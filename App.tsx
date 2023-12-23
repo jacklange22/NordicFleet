@@ -1,5 +1,7 @@
 // App.tsx
 import React from 'react';
+import { useEffect } from 'react';
+import analytics from '@react-native-firebase/analytics';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import WelcomeScreen from './src/screens/welcome.js';
@@ -18,6 +20,12 @@ import AddSkiForm from './src/screens/newSki.js';
 const Stack = createStackNavigator();
 
 const App = () => {
+  useEffect(() => {
+    // Log an event 'app_open' with parameters
+    analytics().logEvent('app_open', { screen: 'main' })
+      .then(() => console.log('App open event logged'))
+      .catch((error: Error) => console.error('Error logging the app open event', error));
+  }, []);
   return (
     <NavigationContainer>
       <Stack.Navigator initialRouteName="Welcome">
