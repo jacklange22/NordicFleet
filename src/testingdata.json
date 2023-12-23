@@ -1,0 +1,82 @@
+{
+    "users": [
+      {
+        "id": "user1",
+        "weight": 70,
+        "height": 180,
+        "team": "Dartmouth",
+        "location": "Hanover, NH",
+        "email": "user1@example.com",
+        "password": "encryptedPassword",
+        "skis": [
+          {
+            "id": "334",
+            "technique": "Classic",
+            "name": "Fischer Speedmax",
+            "type": "Performance",
+            "build": "2019 World Cup",
+            "brand": "Fischer",
+            "year": 2019,
+            "flex": 90,
+            "base": "Plus",
+            "grind": "Universal",
+            "length": 200,
+            "waxingHistory": [
+              {
+                "waxLayer": "CH6 Blue",
+                "date": "2022-12-01"
+              },
+              {
+                "waxLayer": "HF8 Red",
+                "date": "2022-12-10"
+              }
+            ],
+            "testingHistory": [
+              {
+                "date": "2022-12-15",
+                "speed": 8.5,
+                "kick": 7.0,
+                "notes": "Good grip but slightly slippery in wet conditions."
+              }
+            ],
+            "notes": "Needs retuning for colder temperatures."
+          },
+          {
+            "id": "117",
+            "technique": "Skate",
+            "name": "Salomon S/Lab Carbon",
+            "type": "Race",
+            "build": "Pro Skate",
+            "brand": "Salomon",
+            "year": 2020,
+            "flex": 100,
+            "base": "Cold",
+            "grind": "Fine",
+            "length": 192,
+            "waxingHistory": [
+              {
+                "waxLayer": "LF7 Violet",
+                "date": "2022-11-25"
+              },
+              {
+                "waxLayer": "HF10 Yellow",
+                "date": "2022-12-05"
+              }
+            ],
+            "testingHistory": [
+              {
+                "date": "2022-12-20",
+                "speed": 9.2,
+                "climbing": 8.0,
+                "stability": 8.5,
+                "notes": "Excellent performance on hard snow."
+              }
+            ],
+            "notes": "Recently stone ground, working well."
+          }
+
+        ]
+      }
+    ]
+  }
+  
