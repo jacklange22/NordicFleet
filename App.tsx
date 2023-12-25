@@ -19,9 +19,13 @@ import AddSkiForm from './src/screens/newSki.js';
 import firebase from '@react-native-firebase/app';
 
 
+
+
+
 const Stack = createStackNavigator();
 
 const App = () => {
+  
   
 console.log(firebase.app().name);  // default app should log "DEFAULT"
 
