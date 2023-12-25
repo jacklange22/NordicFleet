@@ -16,16 +16,15 @@ import SkisInputFields from './src/screens/inputfieldscreen.js';
 import WaxLogScreen from './src/screens/waxinglog.js';
 import SkiInfo from './src/screens/skiInfo.js';
 import AddSkiForm from './src/screens/newSki.js';
+import firebase from '@react-native-firebase/app';
+
 
 const Stack = createStackNavigator();
 
 const App = () => {
-  useEffect(() => {
-    // Log an event 'app_open' with parameters
-    analytics().logEvent('app_open', { screen: 'main' })
-      .then(() => console.log('App open event logged'))
-      .catch((error: Error) => console.error('Error logging the app open event', error));
-  }, []);
+  
+console.log(firebase.app().name);  // default app should log "DEFAULT"
+
   return (
     <NavigationContainer>
       <Stack.Navigator initialRouteName="Welcome">
