@@ -27,7 +27,7 @@ const Stack = createStackNavigator();
 const App = () => {
   
   
-console.log(firebase.app().name);  // default app should log "DEFAULT"
+//console.log(firebase.app().name);  // default app should log "DEFAULT"
 
   return (
     <NavigationContainer>

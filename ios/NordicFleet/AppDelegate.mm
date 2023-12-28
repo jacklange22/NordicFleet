@@ -1,23 +1,18 @@
 #import "AppDelegate.h"
 @import Firebase;
-
-
 #import <React/RCTBundleURLProvider.h>
 
 @implementation AppDelegate
+
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
-  // Override point for customization after application launch.
+  // Firebase configuration
   [FIRApp configure];
-  return YES;
-}
 
-
-- (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions
-{
+  // React Native setup
   self.moduleName = @"NordicFleet";
-  // You can add your custom initial props in the dictionary below.
-  // They will be passed down to the ViewController used by React Native.
   self.initialProps = @{};
+
+  // Additional setup can go here
 
   return [super application:application didFinishLaunchingWithOptions:launchOptions];
 }
