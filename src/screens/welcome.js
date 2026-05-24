@@ -1,81 +1,130 @@
 import React from 'react';
-import {View, Text, StyleSheet, TouchableOpacity, Image} from 'react-native';
+import {View, Text, Image, StyleSheet, StatusBar} from 'react-native';
+import {SafeAreaView} from 'react-native-safe-area-context';
+import Ionicons from 'react-native-vector-icons/Ionicons';
+import {Button} from '../components/ui';
+import {colors, spacing, typography} from '../theme';
 
-const WelcomeScreen = ({navigation}) => {
-  return (
-    <View style={styles.container}>
+const FEATURES = [
+  {
+    icon: 'stats-chart-outline',
+    text: 'Track every wax & test session',
+  },
+  {
+    icon: 'people-outline',
+    text: "Share your fleet with your coach",
+  },
+  {
+    icon: 'cloud-offline-outline',
+    text: 'Works offline, syncs automatically',
+  },
+];
+
+const WelcomeScreen = ({navigation}) => (
+  <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+    <StatusBar barStyle="light-content" />
+    <View style={styles.heroBlock}>
       <Image
         source={require('../assets/nordicfleet.png')}
         style={styles.logo}
-        accessibilityElementsHidden={true}
+        accessibilityElementsHidden
         importantForAccessibility="no"
       />
-      <Text style={styles.title}>Welcome</Text>
+      <Text style={styles.title}>NordicFleet</Text>
       <Text style={styles.subtitle}>
-        Track and manage all your nordic skis in one place.
+        Track and manage your nordic skis like a pro team.
       </Text>
-      <TouchableOpacity
-        accessibilityRole="button"
-        accessibilityLabel="Track now"
-        style={styles.trackButton}
-        onPress={() => navigation.navigate('Signup')}>
-        <Text style={styles.trackButtonText}>Track now</Text>
-      </TouchableOpacity>
-      <TouchableOpacity
-        accessibilityRole="button"
-        accessibilityLabel="Already a member, log in"
-        onPress={() => navigation.navigate('Login')}>
-        <Text style={styles.loginText}>Already a member? Log in</Text>
-      </TouchableOpacity>
     </View>
-  );
-};
+
+    <View style={styles.featureBlock}>
+      {FEATURES.map(f => (
+        <View key={f.icon} style={styles.featureRow}>
+          <View style={styles.featureIconWrap}>
+            <Ionicons name={f.icon} size={20} color={colors.red} />
+          </View>
+          <Text style={styles.featureText}>{f.text}</Text>
+        </View>
+      ))}
+    </View>
+
+    <View style={styles.actions}>
+      <Button
+        variant="primary"
+        size="lg"
+        icon="arrow-forward"
+        iconRight
+        fullWidth
+        onPress={() => navigation.navigate('Signup')}>
+        Get started
+      </Button>
+      <View style={{height: spacing.sm}} />
+      <Button
+        variant="ghost"
+        size="md"
+        fullWidth
+        onPress={() => navigation.navigate('Login')}>
+        I already have an account
+      </Button>
+    </View>
+  </SafeAreaView>
+);
 
 const styles = StyleSheet.create({
-  container: {
+  safe: {
     flex: 1,
-    padding: 20,
-    justifyContent: 'center',
-    backgroundColor: '#000',
+    backgroundColor: colors.bg,
+    paddingHorizontal: spacing['2xl'],
+    justifyContent: 'space-between',
+    paddingBottom: spacing.lg,
+  },
+  heroBlock: {
+    alignItems: 'center',
+    paddingTop: spacing['4xl'],
   },
   logo: {
-    width: '100%',
+    width: 200,
     height: undefined,
     aspectRatio: 1298 / 852,
     resizeMode: 'contain',
+    marginBottom: spacing.xl,
   },
   title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#E53935',
+    ...typography.displayLg,
+    color: colors.textPrimary,
     textAlign: 'center',
-    marginBottom: 30,
+    marginBottom: spacing.md,
   },
   subtitle: {
-    fontSize: 18,
-    color: '#fff',
+    ...typography.bodyLg,
+    color: colors.textSecondary,
     textAlign: 'center',
-    marginBottom: 20,
+    maxWidth: 280,
+    lineHeight: 22,
   },
-  trackButton: {
-    backgroundColor: '#E53935',
-    paddingVertical: 12,
-    paddingHorizontal: 36,
-    borderRadius: 24,
-    alignSelf: 'center',
-    marginBottom: 15,
+  featureBlock: {
+    paddingHorizontal: spacing.sm,
   },
-  trackButtonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '600',
+  featureRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.md,
   },
-  loginText: {
-    fontSize: 16,
-    color: '#bbb',
-    textAlign: 'center',
-    textDecorationLine: 'underline',
-    marginTop: 15,
+  featureIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(229, 57, 53, 0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.lg,
+  },
+  featureText: {
+    ...typography.body,
+    color: colors.textPrimary,
+    flex: 1,
+  },
+  actions: {
+    paddingBottom: spacing.md,
   },
 });
 
