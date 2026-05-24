@@ -19,6 +19,10 @@ The JS side of the project is done. All five brief phases plus six audit passes 
 | Audit 4 | SkiSaveButton supports submitting/disabled props | `7e46997` |
 | Audit 5 | Technique-aware save shape, SearchBar live filter | `49cee47` |
 | Audit 6 | Jest coverage config, npm scripts | `5b00ee1` |
+| Audit 7 | AuthContext value memoized, sign-out resets nav | `1358c59` |
+| Audit 8 | Firestore mock __injectError for offline path tests | `12d194d` |
+| Audit 9 | Error-path tests for every service + WaxLog screen offline test | `39187bf` |
+| Audit 10 | TestingLog screen test, shared JSDoc typedefs | `8b487ab` |
 
 (Phases 3 and 4 effectively merged because removing the hardcoded `user1` required swapping read paths to services at the same time the write paths got wired up. Net result is correct; the commit boundaries land where the brief says they should.)
 
@@ -134,6 +138,10 @@ For the offline-first contract: turn off WiFi after step 5, do step 7 — the sa
 - **Pass 4 (SkiSaveButton ergonomics):** the button owns `submitting`/`disabled` instead of screens passing no-ops.
 - **Pass 5 (data-model fidelity):** technique-aware save shape per the brief's nullability rules; SearchBar filters live.
 - **Pass 6 (coverage gates):** `npm run test:coverage`, `npm run deploy:rules`; 60% gate on `src/services/`.
+- **Pass 7 (memo + nav reset):** Context value memoized so children only re-render on actual state change; sign-out now `navigation.reset` to Welcome (otherwise the user is stranded on Profile with a stale stack).
+- **Pass 8 (mock injectError):** Firestore mock supports `__injectError(err)` so tests can force the next set/update/get/add to reject. Replaces the fragile resetModules + doMock dance.
+- **Pass 9 (error path tests):** every service has dedicated `*.errors.test.js`. WaxLog screen has explicit offline-tolerance test (Firestore throws unavailable, save still navigates Home).
+- **Pass 10 (typedefs):** shared JSDoc typedefs in `src/services/types.js` so editors get autocomplete on Profile/Ski/WaxLog/TestLog shapes.
 
 ## Open issues
 
