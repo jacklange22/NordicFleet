@@ -54,7 +54,9 @@ const SignupScreen = ({navigation}) => {
     setSubmitting(true);
     try {
       await signUp(email.trim(), password);
-      navigation.replace('Home');
+      // After signup, the user picks a role. RoleSelect routes to Home
+      // (athletes) or CoachDashboard (coaches) on completion.
+      navigation.replace('RoleSelect');
     } catch (err) {
       setError(mapSignupError(err && err.code));
     } finally {

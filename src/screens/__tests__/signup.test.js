@@ -39,7 +39,7 @@ describe('SignupScreen', () => {
     expect(tree.getByText('Passwords do not match')).toBeTruthy();
   });
 
-  it('creates a user, profile doc, and routes Home', async () => {
+  it('creates a user, profile doc, and routes to RoleSelect', async () => {
     const tree = renderScreen();
     fireEvent.changeText(tree.getByPlaceholderText('Email'), 'new@user.com');
     fireEvent.changeText(tree.getByPlaceholderText('Password'), 'password1');
@@ -50,7 +50,10 @@ describe('SignupScreen', () => {
     await act(async () => {
       fireEvent.press(tree.getByLabelText('Sign up'));
     });
-    expect(mockReplace).toHaveBeenCalledWith('Home');
+    // Signup now routes to RoleSelect so the user can pick athlete or
+    // coach (coach-feature work). RoleSelect handles the route to Home
+    // or CoachDashboard afterwards.
+    expect(mockReplace).toHaveBeenCalledWith('RoleSelect');
     // Profile doc was written.
     const profileEntries = [...firestoreMock.__getStore().keys()].filter(k =>
       k.startsWith('users/'),

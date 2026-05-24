@@ -2,10 +2,15 @@ import React from 'react';
 import {View, Text, StyleSheet, TouchableOpacity} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 
-const SkiItem = ({skiId, name, technique, type, grind}) => {
+/**
+ * Tapping a row navigates to SkiInfo. When `ownerUid` is supplied (coach
+ * viewing an athlete's fleet), it flows through so SkiInfo reads the
+ * right user's subcollection.
+ */
+const SkiItem = ({skiId, ownerUid, name, technique, type, grind}) => {
   const navigation = useNavigation();
   const goToSkiInfo = () => {
-    navigation.navigate('SkiInfo', {skiId});
+    navigation.navigate('SkiInfo', ownerUid ? {skiId, ownerUid} : {skiId});
   };
   return (
     <TouchableOpacity

@@ -12,6 +12,9 @@ import TestingLogScreen from './src/screens/testinglog.js';
 import WaxLogScreen from './src/screens/waxinglog.js';
 import SkiInfo from './src/screens/skiInfo.js';
 import AddSkiForm from './src/screens/newSki.js';
+import RoleSelectScreen from './src/screens/roleSelect.js';
+import CoachDashboardScreen from './src/screens/coachDashboard.js';
+import AthleteDetailScreen from './src/screens/athleteDetail.js';
 import {AuthProvider} from './src/context/AuthContext';
 import ErrorBoundary from './src/components/ErrorBoundary';
 
@@ -71,6 +74,21 @@ const App = () => {
             <Stack.Screen
               name="newSki"
               component={AddSkiForm}
+              options={{headerShown: false}}
+            />
+            <Stack.Screen
+              name="RoleSelect"
+              component={RoleSelectScreen}
+              options={{headerShown: false}}
+            />
+            <Stack.Screen
+              name="CoachDashboard"
+              component={CoachDashboardScreen}
+              options={{headerShown: false}}
+            />
+            <Stack.Screen
+              name="AthleteDetail"
+              component={AthleteDetailScreen}
               options={{headerShown: false}}
             />
           </Stack.Navigator>

@@ -42,8 +42,12 @@ const formatDate = raw => {
 
 const SkiInfo = ({route, navigation}) => {
   const {user} = useAuth();
-  const uid = user?.uid;
   const skiId = route?.params?.skiId;
+  // If `ownerUid` is in the route params, this is a coach viewing an
+  // athlete's ski. Otherwise it's the signed-in user's own ski.
+  const ownerUid = route?.params?.ownerUid;
+  const uid = ownerUid || user?.uid;
+  const isCoachView = !!ownerUid && ownerUid !== user?.uid;
 
   const [ski, setSki] = useState(null);
   const [waxLogs, setWaxLogs] = useState([]);
@@ -89,7 +93,7 @@ const SkiInfo = ({route, navigation}) => {
           <ProfileButton />
         </View>
         <View style={styles.spacer} />
-        <Footer />
+        {!isCoachView && <Footer />}
       </View>
     );
   }
@@ -170,7 +174,7 @@ const SkiInfo = ({route, navigation}) => {
           </Text>
         </View>
       </ScrollView>
-      <Footer />
+      {!isCoachView && <Footer />}
     </View>
   );
 };
