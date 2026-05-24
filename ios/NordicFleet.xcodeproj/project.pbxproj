@@ -14,6 +14,7 @@
 		41BB32B996EF3647F1F71E7E /* libPods-NordicFleet-NordicFleetTests.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 253612A2DAAD411E14F45B87 /* libPods-NordicFleet-NordicFleetTests.a */; };
 		75119EE4BFFCA42E73009FA2 /* libPods-NordicFleet.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 6C2F9C44A1942C4DD6A2BA80 /* libPods-NordicFleet.a */; };
 		81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */; };
+		970AC4EC454CF4D28D7F0DCF /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */; };
 		C3E6D9552B37A61200E69852 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = C3E6D9542B37A61100E69852 /* GoogleService-Info.plist */; };
 /* End PBXBuildFile section */
 
@@ -251,6 +252,7 @@
 				81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */,
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
 				C3E6D9552B37A61200E69852 /* GoogleService-Info.plist in Resources */,
+				970AC4EC454CF4D28D7F0DCF /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -608,6 +610,7 @@
 				OTHER_LDFLAGS = "$(inherited)";
 				REACT_NATIVE_PATH = "${PODS_ROOT}/../../node_modules/react-native";
 				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) DEBUG";
 				USE_HERMES = true;
 			};
 			name = Debug;
