@@ -31,10 +31,10 @@ const renderScreen = () =>
 describe('LoginScreen', () => {
   it('refuses an invalid email', async () => {
     const tree = renderScreen();
-    fireEvent.changeText(tree.getByPlaceholderText('Email'), 'not-an-email');
-    fireEvent.changeText(tree.getByPlaceholderText('Password'), 'password1');
+    fireEvent.changeText(tree.getByLabelText('Email'), 'not-an-email');
+    fireEvent.changeText(tree.getByLabelText('Password'), 'password1');
     await act(async () => {
-      fireEvent.press(tree.getByLabelText('Login'));
+      fireEvent.press(tree.getByLabelText('Sign in'));
     });
     expect(tree.getByText('Please enter a valid email')).toBeTruthy();
     expect(mockReplace).not.toHaveBeenCalled();
@@ -42,10 +42,10 @@ describe('LoginScreen', () => {
 
   it('refuses a short password', async () => {
     const tree = renderScreen();
-    fireEvent.changeText(tree.getByPlaceholderText('Email'), 'a@b.com');
-    fireEvent.changeText(tree.getByPlaceholderText('Password'), '123');
+    fireEvent.changeText(tree.getByLabelText('Email'), 'a@b.com');
+    fireEvent.changeText(tree.getByLabelText('Password'), '123');
     await act(async () => {
-      fireEvent.press(tree.getByLabelText('Login'));
+      fireEvent.press(tree.getByLabelText('Sign in'));
     });
     expect(
       tree.getByText('Password must be at least 6 characters'),
@@ -54,10 +54,10 @@ describe('LoginScreen', () => {
 
   it('maps invalid-credential to friendly error', async () => {
     const tree = renderScreen();
-    fireEvent.changeText(tree.getByPlaceholderText('Email'), 'nope@b.com');
-    fireEvent.changeText(tree.getByPlaceholderText('Password'), 'wrongpw');
+    fireEvent.changeText(tree.getByLabelText('Email'), 'nope@b.com');
+    fireEvent.changeText(tree.getByLabelText('Password'), 'wrongpw');
     await act(async () => {
-      fireEvent.press(tree.getByLabelText('Login'));
+      fireEvent.press(tree.getByLabelText('Sign in'));
     });
     expect(tree.getByText('Wrong email or password')).toBeTruthy();
   });
@@ -65,10 +65,10 @@ describe('LoginScreen', () => {
   it('signs in with valid creds and routes to Home', async () => {
     authMock.__seedUser('a@b.com', 'password1', 'uid_a');
     const tree = renderScreen();
-    fireEvent.changeText(tree.getByPlaceholderText('Email'), 'a@b.com');
-    fireEvent.changeText(tree.getByPlaceholderText('Password'), 'password1');
+    fireEvent.changeText(tree.getByLabelText('Email'), 'a@b.com');
+    fireEvent.changeText(tree.getByLabelText('Password'), 'password1');
     await act(async () => {
-      fireEvent.press(tree.getByLabelText('Login'));
+      fireEvent.press(tree.getByLabelText('Sign in'));
     });
     expect(mockReplace).toHaveBeenCalledWith('Home');
   });

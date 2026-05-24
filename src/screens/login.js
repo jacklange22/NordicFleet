@@ -1,14 +1,17 @@
 import React, {useState} from 'react';
 import {
   View,
-  StyleSheet,
-  TextInput,
   Text,
-  TouchableOpacity,
-  ActivityIndicator,
-  Image,
+  StyleSheet,
+  KeyboardAvoidingView,
+  ScrollView,
+  Platform,
+  StatusBar,
 } from 'react-native';
+import {SafeAreaView} from 'react-native-safe-area-context';
 import {useAuth} from '../context/AuthContext';
+import {Header, Input, Button} from '../components/ui';
+import {colors, spacing, typography} from '../theme';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -47,8 +50,6 @@ const LoginScreen = ({navigation}) => {
     setSubmitting(true);
     try {
       await signIn(email.trim(), password);
-      // AuthProvider flips state; AuthLoadingScreen would route. Here we
-      // explicitly replace so the user lands on Home immediately.
       navigation.replace('Home');
     } catch (err) {
       setError(mapAuthError(err && err.code));
@@ -58,113 +59,89 @@ const LoginScreen = ({navigation}) => {
   };
 
   return (
-    <View style={styles.container}>
-      <Image
-        source={require('../assets/nordicfleet.png')}
-        style={styles.logo}
-        accessibilityElementsHidden={true}
-        importantForAccessibility="no"
-      />
-      <Text style={styles.title}>Log in</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Email"
-        placeholderTextColor="#888"
-        value={email}
-        onChangeText={setEmail}
-        keyboardType="email-address"
-        autoCapitalize="none"
-        editable={!submitting}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Password"
-        placeholderTextColor="#888"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-        editable={!submitting}
-      />
-      {!!error && <Text style={styles.errorText}>{error}</Text>}
+    <SafeAreaView style={styles.safe} edges={['top']}>
+      <StatusBar barStyle="light-content" />
+      <Header title="Sign in" />
+      <KeyboardAvoidingView
+        style={{flex: 1}}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView
+          contentContainerStyle={styles.scroll}
+          keyboardShouldPersistTaps="handled">
+          <View style={styles.intro}>
+            <Text style={styles.title}>Welcome back</Text>
+            <Text style={styles.subtitle}>Pick up where you left off.</Text>
+          </View>
 
-      <TouchableOpacity
-        accessibilityRole="button"
-        accessibilityLabel="Login"
-        style={[styles.button, submitting && styles.buttonDisabled]}
-        onPress={handleLogin}
-        disabled={submitting}>
-        {submitting ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text style={styles.buttonText}>Login</Text>
-        )}
-      </TouchableOpacity>
+          <View style={styles.form}>
+            <Input
+              label="Email"
+              icon="mail-outline"
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+            <View style={{height: spacing.lg}} />
+            <Input
+              label="Password"
+              icon="lock-closed-outline"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              autoCapitalize="none"
+            />
 
-      <TouchableOpacity
-        accessibilityRole="button"
-        accessibilityLabel="Go to Signup"
-        onPress={() => navigation.navigate('Signup')}>
-        <Text style={styles.linkText}>Don&apos;t have an account? Sign up</Text>
-      </TouchableOpacity>
-    </View>
+            {!!error && <Text style={styles.error}>{error}</Text>}
+
+            <View style={{height: spacing.xl}} />
+            <Button
+              variant="primary"
+              size="lg"
+              fullWidth
+              loading={submitting}
+              icon="log-in-outline"
+              onPress={handleLogin}>
+              Sign in
+            </Button>
+            <View style={{height: spacing.sm}} />
+            <Button
+              variant="ghost"
+              size="md"
+              fullWidth
+              onPress={() => navigation.navigate('Signup')}>
+              Don't have an account? Create one
+            </Button>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    padding: 20,
-    backgroundColor: '#000',
+  safe: {flex: 1, backgroundColor: colors.bg},
+  scroll: {
+    paddingHorizontal: spacing['2xl'],
+    paddingTop: spacing['3xl'],
+    paddingBottom: spacing['4xl'],
   },
-  logo: {
-    width: '100%',
-    height: undefined,
-    aspectRatio: 1298 / 852,
-    resizeMode: 'contain',
-    marginBottom: 20,
-  },
+  intro: {marginBottom: spacing['3xl']},
   title: {
-    fontSize: 28,
-    color: '#fff',
-    fontWeight: 'bold',
+    ...typography.displayMd,
+    color: colors.textPrimary,
+    marginBottom: spacing.sm,
+  },
+  subtitle: {
+    ...typography.bodyLg,
+    color: colors.textSecondary,
+  },
+  form: {},
+  error: {
+    ...typography.body,
+    color: colors.red,
+    marginTop: spacing.lg,
     textAlign: 'center',
-    marginBottom: 20,
-  },
-  input: {
-    height: 44,
-    borderColor: '#444',
-    borderWidth: 1,
-    marginBottom: 16,
-    padding: 10,
-    color: '#fff',
-    borderRadius: 8,
-  },
-  errorText: {
-    color: '#E53935',
-    marginBottom: 12,
-    textAlign: 'center',
-  },
-  button: {
-    backgroundColor: '#E53935',
-    paddingVertical: 12,
-    borderRadius: 24,
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  linkText: {
-    color: '#bbb',
-    textAlign: 'center',
-    textDecorationLine: 'underline',
-    marginTop: 8,
   },
 });
 

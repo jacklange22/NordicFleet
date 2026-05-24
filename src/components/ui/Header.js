@@ -4,6 +4,17 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import {useNavigation} from '@react-navigation/native';
 import {colors, spacing, typography} from '../../theme';
 
+// useNavigation throws if not inside a NavigationContainer (test renders
+// without one will hit this). Wrap so tests can render screens that mount
+// a Header without first wiring a NavigationContainer in their setup.
+const useSafeNavigation = () => {
+  try {
+    return useNavigation();
+  } catch {
+    return null;
+  }
+};
+
 /**
  * App header.
  *
@@ -26,7 +37,7 @@ const Header = ({
   align = 'left',
   transparent = false,
 }) => {
-  const navigation = useNavigation();
+  const navigation = useSafeNavigation();
   const canGoBack = navigation?.canGoBack && navigation.canGoBack();
 
   let leftEl = left;

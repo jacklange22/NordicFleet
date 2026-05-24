@@ -27,10 +27,10 @@ const renderScreen = () =>
 describe('SignupScreen', () => {
   it('requires matching passwords', async () => {
     const tree = renderScreen();
-    fireEvent.changeText(tree.getByPlaceholderText('Email'), 'a@b.com');
-    fireEvent.changeText(tree.getByPlaceholderText('Password'), 'password1');
+    fireEvent.changeText(tree.getByLabelText('Email'), 'a@b.com');
+    fireEvent.changeText(tree.getByLabelText('Password'), 'password1');
     fireEvent.changeText(
-      tree.getByPlaceholderText('Confirm Password'),
+      tree.getByLabelText('Confirm Password'),
       'different',
     );
     await act(async () => {
@@ -41,10 +41,10 @@ describe('SignupScreen', () => {
 
   it('creates a user, profile doc, and routes to RoleSelect', async () => {
     const tree = renderScreen();
-    fireEvent.changeText(tree.getByPlaceholderText('Email'), 'new@user.com');
-    fireEvent.changeText(tree.getByPlaceholderText('Password'), 'password1');
+    fireEvent.changeText(tree.getByLabelText('Email'), 'new@user.com');
+    fireEvent.changeText(tree.getByLabelText('Password'), 'password1');
     fireEvent.changeText(
-      tree.getByPlaceholderText('Confirm Password'),
+      tree.getByLabelText('Confirm Password'),
       'password1',
     );
     await act(async () => {
@@ -64,10 +64,10 @@ describe('SignupScreen', () => {
   it('maps email-already-in-use', async () => {
     authMock.__seedUser('taken@user.com', 'doesntmatter');
     const tree = renderScreen();
-    fireEvent.changeText(tree.getByPlaceholderText('Email'), 'taken@user.com');
-    fireEvent.changeText(tree.getByPlaceholderText('Password'), 'password1');
+    fireEvent.changeText(tree.getByLabelText('Email'), 'taken@user.com');
+    fireEvent.changeText(tree.getByLabelText('Password'), 'password1');
     fireEvent.changeText(
-      tree.getByPlaceholderText('Confirm Password'),
+      tree.getByLabelText('Confirm Password'),
       'password1',
     );
     await act(async () => {

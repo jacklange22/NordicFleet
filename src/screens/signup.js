@@ -1,14 +1,17 @@
 import React, {useState} from 'react';
 import {
   View,
-  StyleSheet,
-  TextInput,
   Text,
-  TouchableOpacity,
-  ActivityIndicator,
-  Image,
+  StyleSheet,
+  KeyboardAvoidingView,
+  ScrollView,
+  Platform,
+  StatusBar,
 } from 'react-native';
+import {SafeAreaView} from 'react-native-safe-area-context';
 import {useAuth} from '../context/AuthContext';
+import {Header, Input, Button} from '../components/ui';
+import {colors, spacing, typography} from '../theme';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -54,8 +57,6 @@ const SignupScreen = ({navigation}) => {
     setSubmitting(true);
     try {
       await signUp(email.trim(), password);
-      // After signup, the user picks a role. RoleSelect routes to Home
-      // (athletes) or CoachDashboard (coaches) on completion.
       navigation.replace('RoleSelect');
     } catch (err) {
       setError(mapSignupError(err && err.code));
@@ -65,122 +66,98 @@ const SignupScreen = ({navigation}) => {
   };
 
   return (
-    <View style={styles.container}>
-      <Image
-        source={require('../assets/nordicfleet.png')}
-        style={styles.logo}
-        accessibilityElementsHidden={true}
-        importantForAccessibility="no"
-      />
-      <Text style={styles.title}>Create account</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Email"
-        placeholderTextColor="#888"
-        value={email}
-        onChangeText={setEmail}
-        keyboardType="email-address"
-        autoCapitalize="none"
-        editable={!submitting}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Password"
-        placeholderTextColor="#888"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-        editable={!submitting}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Confirm Password"
-        placeholderTextColor="#888"
-        value={confirmPassword}
-        onChangeText={setConfirmPassword}
-        secureTextEntry
-        editable={!submitting}
-      />
-      {!!error && <Text style={styles.errorText}>{error}</Text>}
+    <SafeAreaView style={styles.safe} edges={['top']}>
+      <StatusBar barStyle="light-content" />
+      <Header title="Create account" />
+      <KeyboardAvoidingView
+        style={{flex: 1}}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView
+          contentContainerStyle={styles.scroll}
+          keyboardShouldPersistTaps="handled">
+          <View style={styles.intro}>
+            <Text style={styles.title}>Create your account</Text>
+            <Text style={styles.subtitle}>Start tracking your fleet.</Text>
+          </View>
 
-      <TouchableOpacity
-        accessibilityRole="button"
-        accessibilityLabel="Sign up"
-        style={[styles.button, submitting && styles.buttonDisabled]}
-        onPress={handleSignup}
-        disabled={submitting}>
-        {submitting ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text style={styles.buttonText}>Sign up</Text>
-        )}
-      </TouchableOpacity>
+          <View style={styles.form}>
+            <Input
+              label="Email"
+              icon="mail-outline"
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+            <View style={{height: spacing.lg}} />
+            <Input
+              label="Password"
+              icon="lock-closed-outline"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              autoCapitalize="none"
+            />
+            <View style={{height: spacing.lg}} />
+            <Input
+              label="Confirm Password"
+              icon="lock-closed-outline"
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+              secureTextEntry
+              autoCapitalize="none"
+            />
 
-      <TouchableOpacity
-        accessibilityRole="button"
-        accessibilityLabel="Go to Login"
-        onPress={() => navigation.navigate('Login')}>
-        <Text style={styles.linkText}>Already have an account? Log in</Text>
-      </TouchableOpacity>
-    </View>
+            {!!error && <Text style={styles.error}>{error}</Text>}
+
+            <View style={{height: spacing.xl}} />
+            <Button
+              variant="primary"
+              size="lg"
+              fullWidth
+              loading={submitting}
+              icon="person-add-outline"
+              onPress={handleSignup}>
+              Sign up
+            </Button>
+            <View style={{height: spacing.sm}} />
+            <Button
+              variant="ghost"
+              size="md"
+              fullWidth
+              onPress={() => navigation.navigate('Login')}>
+              Already have an account? Sign in
+            </Button>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    padding: 20,
-    backgroundColor: '#000',
+  safe: {flex: 1, backgroundColor: colors.bg},
+  scroll: {
+    paddingHorizontal: spacing['2xl'],
+    paddingTop: spacing['3xl'],
+    paddingBottom: spacing['4xl'],
   },
-  logo: {
-    width: '100%',
-    height: undefined,
-    aspectRatio: 1298 / 852,
-    resizeMode: 'contain',
-    marginBottom: 20,
-  },
+  intro: {marginBottom: spacing['3xl']},
   title: {
-    fontSize: 28,
-    color: '#fff',
-    fontWeight: 'bold',
+    ...typography.displayMd,
+    color: colors.textPrimary,
+    marginBottom: spacing.sm,
+  },
+  subtitle: {
+    ...typography.bodyLg,
+    color: colors.textSecondary,
+  },
+  form: {},
+  error: {
+    ...typography.body,
+    color: colors.red,
+    marginTop: spacing.lg,
     textAlign: 'center',
-    marginBottom: 20,
-  },
-  input: {
-    height: 44,
-    borderColor: '#444',
-    borderWidth: 1,
-    marginBottom: 16,
-    padding: 10,
-    color: '#fff',
-    borderRadius: 8,
-  },
-  errorText: {
-    color: '#E53935',
-    marginBottom: 12,
-    textAlign: 'center',
-  },
-  button: {
-    backgroundColor: '#E53935',
-    paddingVertical: 12,
-    borderRadius: 24,
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  linkText: {
-    color: '#bbb',
-    textAlign: 'center',
-    textDecorationLine: 'underline',
-    marginTop: 8,
   },
 });
 
