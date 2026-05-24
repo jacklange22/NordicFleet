@@ -51,8 +51,12 @@ These are no longer blockers but documenting for posterity:
 2. **Create the Firestore database** (production mode) in the Firebase console:
    - Firestore Database → Create database → Production mode → pick a region (us-central1 is fine).
 
-3. **Deploy Firestore security rules** (file `firestore.rules` is at the project root):
+3. **Install the Firebase CLI and deploy security rules** (file `firestore.rules` is at the project root):
    ```
+   npm install -g firebase-tools
+   firebase login
+   firebase use nordicfleet-11e67
    firebase deploy --only firestore:rules
    ```
-   Or paste `firestore.rules` into the Firebase console under Firestore → Rules → Publish.
+   (firebase CLI is not currently installed on this machine — I checked with `which firebase`.)
+   Alternatively, paste `firestore.rules` into the Firebase console under Firestore → Rules → Publish.
