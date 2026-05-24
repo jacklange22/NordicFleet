@@ -1,30 +1,38 @@
 import React, {useState, useEffect, useMemo} from 'react';
-import {SafeAreaView, View, Text, StyleSheet, FlatList, TouchableOpacity} from 'react-native';
+import {SafeAreaView, View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator} from 'react-native';
 import ProfileButton from '../components/profilebutton.js';
 import Footer from '../components/footer.js';
 import SearchBar from '../components/searchbar.js';
 import SkiItem from '../components/skiitem.js';
 import FilterMenu from '../components/filtermenu.js';
-import testingData from '../seedData.json';
+import {useAuth} from '../context/AuthContext';
+import {subscribeSkis} from '../services/skiService';
 
 const HomeScreen = () => {
+  const {user} = useAuth();
+  const uid = user?.uid;
+
   const [userSkis, setUserSkis] = useState([]);
-  const userId = 'user1'; // Phase 3 swaps in AuthContext.
-
-  useEffect(() => {
-    // Fix: the JSON uses `id`, not `userId`.
-    const userData = testingData.users.find(user => user.id === userId);
-    if (userData) {
-      setUserSkis(userData.skis);
-    } else {
-      setUserSkis([]);
-    }
-  }, [userId]);
-
+  const [loading, setLoading] = useState(true);
   const [isFilterVisible, setIsFilterVisible] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [technique, setTechnique] = useState(null);
   const [condition, setCondition] = useState(null);
+
+  useEffect(() => {
+    if (!uid) {
+      setUserSkis([]);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    const unsub = subscribeSkis(uid, skis => {
+      // Hide retired skis from Home by default.
+      setUserSkis(skis.filter(s => !s.retired));
+      setLoading(false);
+    });
+    return unsub;
+  }, [uid]);
 
   const toggleFilterMenu = () => {
     setIsFilterVisible(v => !v);
@@ -39,10 +47,11 @@ const HomeScreen = () => {
       );
     }
     if (technique) {
-      result = result.filter(ski => ski.technique === technique);
+      result = result.filter(
+        ski => (ski.technique || '').toLowerCase() === technique.toLowerCase(),
+      );
     }
     if (condition) {
-      // condition matches the `type` field on the ski (Cold/Warm/Universal).
       result = result.filter(
         ski => (ski.type || '').toLowerCase() === condition.toLowerCase(),
       );
@@ -76,29 +85,35 @@ const HomeScreen = () => {
       <View style={styles.filterOptionsContainer}>
         {isFilterVisible && <FilterMenu onApplyFilter={handleApplyFilter} />}
       </View>
-      <FlatList
-        data={filteredSkis}
-        renderItem={({item}) => (
-          <SkiItem
-            skiId={item.id}
-            name={item.name}
-            technique={item.technique}
-            type={item.type}
-            grind={item.grind}
-            flex={item.flex}
-            brand={item.brand}
-            model={item.model}
-            base={item.base}
-            build={item.build}
-            length={item.length}
-            notes={item.notes}
-          />
-        )}
-        keyExtractor={item => item.id.toString()}
-        ListEmptyComponent={
-          <Text style={styles.emptyText}>No skis yet — add one!</Text>
-        }
-      />
+      {loading ? (
+        <ActivityIndicator color="#fff" style={styles.loading} />
+      ) : (
+        <FlatList
+          data={filteredSkis}
+          renderItem={({item}) => (
+            <SkiItem
+              skiId={item.id}
+              name={item.name}
+              technique={item.technique}
+              type={item.type}
+              grind={item.grind}
+              flex={item.flex}
+              brand={item.brand}
+              model={item.model}
+              base={item.base}
+              build={item.build}
+              length={item.length}
+              notes={item.notes}
+            />
+          )}
+          keyExtractor={item => item.id.toString()}
+          ListEmptyComponent={
+            <Text style={styles.emptyText}>
+              No skis yet — tap the + to add your first.
+            </Text>
+          }
+        />
+      )}
 
       <View style={styles.Footer}>
         <Footer />
@@ -124,25 +139,8 @@ const styles = StyleSheet.create({
     fontSize: 24,
     color: '#fff',
   },
-  searchInput: {
-    height: 40,
-    backgroundColor: '#333',
-    color: '#fff',
-    paddingHorizontal: 10,
-    borderRadius: 10,
-    margin: 16,
-  },
-  skiItem: {
-    backgroundColor: '#222',
-    borderRadius: 10,
-    padding: 10,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 10,
-    marginHorizontal: 16,
-  },
-  skiText: {
-    color: '#fff',
+  loading: {
+    marginTop: 40,
   },
   filterButton: {
     paddingHorizontal: 20,

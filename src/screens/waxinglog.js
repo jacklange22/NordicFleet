@@ -5,14 +5,19 @@ import {
   View,
   ScrollView,
   SafeAreaView,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import ProfileButton from '../components/profilebutton';
 import Footer from '../components/footer';
-import testData from '../seedData.json';
 import MultiSelectDropdown from '../components/checkboxDropdown';
 import WaxInputComponent from '../components/waxinput.js';
 import SkiSaveButton from '../components/skisaveButton';
 import {useNavigation} from '@react-navigation/native';
+import {useAuth} from '../context/AuthContext';
+import {subscribeSkis} from '../services/skiService';
+import {createWaxLog} from '../services/waxLogService';
+import {firestore} from '../services/firebase';
 
 const emptyWaxEntry = () => ({
   binder: '',
@@ -25,23 +30,33 @@ const emptyWaxEntry = () => ({
 
 const WaxLogScreen = () => {
   const navigation = useNavigation();
+  const {user} = useAuth();
+  const uid = user?.uid;
 
-  // userId still hard-coded here in Phase 1 — Phase 3 swaps it for AuthContext.
-  const userId = 'user1';
+  const [skisForUser, setSkisForUser] = useState([]);
+  const [loadingSkis, setLoadingSkis] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
 
-  const skisForUser = useMemo(() => {
-    const user = testData.users.find(u => u.id === userId);
-    return user ? user.skis : [];
-  }, [userId]);
+  useEffect(() => {
+    if (!uid) {
+      setSkisForUser([]);
+      setLoadingSkis(false);
+      return;
+    }
+    setLoadingSkis(true);
+    const unsub = subscribeSkis(uid, skis => {
+      setSkisForUser(skis.filter(s => !s.retired));
+      setLoadingSkis(false);
+    });
+    return unsub;
+  }, [uid]);
 
-  // checkboxDropdown now expects {id, label} items.
   const dropdownItems = useMemo(
-    () => skisForUser.map(ski => ({id: ski.id, label: ski.name})),
+    () => skisForUser.map(ski => ({id: ski.id, label: ski.name || ski.id})),
     [skisForUser],
   );
 
-  const [selectedSkis, setSelectedSkis] = useState([]); // array of ski IDs
-  // Lifted state — one wax-log entry per selected ski, keyed by ski ID.
+  const [selectedSkis, setSelectedSkis] = useState([]);
   const [waxLog, setWaxLog] = useState({});
   const [skiWaxEntries, setSkiWaxEntries] = useState([]);
 
@@ -50,7 +65,6 @@ const WaxLogScreen = () => {
     return ski ? ski.technique : null;
   };
 
-  // Rebuild the wax-entry map when the selected-ski set changes.
   useEffect(() => {
     setWaxLog(prev => {
       const next = {};
@@ -62,9 +76,7 @@ const WaxLogScreen = () => {
     setSkiWaxEntries(selectedSkis);
   }, [selectedSkis]);
 
-  const handleSelectionDone = items => {
-    setSelectedSkis(items);
-  };
+  const handleSelectionDone = items => setSelectedSkis(items);
 
   const handleEntryChange = (skiId, partial) => {
     setWaxLog(prev => ({
@@ -73,17 +85,37 @@ const WaxLogScreen = () => {
     }));
   };
 
-  const handleSavePress = () => {
-    // Phase 4 wires this to Firestore. Phase 1 just collects the data.
-    const payload = selectedSkis.map(skiId => ({
-      skiId,
-      ...waxLog[skiId],
-    }));
-    // eslint-disable-next-line no-undef
-    if (typeof __DEV__ !== 'undefined' && __DEV__) {
-      // intentional: payload would otherwise be unused in Phase 1
-      void payload;
+  const handleSavePress = async () => {
+    if (!uid) {
+      Alert.alert('Please sign in to save');
+      return;
     }
+    if (selectedSkis.length === 0) {
+      Alert.alert('Please pick at least one ski');
+      return;
+    }
+    setSubmitting(true);
+    const date = firestore.FieldValue.serverTimestamp();
+    const writes = selectedSkis.map(skiId =>
+      createWaxLog(uid, {
+        skiId,
+        date,
+        ...waxLog[skiId],
+      }),
+    );
+    try {
+      await Promise.all(writes);
+    } catch (err) {
+      // Offline-first: Firestore queues failed writes locally. Only show an
+      // error for non-network failures.
+      const code = err && err.code;
+      if (code && !String(code).includes('unavailable')) {
+        Alert.alert('Save failed', String(err.message || err));
+        setSubmitting(false);
+        return;
+      }
+    }
+    setSubmitting(false);
     navigation.navigate('Home');
   };
 
@@ -100,11 +132,15 @@ const WaxLogScreen = () => {
         contentContainerStyle={styles.scrollContentContainer}>
         <View style={styles.dropdownContainer}>
           <Text style={styles.dropdownLabel}>Skis:</Text>
-          <MultiSelectDropdown
-            items={dropdownItems}
-            onSelectionDone={handleSelectionDone}
-            label={'Select Skis Waxed'}
-          />
+          {loadingSkis ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <MultiSelectDropdown
+              items={dropdownItems}
+              onSelectionDone={handleSelectionDone}
+              label={'Select Skis Waxed'}
+            />
+          )}
 
           <Text style={styles.dropdownLabel}>Wax:</Text>
           {skiWaxEntries.map(skiId => {
@@ -121,7 +157,7 @@ const WaxLogScreen = () => {
             );
           })}
         </View>
-        <SkiSaveButton onPress={handleSavePress} />
+        <SkiSaveButton onPress={submitting ? () => {} : handleSavePress} />
       </ScrollView>
       <View style={styles.Footer}>
         <Footer />
@@ -159,9 +195,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     color: '#fff',
-  },
-  checkboxText: {
-    fontSize: 14,
   },
   Footer: {
     position: 'absolute',

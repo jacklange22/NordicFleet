@@ -6,10 +6,16 @@ const ProfileButton = () => {
   const navigation = useNavigation();
 
   return (
-    <TouchableOpacity style={styles.imageContainer} onPress={() => navigation.navigate('Profile', { userId: 'user1' })}>
+    <TouchableOpacity
+      accessibilityRole="button"
+      accessibilityLabel="Open profile"
+      style={styles.imageContainer}
+      onPress={() => navigation.navigate('Profile')}>
       <Image
         source={require('../assets/profile.png')}
         style={styles.image}
+        accessibilityElementsHidden={true}
+        importantForAccessibility="no"
       />
     </TouchableOpacity>
   );

@@ -1,22 +1,17 @@
 // src/screens/AuthLoadingScreen.js
 import React, {useEffect} from 'react';
 import {View, ActivityIndicator, StyleSheet} from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import {useAuth} from '../context/AuthContext';
 
 const AuthLoadingScreen = ({navigation}) => {
-  useEffect(() => {
-    const bootstrapAsync = async () => {
-      let userToken;
-      try {
-        userToken = await AsyncStorage.getItem('userToken');
-      } catch (e) {
-        userToken = null;
-      }
-      navigation.replace(userToken ? 'Home' : 'Welcome');
-    };
+  const {user, loading} = useAuth();
 
-    bootstrapAsync();
-  }, [navigation]);
+  useEffect(() => {
+    if (loading) {
+      return;
+    }
+    navigation.replace(user ? 'Home' : 'Welcome');
+  }, [loading, user, navigation]);
 
   return (
     <View style={styles.container}>

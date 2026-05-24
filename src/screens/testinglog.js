@@ -5,16 +5,21 @@ import {
   View,
   ScrollView,
   SafeAreaView,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import Dropdown from '../components/dropdown';
 import ProfileButton from '../components/profilebutton';
 import Footer from '../components/footer';
-import testData from '../seedData.json';
 import MultiSelectDropdown from '../components/checkboxDropdown';
 import InputField from '../components/inputfield';
 import SkiInputComponent from '../components/testInput';
 import SkiSaveButton from '../components/skisaveButton';
 import {useNavigation} from '@react-navigation/native';
+import {useAuth} from '../context/AuthContext';
+import {subscribeSkis} from '../services/skiService';
+import {createTestLog} from '../services/testLogService';
+import {firestore} from '../services/firebase';
 
 const emptyTestEntry = () => ({
   glideWax: '',
@@ -28,15 +33,29 @@ const emptyTestEntry = () => ({
 
 const TestingLogScreen = () => {
   const navigation = useNavigation();
-  const userId = 'user1'; // Phase 3 swaps in AuthContext.
+  const {user} = useAuth();
+  const uid = user?.uid;
 
-  const skisForUser = useMemo(() => {
-    const user = testData.users.find(u => u.id === userId);
-    return user ? user.skis : [];
-  }, [userId]);
+  const [skisForUser, setSkisForUser] = useState([]);
+  const [loadingSkis, setLoadingSkis] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!uid) {
+      setSkisForUser([]);
+      setLoadingSkis(false);
+      return;
+    }
+    setLoadingSkis(true);
+    const unsub = subscribeSkis(uid, skis => {
+      setSkisForUser(skis.filter(s => !s.retired));
+      setLoadingSkis(false);
+    });
+    return unsub;
+  }, [uid]);
 
   const dropdownItems = useMemo(
-    () => skisForUser.map(ski => ({id: ski.id, label: ski.name})),
+    () => skisForUser.map(ski => ({id: ski.id, label: ski.name || ski.id})),
     [skisForUser],
   );
 
@@ -77,8 +96,39 @@ const TestingLogScreen = () => {
     }));
   };
 
-  const handleSubmit = () => {
-    // Phase 4 wires this to Firestore via testLogService.
+  const handleSubmit = async () => {
+    if (!uid) {
+      Alert.alert('Please sign in to save');
+      return;
+    }
+    if (selectedSkis.length === 0) {
+      Alert.alert('Please pick at least one ski');
+      return;
+    }
+    setSubmitting(true);
+    const date = firestore.FieldValue.serverTimestamp();
+    const writes = selectedSkis.map(skiId =>
+      createTestLog(uid, {
+        skiId,
+        date,
+        temperature: testingLog.temperature,
+        humidity: testingLog.humidity,
+        snowType: testingLog.snowType,
+        surface: testingLog.surface,
+        ...skiTestEntries[skiId],
+      }),
+    );
+    try {
+      await Promise.all(writes);
+    } catch (err) {
+      const code = err && err.code;
+      if (code && !String(code).includes('unavailable')) {
+        Alert.alert('Save failed', String(err.message || err));
+        setSubmitting(false);
+        return;
+      }
+    }
+    setSubmitting(false);
     navigation.navigate('Home');
   };
 
@@ -110,11 +160,15 @@ const TestingLogScreen = () => {
             placeholder="Choose one"
           />
           <Text style={styles.dropdownLabel}>Skis:</Text>
-          <MultiSelectDropdown
-            items={dropdownItems}
-            onSelectionDone={handleSelectionDone}
-            label={'Select Skis Tested'}
-          />
+          {loadingSkis ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <MultiSelectDropdown
+              items={dropdownItems}
+              onSelectionDone={handleSelectionDone}
+              label={'Select Skis Tested'}
+            />
+          )}
           <Text style={styles.dropdownLabel}>Temperature:</Text>
           <InputField
             placeholder="Enter temperature"
@@ -144,7 +198,7 @@ const TestingLogScreen = () => {
             );
           })}
         </View>
-        <SkiSaveButton onPress={handleSubmit} />
+        <SkiSaveButton onPress={submitting ? () => {} : handleSubmit} />
       </ScrollView>
 
       <View style={styles.Footer}>
@@ -183,9 +237,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     color: '#fff',
-  },
-  checkboxText: {
-    fontSize: 14,
   },
   Footer: {
     position: 'absolute',

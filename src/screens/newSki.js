@@ -7,15 +7,21 @@ import {
   StyleSheet,
   SafeAreaView,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import Dropdown from '../components/dropdown';
 import Footer from '../components/footer';
 import ProfileButton from '../components/profilebutton';
 import SkiSaveButton from '../components/skisaveButton';
 import {useNavigation} from '@react-navigation/native';
+import {useAuth} from '../context/AuthContext';
+import {createSki} from '../services/skiService';
 
 const AddSkiForm = () => {
   const navigation = useNavigation();
+  const {user} = useAuth();
+  const uid = user?.uid;
+
   const [brand, setBrand] = useState('');
   const [model, setModel] = useState('');
   const [base, setBase] = useState('');
@@ -27,36 +33,48 @@ const AddSkiForm = () => {
   const [notes, setNotes] = useState('');
   const [technique, setTechnique] = useState('');
   const [type, setType] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = () => {
-    // Notes is optional. Everything else required.
+  const handleSubmit = async () => {
     if (
-      brand &&
-      model &&
-      base &&
-      build &&
-      grind &&
-      length &&
-      name &&
-      flex &&
-      technique &&
-      type
+      !brand ||
+      !model ||
+      !base ||
+      !build ||
+      !grind ||
+      !length ||
+      !name ||
+      !flex ||
+      !technique ||
+      !type
     ) {
-      navigation.navigate('SkiInfo', {
-        flex,
-        grind,
+      Alert.alert('Please fill out all required fields.');
+      return;
+    }
+    if (!uid) {
+      Alert.alert('Please sign in to add a ski');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const newId = await createSki(uid, {
         brand,
         model,
         base,
         build,
-        name,
-        notes,
-        type,
-        technique,
+        grind,
         length,
+        name,
+        flex,
+        notes,
+        technique,
+        type,
       });
-    } else {
-      Alert.alert('Please fill out all required fields.');
+      navigation.replace('SkiInfo', {skiId: newId});
+    } catch (err) {
+      Alert.alert('Could not save', String(err.message || err));
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -155,7 +173,11 @@ const AddSkiForm = () => {
             placeholder="Enter notes"
             placeholderTextColor="#888"
           />
-          <SkiSaveButton onPress={handleSubmit} />
+          {submitting ? (
+            <ActivityIndicator color="#fff" style={styles.spinner} />
+          ) : (
+            <SkiSaveButton onPress={handleSubmit} />
+          )}
         </View>
       </ScrollView>
       <Footer />
@@ -202,6 +224,9 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     marginTop: 10,
+  },
+  spinner: {
+    marginTop: 20,
   },
 });
 
