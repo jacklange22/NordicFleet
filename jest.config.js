@@ -8,4 +8,18 @@ module.exports = {
   moduleNameMapper: {
     '\\.(jpg|jpeg|png|gif|webp)$': '<rootDir>/__mocks__/fileMock.js',
   },
+  collectCoverageFrom: [
+    'src/**/*.{js,jsx}',
+    '!src/seedData.json',
+    '!src/**/__tests__/**',
+    '!src/**/__mocks__/**',
+  ],
+  coverageThreshold: {
+    'src/services/': {
+      branches: 60,
+      functions: 60,
+      lines: 60,
+      statements: 60,
+    },
+  },
 };
