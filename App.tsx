@@ -1,7 +1,9 @@
 // App.tsx
 import React from 'react';
-import {NavigationContainer} from '@react-navigation/native';
+import {StatusBar} from 'react-native';
+import {NavigationContainer, DefaultTheme} from '@react-navigation/native';
 import {createStackNavigator} from '@react-navigation/stack';
+import {SafeAreaProvider} from 'react-native-safe-area-context';
 import WelcomeScreen from './src/screens/welcome.js';
 import SignupScreen from './src/screens/signup.js';
 import LoginScreen from './src/screens/login.js';
@@ -17,83 +19,59 @@ import CoachDashboardScreen from './src/screens/coachDashboard.js';
 import AthleteDetailScreen from './src/screens/athleteDetail.js';
 import {AuthProvider} from './src/context/AuthContext';
 import ErrorBoundary from './src/components/ErrorBoundary';
+import {colors} from './src/theme';
+
+const navTheme = {
+  ...DefaultTheme,
+  dark: true,
+  colors: {
+    ...DefaultTheme.colors,
+    background: colors.bg,
+    card: colors.surface,
+    text: colors.textPrimary,
+    border: colors.border,
+    primary: colors.red,
+  },
+};
 
 const Stack = createStackNavigator();
 
 const App = () => {
   return (
     <ErrorBoundary>
-      <AuthProvider>
-        <NavigationContainer>
-          <Stack.Navigator initialRouteName="AuthLoading">
-            <Stack.Screen
-              name="AuthLoading"
-              component={AuthLoadingScreen}
-              options={{headerShown: false}}
-            />
-            <Stack.Screen
-              name="Welcome"
-              component={WelcomeScreen}
-              options={{headerShown: false}}
-            />
-            <Stack.Screen
-              name="Signup"
-              component={SignupScreen}
-              options={{headerShown: false}}
-            />
-            <Stack.Screen
-              name="Login"
-              component={LoginScreen}
-              options={{headerShown: false}}
-            />
-            <Stack.Screen
-              name="Home"
-              component={HomeScreen}
-              options={{headerShown: false}}
-            />
-            <Stack.Screen
-              name="Profile"
-              component={ProfileScreen}
-              options={{headerShown: false}}
-            />
-            <Stack.Screen
-              name="TestingLog"
-              component={TestingLogScreen}
-              options={{headerShown: false}}
-            />
-            <Stack.Screen
-              name="WaxLog"
-              component={WaxLogScreen}
-              options={{headerShown: false}}
-            />
-            <Stack.Screen
-              name="SkiInfo"
-              component={SkiInfo}
-              options={{headerShown: false}}
-            />
-            <Stack.Screen
-              name="newSki"
-              component={AddSkiForm}
-              options={{headerShown: false}}
-            />
-            <Stack.Screen
-              name="RoleSelect"
-              component={RoleSelectScreen}
-              options={{headerShown: false}}
-            />
-            <Stack.Screen
-              name="CoachDashboard"
-              component={CoachDashboardScreen}
-              options={{headerShown: false}}
-            />
-            <Stack.Screen
-              name="AthleteDetail"
-              component={AthleteDetailScreen}
-              options={{headerShown: false}}
-            />
-          </Stack.Navigator>
-        </NavigationContainer>
-      </AuthProvider>
+      <SafeAreaProvider>
+        <StatusBar barStyle="light-content" backgroundColor={colors.bg} />
+        <AuthProvider>
+          <NavigationContainer theme={navTheme}>
+            <Stack.Navigator
+              initialRouteName="AuthLoading"
+              screenOptions={{
+                headerShown: false,
+                cardStyle: {backgroundColor: colors.bg},
+              }}>
+              <Stack.Screen name="AuthLoading" component={AuthLoadingScreen} />
+              <Stack.Screen name="Welcome" component={WelcomeScreen} />
+              <Stack.Screen name="Signup" component={SignupScreen} />
+              <Stack.Screen name="Login" component={LoginScreen} />
+              <Stack.Screen name="Home" component={HomeScreen} />
+              <Stack.Screen name="Profile" component={ProfileScreen} />
+              <Stack.Screen name="TestingLog" component={TestingLogScreen} />
+              <Stack.Screen name="WaxLog" component={WaxLogScreen} />
+              <Stack.Screen name="SkiInfo" component={SkiInfo} />
+              <Stack.Screen name="newSki" component={AddSkiForm} />
+              <Stack.Screen name="RoleSelect" component={RoleSelectScreen} />
+              <Stack.Screen
+                name="CoachDashboard"
+                component={CoachDashboardScreen}
+              />
+              <Stack.Screen
+                name="AthleteDetail"
+                component={AthleteDetailScreen}
+              />
+            </Stack.Navigator>
+          </NavigationContainer>
+        </AuthProvider>
+      </SafeAreaProvider>
     </ErrorBoundary>
   );
 };
