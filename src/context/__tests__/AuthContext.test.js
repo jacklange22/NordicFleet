@@ -87,6 +87,28 @@ describe('AuthContext', () => {
     expect(err.code).toBe('auth/invalid-credential');
   });
 
+  it('signUp still resolves if profile write fails (offline-tolerant)', async () => {
+    // Force getCurrentUser collection writes to error by overriding the mock
+    // for this test. The simplest pin is to mock createProfile to throw.
+    jest.resetModules();
+    jest.doMock('../../services/userService', () => ({
+      createProfile: jest.fn().mockRejectedValue(new Error('offline')),
+      getProfile: jest.fn(),
+    }));
+    const {AuthProvider: Provider} = require('../AuthContext');
+    let latest;
+    render(
+      <Provider>
+        <Probe onState={s => (latest = s)} />
+      </Provider>,
+    );
+    await act(async () => {
+      await latest.signUp('offline@b.com', 'password1');
+    });
+    // User is still created; profile write was swallowed.
+    expect(latest.user).not.toBeNull();
+  });
+
   it('signOut clears user', async () => {
     authMock.__seedUser('a@b.com', 'pw');
     let latest;

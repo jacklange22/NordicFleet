@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useCallback} from 'react';
+import React, {useState, useCallback} from 'react';
 import {
   StyleSheet,
   View,
@@ -17,7 +17,8 @@ import {
 import Footer from '../components/footer';
 import LoadingScreen from '../components/LoadingScreen';
 import {useAuth} from '../context/AuthContext';
-import {subscribeProfile, updateProfile} from '../services/userService';
+import useProfile from '../hooks/useProfile';
+import {updateProfile} from '../services/userService';
 import {seedCurrentUser} from '../services/seed';
 import {auth} from '../services/firebase';
 
@@ -38,8 +39,7 @@ const ProfileScreen = () => {
   const {user, signOut} = useAuth();
   const uid = user?.uid;
 
-  const [profile, setProfile] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const {profile, loading} = useProfile(uid);
   const [editField, setEditField] = useState(null);
   const [tempValue, setTempValue] = useState('');
   const [seeding, setSeeding] = useState(false);
@@ -50,19 +50,6 @@ const ProfileScreen = () => {
   const [newPw, setNewPw] = useState('');
   const [pwError, setPwError] = useState('');
   const [pwSubmitting, setPwSubmitting] = useState(false);
-
-  useEffect(() => {
-    if (!uid) {
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    const unsub = subscribeProfile(uid, p => {
-      setProfile(p);
-      setLoading(false);
-    });
-    return unsub;
-  }, [uid]);
 
   const handleSave = useCallback(async () => {
     if (!editField || !uid) {

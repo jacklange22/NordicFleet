@@ -15,7 +15,7 @@ import WaxInputComponent from '../components/waxinput.js';
 import SkiSaveButton from '../components/skisaveButton';
 import {useNavigation} from '@react-navigation/native';
 import {useAuth} from '../context/AuthContext';
-import {subscribeSkis} from '../services/skiService';
+import useSkis from '../hooks/useSkis';
 import {createWaxLog} from '../services/waxLogService';
 import {firestore} from '../services/firebase';
 
@@ -33,23 +33,8 @@ const WaxLogScreen = () => {
   const {user} = useAuth();
   const uid = user?.uid;
 
-  const [skisForUser, setSkisForUser] = useState([]);
-  const [loadingSkis, setLoadingSkis] = useState(true);
+  const {skis: skisForUser, loading: loadingSkis} = useSkis(uid);
   const [submitting, setSubmitting] = useState(false);
-
-  useEffect(() => {
-    if (!uid) {
-      setSkisForUser([]);
-      setLoadingSkis(false);
-      return;
-    }
-    setLoadingSkis(true);
-    const unsub = subscribeSkis(uid, skis => {
-      setSkisForUser(skis.filter(s => !s.retired));
-      setLoadingSkis(false);
-    });
-    return unsub;
-  }, [uid]);
 
   const dropdownItems = useMemo(
     () => skisForUser.map(ski => ({id: ski.id, label: ski.name || ski.id})),

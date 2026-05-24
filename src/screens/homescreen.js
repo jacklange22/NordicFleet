@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useMemo} from 'react';
+import React, {useState, useMemo} from 'react';
 import {SafeAreaView, View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator} from 'react-native';
 import ProfileButton from '../components/profilebutton.js';
 import Footer from '../components/footer.js';
@@ -6,33 +6,17 @@ import SearchBar from '../components/searchbar.js';
 import SkiItem from '../components/skiitem.js';
 import FilterMenu from '../components/filtermenu.js';
 import {useAuth} from '../context/AuthContext';
-import {subscribeSkis} from '../services/skiService';
+import useSkis from '../hooks/useSkis';
 
 const HomeScreen = () => {
   const {user} = useAuth();
   const uid = user?.uid;
 
-  const [userSkis, setUserSkis] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const {skis: userSkis, loading} = useSkis(uid);
   const [isFilterVisible, setIsFilterVisible] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [technique, setTechnique] = useState(null);
   const [condition, setCondition] = useState(null);
-
-  useEffect(() => {
-    if (!uid) {
-      setUserSkis([]);
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    const unsub = subscribeSkis(uid, skis => {
-      // Hide retired skis from Home by default.
-      setUserSkis(skis.filter(s => !s.retired));
-      setLoading(false);
-    });
-    return unsub;
-  }, [uid]);
 
   const toggleFilterMenu = () => {
     setIsFilterVisible(v => !v);
