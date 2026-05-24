@@ -1,87 +1,79 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, Button, ScrollView, StyleSheet, SafeAreaView } from 'react-native';
+import React, {useState} from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  ScrollView,
+  StyleSheet,
+  SafeAreaView,
+  Alert,
+} from 'react-native';
 import Dropdown from '../components/dropdown';
 import Footer from '../components/footer';
 import ProfileButton from '../components/profilebutton';
-import SaveButton from '../components/skisaveButton';
 import SkiSaveButton from '../components/skisaveButton';
-import { useNavigation } from '@react-navigation/native';
+import {useNavigation} from '@react-navigation/native';
 
 const AddSkiForm = () => {
-    const navigation = useNavigation();
- const [newbeSki, setNewbeSki] = useState([]);
- const [brand, setBrand] = useState('');
- const [model, setModel] = useState('');
- const [base, setBase] = useState('');
- const [build, setBuild] = useState('');
- const [grind, setGrind] = useState('');
- const [length, setLength] = useState('');
- const [name, setName] = useState('');
- const [flex, setFlex] = useState('');
- const [notes, setNotes] = useState('');
- const [technique, setTechnique] = useState('');
- const [type, setType] = useState('');
+  const navigation = useNavigation();
+  const [brand, setBrand] = useState('');
+  const [model, setModel] = useState('');
+  const [base, setBase] = useState('');
+  const [build, setBuild] = useState('');
+  const [grind, setGrind] = useState('');
+  const [length, setLength] = useState('');
+  const [name, setName] = useState('');
+  const [flex, setFlex] = useState('');
+  const [notes, setNotes] = useState('');
+  const [technique, setTechnique] = useState('');
+  const [type, setType] = useState('');
 
- const handleSubmit = () => {
-    if (brand && model && base && build && grind && length && name && flex && notes){
-    const ski = {
-      brand,
-      model,
-      base,
-      build,
-      grind,
-      length,
-      name,
-      flex,
-      notes,
-      length,
-      technique,
-    };
-    setNewbeSki([...newbeSki, ski]);
-    setBrand('');
-    setModel('');
-    setBase('');
-    setBuild('');
-    setGrind('');
-    setLength('');
-    setName('');
-    setFlex('');
-    setNotes('');
-    setTechnique('');
-    setType('');
-    navigation.navigate('SkiInfo', {
-        flex: flex,
-        grind: grind,
-        brand: brand,
-        model: model,
-        base: base,
-        build: build,
-        name: name,
-        notes: notes,
-        type: type,
-        technique, technique,
-        length, length,
-      } );
+  const handleSubmit = () => {
+    // Notes is optional. Everything else required.
+    if (
+      brand &&
+      model &&
+      base &&
+      build &&
+      grind &&
+      length &&
+      name &&
+      flex &&
+      technique &&
+      type
+    ) {
+      navigation.navigate('SkiInfo', {
+        flex,
+        grind,
+        brand,
+        model,
+        base,
+        build,
+        name,
+        notes,
+        type,
+        technique,
+        length,
+      });
     } else {
-        // You can alert the user or show an error message that all fields are required
-        alert('Please fill out all the fields.');}
- };
+      Alert.alert('Please fill out all required fields.');
+    }
+  };
 
- return (
+  return (
     <SafeAreaView style={styles.safeArea}>
-        <View style={styles.header}>
+      <View style={styles.header}>
         <Text style={styles.headerText}>New Ski!</Text>
         <ProfileButton />
       </View>
       <ScrollView style={styles.scrollViewContent}>
-      
         <View style={styles.infoContainer}>
           <Text style={styles.label}>Brand:</Text>
           <Dropdown
-          placeholder="Select a Brand"
-          options={['Salomon','Atomic','Fisher','Madshus','Rossignol']}
-          onSelect={setBrand}
-          value={brand}
+            placeholder="Select a Brand"
+            options={['Salomon', 'Atomic', 'Fischer', 'Madshus', 'Rossignol']}
+            onSelect={setBrand}
+            value={brand}
           />
           <Text style={styles.label}>Model:</Text>
           <TextInput
@@ -89,6 +81,7 @@ const AddSkiForm = () => {
             value={model}
             onChangeText={setModel}
             placeholder="Enter model"
+            placeholderTextColor="#888"
           />
           <Text style={styles.label}>Base:</Text>
           <TextInput
@@ -96,18 +89,29 @@ const AddSkiForm = () => {
             value={base}
             onChangeText={setBase}
             placeholder="Enter base"
+            placeholderTextColor="#888"
           />
           <Text style={styles.label}>Technique:</Text>
-          <Dropdown placeholder="Technique?" options={['skate','classic']} onSelect={setTechnique} value = {technique}/>
+          <Dropdown
+            placeholder="Technique?"
+            options={['Skate', 'Classic']}
+            onSelect={setTechnique}
+            value={technique}
+          />
           <Text style={styles.label}>Type:</Text>
-          <Dropdown placeholder="Type?" options={['warm','universal','cold','zero']}
-          onSelect={setType} value = {type}/>
+          <Dropdown
+            placeholder="Type?"
+            options={['warm', 'universal', 'cold', 'zero']}
+            onSelect={setType}
+            value={type}
+          />
           <Text style={styles.label}>Build:</Text>
           <TextInput
             style={styles.input}
             value={build}
             onChangeText={setBuild}
             placeholder="Enter build"
+            placeholderTextColor="#888"
           />
           <Text style={styles.label}>Grind:</Text>
           <TextInput
@@ -115,6 +119,7 @@ const AddSkiForm = () => {
             value={grind}
             onChangeText={setGrind}
             placeholder="Enter grind"
+            placeholderTextColor="#888"
           />
           <Text style={styles.label}>Length:</Text>
           <TextInput
@@ -122,6 +127,8 @@ const AddSkiForm = () => {
             value={length}
             onChangeText={setLength}
             placeholder="Enter length"
+            keyboardType="numeric"
+            placeholderTextColor="#888"
           />
           <Text style={styles.label}>Name:</Text>
           <TextInput
@@ -129,6 +136,7 @@ const AddSkiForm = () => {
             value={name}
             onChangeText={setName}
             placeholder="Enter name"
+            placeholderTextColor="#888"
           />
           <Text style={styles.label}>Flex:</Text>
           <TextInput
@@ -136,71 +144,65 @@ const AddSkiForm = () => {
             value={flex}
             onChangeText={setFlex}
             placeholder="Enter flex"
+            keyboardType="numeric"
+            placeholderTextColor="#888"
           />
-          <Text style={styles.label}>Notes:</Text>
+          <Text style={styles.label}>Notes (optional):</Text>
           <TextInput
             style={styles.input}
             value={notes}
             onChangeText={setNotes}
             placeholder="Enter notes"
+            placeholderTextColor="#888"
           />
-          <SkiSaveButton onPress={handleSubmit}/>
-        </View>
-        <View>
+          <SkiSaveButton onPress={handleSubmit} />
         </View>
       </ScrollView>
-      <Footer style={styles.Footer} />
+      <Footer />
     </SafeAreaView>
- );
+  );
 };
 
 const styles = StyleSheet.create({
-    safeArea: {
-        flex: 1,
-        backgroundColor: '#000', // Match the background color with the rest of the screen if needed
-      },
- scrollViewContent: {
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#000',
+  },
+  scrollViewContent: {
     width: '100%',
     backgroundColor: 'black',
- },
- infoContainer: {
+  },
+  infoContainer: {
     width: '100%',
-    height: '100%'
- },
- header: {
+    height: '100%',
+    paddingHorizontal: 16,
+    paddingBottom: 80,
+  },
+  header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16, // Only horizontal padding
-    backgroundColor: '#282828', // Set the background color of the header
-    height: 50, // Set the height of the header
-    // Ensure there is no top margin/padding if you want content against the edges
+    paddingHorizontal: 16,
+    backgroundColor: '#282828',
+    height: 50,
   },
   headerText: {
     fontSize: 24,
     color: '#fff',
   },
- input: {
+  input: {
     height: 40,
     borderColor: 'gray',
     borderWidth: 1,
     color: 'white',
     paddingLeft: 10,
- },
- label: {
+    borderRadius: 6,
+  },
+  label: {
     color: 'white',
     fontSize: 16,
     marginTop: 10,
- },
- Footer: {
-    flex: 0.1,
-    backgroundColor: '#fff',
-    borderTopWidth: 1,
-    borderTopColor: 'grey',
-    alignItems: 'center',
-    justifyContent: 'center',
- },
+  },
 });
 
 export default AddSkiForm;
-

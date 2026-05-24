@@ -1,77 +1,92 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
+import React from 'react';
+import {View, Text, TextInput, TouchableOpacity, StyleSheet} from 'react-native';
 import Dropdown from './dropdown';
 
-const RatingInput = ({ label, value, onValueChange }) => {
-    return (
-      <View style={styles.ratingContainer}>
-        <Text style={styles.label}>{label}</Text>
-        <View style={styles.numberInputContainer}>
-          <TouchableOpacity
-            style={styles.numberButton}
-            onPress={() => onValueChange(Math.max(1, value - 1))}
-          >
-            <Text style={styles.numberButtonText}>-</Text>
-          </TouchableOpacity>
-          <Text style={styles.numberInput}>{value}</Text>
-          <TouchableOpacity
-            style={styles.numberButton}
-            onPress={() => onValueChange(Math.min(4, value + 1))} // max value is 4
-          >
-            <Text style={styles.numberButtonText}>+</Text>
-          </TouchableOpacity>
-        </View>
+const BINDER_OPTIONS = [
+  'none',
+  'VG swix binder',
+  'Toko Base',
+  'GS base AT',
+  'GS base super',
+  'Chola',
+  'K-base',
+  'Rode Blackbase',
+  'KS base',
+];
+
+const RatingInput = ({label, value, onValueChange, max = 4}) => {
+  return (
+    <View style={styles.ratingContainer}>
+      <Text style={styles.label}>{label}</Text>
+      <View style={styles.numberInputContainer}>
+        <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityLabel={`Decrease ${label}`}
+          style={styles.numberButton}
+          onPress={() => onValueChange(Math.max(1, value - 1))}>
+          <Text style={styles.numberButtonText}>-</Text>
+        </TouchableOpacity>
+        <Text style={styles.numberInput}>{value}</Text>
+        <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityLabel={`Increase ${label}`}
+          style={styles.numberButton}
+          onPress={() => onValueChange(Math.min(max, value + 1))}>
+          <Text style={styles.numberButtonText}>+</Text>
+        </TouchableOpacity>
       </View>
-    );
-  };
-  
+    </View>
+  );
+};
 
-const WaxInputComponent = ({ ski, technique, onsave }) => {
-    const [binder, setBinder] = useState(false);
-  const [kickLayers, setKickLayers] = useState(1);
-  const [kickWax, setKickWax] = useState('');
-  const [glideLayers, setGlideLayers] = useState(1);
-  const [glideWax, setGlideWax] = useState(['']); // Array for each layer's wax
-  const [notes, setNotes] = useState('');
-
-  const handleBinderSelect = (itemValue) => {
-    setBinder(itemValue);
-  };
-
-  binderOptions = ['none','VG swix binder','Toko Base','GS base AT','GS base super','Chola','K-base','Rode Blackbase','KS base']
-  
-  const handleSave = () => {
-    // Create the wax data object
-    const waxData = {
-      binder,
-      kickLayers,
-      kickWax,
-      glideLayers,
-      glideWax, // This will be an array of strings
-      notes
-    };
-
-    // Pass the wax data to the onSave function provided by the parent component
-    onSave(waxData);
+/**
+ * Controlled wax input component.
+ * The parent screen owns the per-ski form state and passes it in as `value`,
+ * receiving updates via `onChange(partial)`. The component never holds its
+ * own copy of the data.
+ */
+const WaxInputComponent = ({ski, technique, value, onChange}) => {
+  const safeValue = value || {
+    binder: '',
+    kickLayers: 1,
+    kickWax: '',
+    glideLayers: 1,
+    glideWaxes: [''],
+    notes: '',
   };
 
-  useEffect(() => {
-    setGlideWax(oldGlideWax => {
-      const newGlideWax = Array(glideLayers).fill('');
-      oldGlideWax.forEach((wax, index) => {
-        if (index < glideLayers) {
-          newGlideWax[index] = wax;
-        }
-      });
-      return newGlideWax;
+  const {
+    binder,
+    kickLayers,
+    kickWax,
+    glideLayers,
+    glideWaxes,
+    notes,
+  } = safeValue;
+
+  const update = partial => onChange && onChange(partial);
+
+  const handleBinderSelect = itemValue => update({binder: itemValue});
+
+  const handleKickLayersChange = next => update({kickLayers: next});
+
+  const handleGlideLayersChange = next => {
+    const resized = Array(next).fill('');
+    (glideWaxes || []).forEach((wax, idx) => {
+      if (idx < next) {
+        resized[idx] = wax;
+      }
     });
-  }, [glideLayers]);
+    update({glideLayers: next, glideWaxes: resized});
+  };
 
-  const [selectedLayer, setSelectedLayer] = useState(null);
-
-
-  const handleLayerSelect = (selectedLayers) => {
-    setSelectedLayer(selectedLayers); // Update the state with the selected layer
+  const handleGlideWaxChange = (idx, text) => {
+    const next = (glideWaxes || []).slice();
+    while (next.length <= idx) {
+      next.push('');
+    }
+    next[idx] = text;
+    update({glideWaxes: next});
   };
 
   const renderGlideLayerInputs = () => {
@@ -79,61 +94,67 @@ const WaxInputComponent = ({ ski, technique, onsave }) => {
     for (let i = 0; i < glideLayers; i++) {
       inputs.push(
         <TextInput
-          key={i} // Important for React list rendering
+          key={i}
           style={[styles.input, styles.waxInput]}
           placeholder={`Glide Layer ${i + 1} `}
           placeholderTextColor={'#A9A9A9'}
-          // You can also manage state for each layer's value if needed
-        />
+          value={glideWaxes[i] || ''}
+          onChangeText={text => handleGlideWaxChange(i, text)}
+        />,
       );
     }
     return inputs;
   };
 
+  const techniqueNormalized = (technique || '').toLowerCase();
+
   return (
     <View style={styles.skiInputContainer}>
       <Text style={styles.skiName}>{ski}</Text>
 
-             
-
-      {/* Glide and Kick Wax inputs for Classic technique */}
-      {technique === 'Classic' && (
+      {techniqueNormalized === 'classic' && (
         <>
-              <View style={styles.dropdownContainer}>
-      <Text style={styles.label}>Binder:</Text>
-      <Dropdown label="Binder" options={binderOptions} onSelect={handleBinderSelect} />
-      </View>
-        <RatingInput 
-        label="Kick Layers" 
-        value={kickLayers} 
-        onValueChange={setKickLayers} 
-      />
+          <View style={styles.dropdownContainer}>
+            <Text style={styles.label}>Binder:</Text>
+            <Dropdown
+              options={BINDER_OPTIONS}
+              onSelect={handleBinderSelect}
+              placeholder="Choose binder"
+            />
+          </View>
+          <RatingInput
+            label="Kick Layers"
+            value={kickLayers}
+            onValueChange={handleKickLayersChange}
+          />
           <TextInput
             style={[styles.input, styles.waxInput]}
             placeholder="Kickwax"
             value={kickWax}
-            onChangeText={setKickWax}
+            onChangeText={text => update({kickWax: text})}
             placeholderTextColor={'#A9A9A9'}
           />
         </>
       )}
-      <RatingInput 
-        label="Glide Layers" 
-        value={glideLayers} 
-        onValueChange={setGlideLayers} 
+      <RatingInput
+        label="Glide Layers"
+        value={glideLayers}
+        onValueChange={handleGlideLayersChange}
       />
-        {renderGlideLayerInputs()}
+      {renderGlideLayerInputs()}
 
-      {/* Notes input for both Classic and Skate */}
       <TextInput
         style={[styles.input, styles.notesInput]}
         placeholder="Notes"
         multiline
         value={notes}
-        onChangeText={setNotes}
+        onChangeText={text => update({notes: text})}
         placeholderTextColor={'#A9A9A9'}
       />
-      
+      {/* binder shown as muted helper text when set, so the user can confirm */}
+      {!!binder && techniqueNormalized === 'classic' && (
+        <Text style={styles.helperText}>Binder: {binder}</Text>
+      )}
     </View>
   );
 };
@@ -197,22 +218,23 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   notesInput: {
-    minHeight: 60, // enough height for multiline notes
+    minHeight: 60,
   },
   dropdownContainer: {
-    flexDirection: 'row', // Align items in a row
-    alignItems: 'center', // Center items vertically
-    justifyContent: 'space-between', // Space between the label and dropdown
-    padding: 10, // Add some padding for spacing
-    // Set other styling as needed for your layout
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 10,
   },
   dropdown: {
-    // Style for the dropdown
-    flexGrow: 1, // Allow dropdown to grow to fill space
-    marginLeft: 10, // Add space between the label and dropdown
-    // Set other styling as needed
+    flexGrow: 1,
+    marginLeft: 10,
   },
-  // Add any other styles you need here
+  helperText: {
+    color: '#999',
+    fontSize: 12,
+    marginTop: 4,
+  },
 });
 
 export default WaxInputComponent;

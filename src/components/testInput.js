@@ -1,22 +1,24 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
+import React from 'react';
+import {View, Text, TextInput, TouchableOpacity, StyleSheet} from 'react-native';
 
-const RatingInput = ({ label, value, onValueChange }) => {
+const RatingInput = ({label, value, onValueChange}) => {
   return (
     <View style={styles.ratingContainer}>
       <Text style={styles.label}>{label}</Text>
       <View style={styles.numberInputContainer}>
         <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityLabel={`Decrease ${label}`}
           style={styles.numberButton}
-          onPress={() => onValueChange(Math.max(1, value - 1))}
-        >
+          onPress={() => onValueChange(Math.max(1, value - 1))}>
           <Text style={styles.numberButtonText}>-</Text>
         </TouchableOpacity>
         <Text style={styles.numberInput}>{value}</Text>
         <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityLabel={`Increase ${label}`}
           style={styles.numberButton}
-          onPress={() => onValueChange(Math.min(10, value + 1))}
-        >
+          onPress={() => onValueChange(Math.min(10, value + 1))}>
           <Text style={styles.numberButtonText}>+</Text>
         </TouchableOpacity>
       </View>
@@ -24,71 +26,96 @@ const RatingInput = ({ label, value, onValueChange }) => {
   );
 };
 
-const SkiInputComponent = ({ ski, technique }) => {
-  const [glideWax, setGlideWax] = useState('');
-  const [glideRating, setGlideRating] = useState(5);
+/**
+ * Controlled test-input component. The parent screen owns the form state.
+ * `value` is the object shape: { glideWax, kickWax, glideRating, kickRating,
+ * stabilityRating, climbingRating, notes }.
+ */
+const SkiInputComponent = ({ski, technique, value, onChange}) => {
+  const safeValue = value || {
+    glideWax: '',
+    kickWax: '',
+    glideRating: 5,
+    kickRating: 5,
+    stabilityRating: 5,
+    climbingRating: 5,
+    notes: '',
+  };
 
-  const [kickWax, setKickWax] = useState('');
-  const [kickRating, setKickRating] = useState(5);
+  const {
+    glideWax,
+    kickWax,
+    glideRating,
+    kickRating,
+    stabilityRating,
+    climbingRating,
+    notes,
+  } = safeValue;
 
-  const [stabilityRating, setStabilityRating] = useState(5);
-  const [climbingRating, setClimbingRating] = useState(5);
-
-  const [notes, setNotes] = useState('');
-
-  console.log('component',ski,technique)
+  const update = partial => onChange && onChange(partial);
+  const techniqueNormalized = (technique || '').toLowerCase();
 
   return (
     <View style={styles.skiInputContainer}>
       <Text style={styles.skiName}>{ski}</Text>
 
-      {/* Glide and Kick Wax inputs for Classic technique */}
-      {technique === 'Classic' && (
+      {techniqueNormalized === 'classic' && (
         <>
           <TextInput
             style={[styles.input, styles.waxInput]}
             placeholder="Glidewax"
             value={glideWax}
-            onChangeText={setGlideWax}
+            onChangeText={text => update({glideWax: text})}
             placeholderTextColor={'#A9A9A9'}
           />
           <TextInput
             style={[styles.input, styles.waxInput]}
             placeholder="Kickwax"
             value={kickWax}
-            onChangeText={setKickWax}
+            onChangeText={text => update({kickWax: text})}
             placeholderTextColor={'#A9A9A9'}
           />
-          <RatingInput label="Kick" value={kickRating} onValueChange={setKickRating} />
+          <RatingInput
+            label="Kick"
+            value={kickRating}
+            onValueChange={v => update({kickRating: v})}
+          />
         </>
       )}
 
-      {/* Glide Rating for both Classic and Skate */}
-      
-
-      {/* Kick Rating and Stability/Climbing Ratings for Skate technique */}
-      {technique === 'Skate' && (
+      {techniqueNormalized === 'skate' && (
         <>
           <TextInput
             style={[styles.input, styles.waxInput]}
             placeholder="Glidewax"
             value={glideWax}
-            onChangeText={setGlideWax}
+            onChangeText={text => update({glideWax: text})}
             placeholderTextColor={'#A9A9A9'}
           />
-          <RatingInput label="Stability" value={stabilityRating} onValueChange={setStabilityRating} />
-          <RatingInput label="Climbing" value={climbingRating} onValueChange={setClimbingRating} />
+          <RatingInput
+            label="Stability"
+            value={stabilityRating}
+            onValueChange={v => update({stabilityRating: v})}
+          />
+          <RatingInput
+            label="Climbing"
+            value={climbingRating}
+            onValueChange={v => update({climbingRating: v})}
+          />
         </>
       )}
-      <RatingInput label="Glide" value={glideRating} onValueChange={setGlideRating} />
+      <RatingInput
+        label="Glide"
+        value={glideRating}
+        onValueChange={v => update({glideRating: v})}
+      />
 
-      {/* Notes input for both Classic and Skate */}
       <TextInput
         style={[styles.input, styles.notesInput]}
         placeholder="Notes"
         multiline
         value={notes}
-        onChangeText={setNotes}
+        onChangeText={text => update({notes: text})}
         placeholderTextColor={'#A9A9A9'}
       />
     </View>
@@ -154,9 +181,8 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   notesInput: {
-    minHeight: 60, // enough height for multiline notes
+    minHeight: 60,
   },
-  // Add any other styles you need here
 });
 
 export default SkiInputComponent;

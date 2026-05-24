@@ -1,205 +1,181 @@
-import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, FlatList, Button,  ScrollView, CheckBox, SafeAreaView, ImageBackground, TextInput } from 'react-native';
-import Dropdown from '../components/dropdown';
+import React, {useState, useEffect, useMemo} from 'react';
+import {
+  StyleSheet,
+  Text,
+  View,
+  ScrollView,
+  SafeAreaView,
+} from 'react-native';
 import ProfileButton from '../components/profilebutton';
 import Footer from '../components/footer';
-import testData from '../testingdata.json'; // Ensure you have the correct path
+import testData from '../testingdata.json';
 import MultiSelectDropdown from '../components/checkboxDropdown';
-import InputField from '../components/inputfield';
 import WaxInputComponent from '../components/waxinput.js';
 import SkiSaveButton from '../components/skisaveButton';
+import {useNavigation} from '@react-navigation/native';
+
+const emptyWaxEntry = () => ({
+  binder: '',
+  kickLayers: 1,
+  kickWax: '',
+  glideLayers: 1,
+  glideWaxes: [''],
+  notes: '',
+});
 
 const WaxLogScreen = () => {
-  const getUserSkis = (userId) => {
-    const user = testData.users.find(user => user.id === userId);
-    return user ? user.skis.map(ski => ski.id) : [];
+  const navigation = useNavigation();
+
+  // userId still hard-coded here in Phase 1 — Phase 3 swaps it for AuthContext.
+  const userId = 'user1';
+
+  const skisForUser = useMemo(() => {
+    const user = testData.users.find(u => u.id === userId);
+    return user ? user.skis : [];
+  }, [userId]);
+
+  // checkboxDropdown now expects {id, label} items.
+  const dropdownItems = useMemo(
+    () => skisForUser.map(ski => ({id: ski.id, label: ski.name})),
+    [skisForUser],
+  );
+
+  const [selectedSkis, setSelectedSkis] = useState([]); // array of ski IDs
+  // Lifted state — one wax-log entry per selected ski, keyed by ski ID.
+  const [waxLog, setWaxLog] = useState({});
+  const [skiWaxEntries, setSkiWaxEntries] = useState([]);
+
+  const getTechniqueBySkiId = skiId => {
+    const ski = skisForUser.find(s => s.id === skiId);
+    return ski ? ski.technique : null;
   };
-  const handleSavePress = () => {
-    console.log('Save button clicked');
-    };
-  
-  const userSkis = getUserSkis("user1"); // This will now be an array of ski IDs for user1
-  
-  const handleSelectionDone = (items) => {
-      // Update the state with the selected items
-      setSelectedSkis(items);
-      console.log(items); // Log the selected items to see if it's correct
-      // Optionally, perform other actions like navigating away or updating a server via API
-    };
 
-    const getTechniqueBySkiId = (userId, skiId) => {
-      // Assuming 'testData' is your data structure
-      const user = testData.users.find(user => user.id === userId);
-      if (!user) return null;
-    
-      const ski = user.skis.find(ski => ski.id === skiId);
-      return ski ? ski.technique : null;
-    };
-    
-    // Usage
-    
-
-
-  const [selectedSkis, setSelectedSkis] = useState([]); // Array of selected ski IDs
-  const [testingLog, setTestingLog] = useState({
-    humidity: '',
-    temperature: '',
-    snowType: '',
-    surface: '',
-  }); // Testing log data
-  const [skiTestEntries, setSkiTestEntries] = useState([]); // Array of ski test entry objects
-
-  // Generate ski test entries for selected skis
+  // Rebuild the wax-entry map when the selected-ski set changes.
   useEffect(() => {
-    const generateSkiWaxEntries = () => {
-      const entries = [];
-      for (const ski of selectedSkis) {
-        const entry = {
-          id: ski,
-          ski,
-          glidewax: '',
-          kickwax: '',
-          notes: '',
-        };
-        entries.push(entry);
+    setWaxLog(prev => {
+      const next = {};
+      for (const skiId of selectedSkis) {
+        next[skiId] = prev[skiId] || emptyWaxEntry();
       }
-      setSkiTestEntries(entries);
-    };
-
-    generateSkiWaxEntries();
+      return next;
+    });
+    setSkiWaxEntries(selectedSkis);
   }, [selectedSkis]);
 
-  // Handle changes to testing log data
-  const handleWaxingLogChange = (field, value) => {
-    setWaxingLog((prevWaxLog) => ({
-      ...prevWaxLog,
-      [field]: value,
+  const handleSelectionDone = items => {
+    setSelectedSkis(items);
+  };
+
+  const handleEntryChange = (skiId, partial) => {
+    setWaxLog(prev => ({
+      ...prev,
+      [skiId]: {...prev[skiId], ...partial},
     }));
   };
 
-  // Handle changes to ski test entry data
-  const handleSkiTestEntryChange = (entryId, field, value) => {
-    setSkiTestEntries((prevSkiTestEntries) => {
-      const updatedEntries = prevSkiTestEntries.map((entry) => {
-        if (entry.id === entryId) {
-          return {
-            ...entry,
-            [field]: value,
-          };
-        }
-        return entry;
-      });
-      return updatedEntries;
-    });
+  const handleSavePress = () => {
+    // Phase 4 wires this to Firestore. Phase 1 just collects the data.
+    const payload = selectedSkis.map(skiId => ({
+      skiId,
+      ...waxLog[skiId],
+    }));
+    // eslint-disable-next-line no-undef
+    if (typeof __DEV__ !== 'undefined' && __DEV__) {
+      // intentional: payload would otherwise be unused in Phase 1
+      void payload;
+    }
+    navigation.navigate('Home');
   };
-
-  // Submit testing log
-  const handleSubmitTestingLog = () => {
-    // TODO: Implement API call to submit testing log
-    alert('Testing log submitted!');
-  };
-
-  const snowOptions = ['Old', 'New', 'Manmade'];
-  const SurfaceOptions = ['hardpack','Powder','Corduroy','Slush']
-
-  const handleSnowTypeSelect = (selectedSnowType) => {
-    handleTestingLogChange('snowType', selectedSnowType);
-  };
-  const handleSave = (waxData) => {
-    console.log('Wax data to submit:', waxData);
-    // Submit to API or further processing
-  };
-
 
   return (
     <SafeAreaView style={styles.safeArea}>
-    <View style={styles.container}>
+      <View style={styles.container}>
         <View style={styles.header}>
           <Text style={styles.headerText}>Waxing Log</Text>
           <ProfileButton />
-
         </View>
-    </View>
-    <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContentContainer}>
-    <View style={styles.dropdownContainer}>
-        <Text style={styles.dropdownLabel}>Skis:</Text>
-      <MultiSelectDropdown items={userSkis} onSelectionDone={handleSelectionDone} label={'Select Skis Waxed'} />
-      
-<Text style={styles.dropdownLabel}>Wax:</Text>
-{selectedSkis.map((skiId) => {
-          const technique = getTechniqueBySkiId('user1',skiId);
-          console.log('map',skiId,technique)
-          return (
-            <WaxInputComponent
-              key={skiId}
-              ski={skiId}
-              technique={technique}
-              // Include any other props your SkiInputComponent needs
-            />
-          );
-        })}
-        
       </View>
-      <SkiSaveButton onPress={handleSavePress} /> 
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContentContainer}>
+        <View style={styles.dropdownContainer}>
+          <Text style={styles.dropdownLabel}>Skis:</Text>
+          <MultiSelectDropdown
+            items={dropdownItems}
+            onSelectionDone={handleSelectionDone}
+            label={'Select Skis Waxed'}
+          />
+
+          <Text style={styles.dropdownLabel}>Wax:</Text>
+          {skiWaxEntries.map(skiId => {
+            const technique = getTechniqueBySkiId(skiId);
+            const ski = skisForUser.find(s => s.id === skiId);
+            return (
+              <WaxInputComponent
+                key={skiId}
+                ski={ski ? ski.name : skiId}
+                technique={technique}
+                value={waxLog[skiId] || emptyWaxEntry()}
+                onChange={partial => handleEntryChange(skiId, partial)}
+              />
+            );
+          })}
+        </View>
+        <SkiSaveButton onPress={handleSavePress} />
       </ScrollView>
       <View style={styles.Footer}>
-      <Footer />
-        </View>
-      </SafeAreaView>
-    );
+        <Footer />
+      </View>
+    </SafeAreaView>
+  );
 };
 
-    const styles = StyleSheet.create({
-        safeArea: {
-            flex: 1,
-            backgroundColor: '#000', // Match the background color with the rest of the screen if needed
-          },
-
-        container: {
-          paddingHorizontal: 0,
-        },
-        header: {
-            flexDirection: 'row',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            paddingHorizontal: 16, // Only horizontal padding
-            backgroundColor: '#282828', // Set the background color of the header
-            height: 50, // Set the height of the header
-            // Ensure there is no top margin/padding if you want content against the edges
-          },
-          headerText: {
-            fontSize: 24,
-            color: '#fff',
-          },
-        dropdownContainer: {
-          paddingHorizontal: 10,
-          paddingVertical: 20,
-          textAlignVertical : 'center',
-        },
-        dropdownLabel: {
-          fontSize: 16,
-          fontWeight: 'bold',
-          color: '#fff',
-        },
-        checkboxText: {
-          fontSize: 14,
-        },
-        Footer: {
-            position: 'absolute', // Position your footer absolutely
-            left: 0,
-            right: 0,
-            bottom: 35, // At the bottom of the SafeAreaView
-            // Add any additional styling for your footer
-          },
-          scrollView: {
-            // Styles for the ScrollView itself
-            flex: 1,
-          },
-          scrollContentContainer: {
-            paddingBottom: 100, // Or any value that gives you the desired scroll space
-            paddingTop: 0,
-          },
-      });
-
+const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#000',
+  },
+  container: {
+    paddingHorizontal: 0,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    backgroundColor: '#282828',
+    height: 50,
+  },
+  headerText: {
+    fontSize: 24,
+    color: '#fff',
+  },
+  dropdownContainer: {
+    paddingHorizontal: 10,
+    paddingVertical: 20,
+    textAlignVertical: 'center',
+  },
+  dropdownLabel: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  checkboxText: {
+    fontSize: 14,
+  },
+  Footer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 35,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContentContainer: {
+    paddingBottom: 100,
+    paddingTop: 0,
+  },
+});
 
 export default WaxLogScreen;

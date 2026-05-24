@@ -1,34 +1,37 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, Modal, ScrollView, StyleSheet } from 'react-native';
+import React, {useState} from 'react';
+import {View, Text, TouchableOpacity, Modal, ScrollView, StyleSheet} from 'react-native';
 
-const MultiSelectDropdown = ({ items, onSelectionDone, label }) => {
+/**
+ * Multi-select dropdown.
+ *
+ * `items` is an array of `{ id, label }` objects.
+ * `onSelectionDone(selectedIds)` receives the array of selected IDs on Done.
+ */
+const MultiSelectDropdown = ({items, onSelectionDone, label}) => {
   const [isVisible, setIsVisible] = useState(false);
-  const [selectedItems, setSelectedItems] = useState([]);
+  const [selectedIds, setSelectedIds] = useState([]);
 
-  const handleSelectItem = (item) => {
-    setSelectedItems((prevSelectedItems) => {
-      let newSelectedItems;
-      if (prevSelectedItems.includes(item)) {
-        // If item is already selected, remove it
-        newSelectedItems = prevSelectedItems.filter((selectedItem) => selectedItem !== item);
-      } else {
-        // If item is not selected, add it
-        newSelectedItems = [...prevSelectedItems, item];
+  const handleSelectItem = id => {
+    setSelectedIds(prev => {
+      if (prev.includes(id)) {
+        return prev.filter(x => x !== id);
       }
-      console.log(newSelectedItems); // Log the new state to see if it's correct
-      return newSelectedItems;
+      return [...prev, id];
     });
   };
-  
 
   const handleDone = () => {
-    onSelectionDone(selectedItems);
+    onSelectionDone(selectedIds);
     setIsVisible(false);
   };
 
   return (
     <View style={styles.container}>
-      <TouchableOpacity style={styles.button} onPress={() => setIsVisible(true)}>
+      <TouchableOpacity
+        accessibilityRole="button"
+        accessibilityLabel={label}
+        style={styles.button}
+        onPress={() => setIsVisible(true)}>
         <Text style={styles.buttonText}>{label}</Text>
       </TouchableOpacity>
 
@@ -36,27 +39,30 @@ const MultiSelectDropdown = ({ items, onSelectionDone, label }) => {
         animationType="slide"
         transparent={true}
         visible={isVisible}
-        onRequestClose={() => setIsVisible(false)}
-      >
+        onRequestClose={() => setIsVisible(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.modal}>
             <ScrollView style={styles.scrollView}>
-              {items.map((item) => (
+              {(items || []).map(item => (
                 <TouchableOpacity
-                  key={item}
+                  accessibilityRole="checkbox"
+                  accessibilityLabel={item.label}
+                  accessibilityState={{checked: selectedIds.includes(item.id)}}
+                  key={item.id}
                   style={styles.item}
-                  onPress={() => handleSelectItem(item)}
-                >
-                  <Text style={styles.itemText}>{item}</Text>
-                  {/* Ensure the checkmark is within a Text component */}
+                  onPress={() => handleSelectItem(item.id)}>
+                  <Text style={styles.itemText}>{item.label}</Text>
                   <Text style={styles.itemCheck}>
-                    {selectedItems.includes(item) ? '✓' : ''}
+                    {selectedIds.includes(item.id) ? '✓' : ''}
                   </Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>
-            <TouchableOpacity style={styles.doneButton} onPress={handleDone}>
-              {/* Ensure the 'Done' text is within a Text component */}
+            <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel="Done"
+              style={styles.doneButton}
+              onPress={handleDone}>
               <Text style={styles.doneButtonText}>Done</Text>
             </TouchableOpacity>
           </View>
@@ -67,94 +73,82 @@ const MultiSelectDropdown = ({ items, onSelectionDone, label }) => {
 };
 
 const styles = StyleSheet.create({
-    container: {
-        margin: 10,
-        paddingVertical: 8,
-        paddingHorizontal: 16,
-        backgroundColor: '#333', // Dark background
-        borderRadius: 30, // Rounded corners
-        minWidth: 200, // Minimum width
-        borderWidth: 1,
-        borderColor: '#555', // Slightly lighter border for subtle effect
-      },
-    button: {
-        flexDirection: 'row', // Align 'Skis Waxed' and the icon on the same line
-      justifyContent: 'space-between', // Push 'Skis Waxed' and the icon to opposite ends
-      alignItems: 'center', // Center items vertically
+  container: {
+    margin: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    backgroundColor: '#333',
+    borderRadius: 30,
+    minWidth: 200,
+    borderWidth: 1,
+    borderColor: '#555',
+  },
+  button: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  buttonText: {
+    fontSize: 16,
+    color: '#fff',
+  },
+  modal: {
+    margin: 20,
+    width: '90%',
+    backgroundColor: '#222',
+    borderRadius: 20,
+    padding: 35,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
     },
-    buttonText: {
-      // The text inside the button
-      fontSize: 16,
-      color: '#fff',
-    },
-    modal: {
-      // The modal view
-      margin: 20,
-      width: '90%', // Take up 90% of the screen width
-      backgroundColor: '#222', // Dark background for the modal
-      borderRadius: 20, // Rounded borders for the modal
-      padding: 35,
-      alignItems: 'center',
-      shadowColor: '#000',
-      shadowOffset: {
-        width: 0,
-        height: 2,
-      },
-      shadowOpacity: 0.25,
-      shadowRadius: 4,
-      elevation: 5,
-    },
-    item: {
-        // The individual item in the list
-        flexDirection: 'row',
-        justifyContent: 'space-between', // Spread the items across the container
-        paddingVertical: 20,
-        borderBottomWidth: 1, // For a separator effect
-        borderBottomColor: '#444', // Slightly lighter than the background
-        width: '100%', // Ensure the item takes the full width
-      },
-      itemText: {
-        // The text of the item
-        color: '#ddd', // Light grey text color
-        fontSize: 16,
-        flex: 1, // This should allow text to take up all available space
-        textAlign: 'left', // Align text to the left
-      },
-      
-    itemCheck: {
-      // The checkmark for the selected item
-      color: '#fff', // White checkmark for better visibility
-      fontSize: 16,
-      fontWeight: 'bold',
-      marginLeft: 10, // Some space between the text and the checkmark
-    },
-    doneButton: {
-      // The 'Done' button below the list
-      marginTop: 10,
-      backgroundColor: '#282828', // A green color for confirmation actions
-      borderRadius: 20,
-      padding: 10,
-      elevation: 2,
-    },
-    doneButtonText: {
-      // The text of the 'Done' button
-      color: '#fff',
-      fontWeight: 'bold',
-      textAlign: 'center',
-      fontSize: 16,
-    },
-    // Add more styles if needed
-    modalOverlay: {
-        flex: 1,
-        justifyContent: 'flex-end',
-        backgroundColor: 'rgba(0, 0, 0, 0.5)', // Dim the background
-      },
-      scrollView: {
-        width: '100%',
-      },
-  });
-  
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  item: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#444',
+    width: '100%',
+  },
+  itemText: {
+    color: '#ddd',
+    fontSize: 16,
+    flex: 1,
+    textAlign: 'left',
+  },
+  itemCheck: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginLeft: 10,
+  },
+  doneButton: {
+    marginTop: 10,
+    backgroundColor: '#282828',
+    borderRadius: 20,
+    padding: 10,
+    elevation: 2,
+  },
+  doneButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    textAlign: 'center',
+    fontSize: 16,
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  scrollView: {
+    width: '100%',
+  },
+});
 
 export default MultiSelectDropdown;
-
-
