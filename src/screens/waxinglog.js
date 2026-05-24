@@ -81,13 +81,21 @@ const WaxLogScreen = () => {
     }
     setSubmitting(true);
     const date = firestore.FieldValue.serverTimestamp();
-    const writes = selectedSkis.map(skiId =>
-      createWaxLog(uid, {
+    const writes = selectedSkis.map(skiId => {
+      const entry = waxLog[skiId] || {};
+      const technique = (getTechniqueBySkiId(skiId) || '').toLowerCase();
+      const payload = {
         skiId,
         date,
-        ...waxLog[skiId],
-      }),
-    );
+        ...entry,
+      };
+      // Skate skis have no kick wax.
+      if (technique === 'skate') {
+        payload.kickLayers = 0;
+        payload.kickWax = null;
+      }
+      return createWaxLog(uid, payload);
+    });
     try {
       await Promise.all(writes);
     } catch (err) {

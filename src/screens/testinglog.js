@@ -92,17 +92,27 @@ const TestingLogScreen = () => {
     }
     setSubmitting(true);
     const date = firestore.FieldValue.serverTimestamp();
-    const writes = selectedSkis.map(skiId =>
-      createTestLog(uid, {
+    const writes = selectedSkis.map(skiId => {
+      const entry = skiTestEntries[skiId] || {};
+      const technique = (getTechniqueBySkiId(skiId) || '').toLowerCase();
+      const payload = {
         skiId,
         date,
         temperature: testingLog.temperature,
         humidity: testingLog.humidity,
         snowType: testingLog.snowType,
         surface: testingLog.surface,
-        ...skiTestEntries[skiId],
-      }),
-    );
+        ...entry,
+      };
+      if (technique === 'skate') {
+        payload.kickWax = null;
+        payload.kickRating = null;
+      } else if (technique === 'classic') {
+        payload.stabilityRating = null;
+        payload.climbingRating = null;
+      }
+      return createTestLog(uid, payload);
+    });
     try {
       await Promise.all(writes);
     } catch (err) {
