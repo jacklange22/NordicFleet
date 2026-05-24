@@ -14,6 +14,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 
+import {useNavigation} from '@react-navigation/native';
 import Footer from '../components/footer';
 import LoadingScreen from '../components/LoadingScreen';
 import {useAuth} from '../context/AuthContext';
@@ -36,6 +37,7 @@ const keyboardTypeFor = field => {
 };
 
 const ProfileScreen = () => {
+  const navigation = useNavigation();
   const {user, signOut} = useAuth();
   const uid = user?.uid;
 
@@ -85,13 +87,14 @@ const ProfileScreen = () => {
         onPress: async () => {
           try {
             await signOut();
+            navigation.reset({index: 0, routes: [{name: 'Welcome'}]});
           } catch (err) {
             Alert.alert('Sign-out failed', String(err.message || err));
           }
         },
       },
     ]);
-  }, [signOut]);
+  }, [signOut, navigation]);
 
   const handleSeed = useCallback(async () => {
     if (!uid) {

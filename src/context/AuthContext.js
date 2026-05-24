@@ -1,4 +1,4 @@
-import React, {createContext, useContext, useEffect, useState, useCallback} from 'react';
+import React, {createContext, useContext, useEffect, useState, useCallback, useMemo} from 'react';
 import {auth} from '../services/firebase';
 import {createProfile} from '../services/userService';
 
@@ -42,7 +42,10 @@ export const AuthProvider = ({children}) => {
     await auth().signOut();
   }, []);
 
-  const value = {user, loading, signIn, signUp, signOut: signOutFn};
+  const value = useMemo(
+    () => ({user, loading, signIn, signUp, signOut: signOutFn}),
+    [user, loading, signIn, signUp, signOutFn],
+  );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
