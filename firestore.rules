@@ -1,10 +1,48 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    function isOwner(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    // True when the requester is the linked coach for `athleteUid`.
+    // Reads the athlete's coachId field, so the rule itself works against
+    // any user doc whose coachId == requester.uid.
+    function isCoachOf(athleteUid) {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/users/$(athleteUid))
+        && get(/databases/$(database)/documents/users/$(athleteUid)).data.coachId == request.auth.uid;
+    }
+
     match /users/{uid} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
-      match /{collection}/{docId} {
-        allow read, write: if request.auth != null && request.auth.uid == uid;
+      // Read access:
+      //   1. The owner reads their own doc.
+      //   2. A coach reads any athlete doc whose coachId points to them.
+      //   3. Any authenticated user reads coach profiles. (Needed so
+      //      athletes can look their coach up by email at signup time.
+      //      Coach profiles are effectively public to logged-in users —
+      //      athlete docs remain private to owner+coach.)
+      allow read: if request.auth != null && (
+        isOwner(uid)
+        || resource.data.coachId == request.auth.uid
+        || resource.data.role == 'coach'
+      );
+
+      // Athletes/coaches can only write their own profile.
+      allow write: if isOwner(uid);
+
+      match /skis/{skiId} {
+        allow read: if isOwner(uid) || isCoachOf(uid);
+        allow write: if isOwner(uid);
+      }
+      match /waxLogs/{logId} {
+        allow read: if isOwner(uid) || isCoachOf(uid);
+        allow write: if isOwner(uid);
+      }
+      match /testLogs/{logId} {
+        allow read: if isOwner(uid) || isCoachOf(uid);
+        allow write: if isOwner(uid);
       }
     }
   }

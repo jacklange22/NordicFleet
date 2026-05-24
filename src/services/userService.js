@@ -43,9 +43,9 @@ export async function createProfile(uid, data = {}) {
       location: data.location || null,
       role,
       // Athletes track their chosen coach (uid). Null until they set one.
+      // (Coach side isn't denormalized — see listAthletesForCoach for the
+      // reverse query.)
       coachId: role === 'athlete' ? data.coachId || null : null,
-      // Coaches track their athletes' uids. Empty array for athletes.
-      athleteIds: role === 'coach' ? data.athleteIds || [] : [],
       createdAt: firestore.FieldValue.serverTimestamp(),
       updatedAt: firestore.FieldValue.serverTimestamp(),
     },
@@ -99,10 +99,12 @@ export function subscribeProfile(uid, callback) {
 }
 
 /**
- * Find a user by email. Used by coach lookup during signup. Returns the
- * first matching profile or null. Email match is exact (not case-insensitive)
- * because Firestore where() doesn't support case folding without an
- * extension.
+ * Find a user by email. Returns null when no match. Email match is exact
+ * (not case-insensitive) because Firestore where() doesn't support case
+ * folding without an extension.
+ *
+ * This is a thin helper — most callers want `findCoachByEmail`, which
+ * also filters by role so Firestore rules permit the read.
  *
  * @param {string} email
  * @returns {Promise<object|null>}
@@ -120,11 +122,34 @@ export async function findProfileByEmail(email) {
 }
 
 /**
- * Look up a coach by email and link the given athlete to them. Two-way:
- *   - athlete's coachId ← coach.uid
- *   - coach's athleteIds ← athleteIds + athleteUid (no duplicates)
+ * Find a coach by email. Two filters: email match + role=='coach'. The
+ * role filter lets Firestore rules permit the read — coach profiles are
+ * effectively public to authenticated users for lookup purposes.
  *
- * Throws when the email doesn't match a coach account.
+ * @param {string} email
+ * @returns {Promise<object|null>}
+ */
+export async function findCoachByEmail(email) {
+  if (!email) {
+    return null;
+  }
+  const snap = await usersCollection()
+    .where('email', '==', email)
+    .where('role', '==', 'coach')
+    .get();
+  if (snap.empty) {
+    return null;
+  }
+  const doc = snap.docs[0];
+  return {uid: doc.id, ...doc.data()};
+}
+
+/**
+ * Look up a coach by email and link the given athlete to them. The link
+ * is one-way: only the athlete's own coachId field is written. The
+ * coach's athlete list is derived via a query (see
+ * listAthletesForCoach), which avoids a cross-user write that Firestore
+ * rules would otherwise have to permit.
  *
  * @param {string} athleteUid
  * @param {string} coachEmail
@@ -137,15 +162,17 @@ export async function setCoachByEmail(athleteUid, coachEmail) {
   if (!coachEmail) {
     throw new Error('setCoachByEmail: coachEmail is required');
   }
-  const coach = await findProfileByEmail(coachEmail);
+  // Use the role-filtered query so the read is permitted by the
+  // Firestore rules (coach profiles are readable to any authenticated
+  // user when role=='coach' is in the filter; arbitrary profile reads
+  // are not).
+  const coach = await findCoachByEmail(coachEmail);
   if (!coach) {
-    const err = new Error('No account found with that email');
+    // Could be: no account with that email, OR the account is an
+    // athlete (not a coach). We can't tell from this side without
+    // leaking, so surface a single message.
+    const err = new Error('No coach account found with that email');
     err.code = 'coach/not-found';
-    throw err;
-  }
-  if (coach.role !== 'coach') {
-    const err = new Error('That account is not a coach');
-    err.code = 'coach/not-a-coach';
     throw err;
   }
   if (coach.uid === athleteUid) {
@@ -154,25 +181,12 @@ export async function setCoachByEmail(athleteUid, coachEmail) {
     throw err;
   }
 
-  // Write the athlete side.
   await updateProfile(athleteUid, {coachId: coach.uid});
-
-  // Write the coach side — use arrayUnion so duplicates are impossible
-  // even if this is called twice.
-  await userDoc(coach.uid).set(
-    {
-      athleteIds: firestore.FieldValue.arrayUnion(athleteUid),
-      updatedAt: firestore.FieldValue.serverTimestamp(),
-    },
-    {merge: true},
-  );
-
   return {coachUid: coach.uid};
 }
 
 /**
- * Unlink an athlete from their coach. Removes from both sides. Safe to call
- * when no coach is set.
+ * Unlink an athlete from their coach. Idempotent.
  *
  * @param {string} athleteUid
  * @returns {Promise<void>}
@@ -181,24 +195,13 @@ export async function removeCoach(athleteUid) {
   if (!athleteUid) {
     throw new Error('removeCoach: athleteUid is required');
   }
-  const athlete = await getProfile(athleteUid);
-  const coachUid = athlete && athlete.coachId;
   await updateProfile(athleteUid, {coachId: null});
-  if (coachUid) {
-    await userDoc(coachUid).set(
-      {
-        athleteIds: firestore.FieldValue.arrayRemove(athleteUid),
-        updatedAt: firestore.FieldValue.serverTimestamp(),
-      },
-      {merge: true},
-    );
-  }
 }
 
 /**
- * Read every athlete profile linked to this coach. Returns full profile
- * objects (not just IDs) so the dashboard can render names/emails directly.
- * Athletes with no public profile read access fall out.
+ * Read every athlete linked to this coach via a `users where coachId ==
+ * coachUid` query. Firestore rules permit a coach to read those docs
+ * (see `firestore.rules`).
  *
  * @param {string} coachUid
  * @returns {Promise<Array<object>>}
@@ -207,26 +210,15 @@ export async function listAthletesForCoach(coachUid) {
   if (!coachUid) {
     return [];
   }
-  const coach = await getProfile(coachUid);
-  if (!coach || !coach.athleteIds || coach.athleteIds.length === 0) {
-    return [];
-  }
-  const results = await Promise.all(
-    coach.athleteIds.map(async uid => {
-      try {
-        return await getProfile(uid);
-      } catch {
-        return null;
-      }
-    }),
-  );
-  return results.filter(Boolean);
+  const snap = await usersCollection().where('coachId', '==', coachUid).get();
+  const out = [];
+  snap.forEach(d => out.push({uid: d.id, ...d.data()}));
+  return out;
 }
 
 /**
- * Real-time subscription to the coach's athlete list. Watches the coach's
- * own document for changes to athleteIds, then refetches each athlete
- * profile. Returns the unsubscribe function from the coach-doc onSnapshot.
+ * Real-time subscription to the coach's athlete list, via a `users where
+ * coachId == coachUid` onSnapshot. Returns the unsubscribe function.
  *
  * @param {string} coachUid
  * @param {(athletes: Array<object>) => void} callback
@@ -237,31 +229,16 @@ export function subscribeAthletesForCoach(coachUid, callback) {
     callback([]);
     return () => {};
   }
-  return userDoc(coachUid).onSnapshot(
-    async snap => {
-      if (!snap.exists) {
+  return usersCollection()
+    .where('coachId', '==', coachUid)
+    .onSnapshot(
+      snap => {
+        const out = [];
+        snap.forEach(d => out.push({uid: d.id, ...d.data()}));
+        callback(out);
+      },
+      () => {
         callback([]);
-        return;
-      }
-      const data = snap.data();
-      const ids = (data && data.athleteIds) || [];
-      if (ids.length === 0) {
-        callback([]);
-        return;
-      }
-      const results = await Promise.all(
-        ids.map(async uid => {
-          try {
-            return await getProfile(uid);
-          } catch {
-            return null;
-          }
-        }),
-      );
-      callback(results.filter(Boolean));
-    },
-    () => {
-      callback([]);
-    },
-  );
+      },
+    );
 }

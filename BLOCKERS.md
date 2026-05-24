@@ -37,23 +37,28 @@ These were handled and are no longer blockers:
 The app builds and launches without these; you'll just hit auth errors the
 moment someone tries to sign up.
 
-1. **Enable Email/Password auth** in the Firebase console for project
-   `nordicfleet-11e67`:
-   - Authentication → Sign-in method → Email/Password → Enable.
+1. ✅ **Enable Email/Password auth** in the Firebase console (done — the
+   e2e verification script signed up a real test user against the live
+   project).
 
-2. **Create the Firestore database** (production mode) in the Firebase
-   console:
-   - Firestore Database → Create database → Production mode → pick a
-     region (us-central1 is fine).
+2. ✅ **Create the Firestore database** (done — the same e2e script
+   wrote profile/ski/log docs).
 
-3. **Install the Firebase CLI and deploy security rules**
-   (`firestore.rules` is at the project root):
+3. **Redeploy Firestore security rules** — the coach feature added new
+   read predicates. The current `firestore.rules` at the project root
+   permits:
+   - owner reads (every doc the user owns)
+   - coach reads of any athlete doc with `coachId == coach.uid` (and of
+     their subcollections: skis, waxLogs, testLogs)
+   - any authenticated user reads of profiles where `role == 'coach'`
+     (needed so athletes can look up their coach by email at signup)
+
+   To deploy:
    ```
-   npm install -g firebase-tools
+   npm install -g firebase-tools       # if not already installed
    firebase login
    firebase use nordicfleet-11e67
    firebase deploy --only firestore:rules
    ```
-   (firebase CLI is not currently installed on this machine; install it
-   with the npm command above. Alternatively, paste `firestore.rules` into
-   the Firebase console under Firestore → Rules → Publish.)
+   Alternatively, paste `firestore.rules` into the Firebase console
+   under Firestore → Rules → Publish.

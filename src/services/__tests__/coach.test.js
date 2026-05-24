@@ -3,6 +3,7 @@ import {
   createProfile,
   getProfile,
   findProfileByEmail,
+  findCoachByEmail,
   setCoachByEmail,
   removeCoach,
   listAthletesForCoach,
@@ -21,14 +22,12 @@ describe('coach data model', () => {
       const p = await getProfile('u1');
       expect(p.role).toBe('athlete');
       expect(p.coachId).toBeNull();
-      expect(p.athleteIds).toEqual([]);
     });
 
-    it('accepts role: "coach" and sets athleteIds=[]', async () => {
+    it('accepts role: "coach" and coachId stays null', async () => {
       await createProfile('coach1', {email: 'c@b.com', role: 'coach'});
       const p = await getProfile('coach1');
       expect(p.role).toBe('coach');
-      expect(p.athleteIds).toEqual([]);
       expect(p.coachId).toBeNull();
     });
 
@@ -57,8 +56,26 @@ describe('coach data model', () => {
     });
   });
 
+  describe('findCoachByEmail', () => {
+    it('returns null when an athlete has the email', async () => {
+      firestoreMock.__seedDoc('users/u1', {email: 'a@b.com', role: 'athlete'});
+      expect(await findCoachByEmail('a@b.com')).toBeNull();
+    });
+
+    it('returns the coach when role matches', async () => {
+      firestoreMock.__seedDoc('users/u1', {email: 'c@b.com', role: 'coach'});
+      const p = await findCoachByEmail('c@b.com');
+      expect(p.uid).toBe('u1');
+      expect(p.role).toBe('coach');
+    });
+
+    it('returns null for missing email', async () => {
+      expect(await findCoachByEmail()).toBeNull();
+    });
+  });
+
   describe('setCoachByEmail', () => {
-    it('links both sides on success', async () => {
+    it("sets the athlete's coachId on success", async () => {
       await createProfile('athlete1', {email: 'ath@b.com', role: 'athlete'});
       await createProfile('coach1', {email: 'coach@b.com', role: 'coach'});
 
@@ -67,9 +84,6 @@ describe('coach data model', () => {
 
       const athlete = await getProfile('athlete1');
       expect(athlete.coachId).toBe('coach1');
-
-      const coach = await getProfile('coach1');
-      expect(coach.athleteIds).toContain('athlete1');
     });
 
     it('rejects unknown email with coach/not-found', async () => {
@@ -79,12 +93,14 @@ describe('coach data model', () => {
       ).rejects.toMatchObject({code: 'coach/not-found'});
     });
 
-    it('rejects non-coach target with coach/not-a-coach', async () => {
+    it('rejects non-coach target with coach/not-found', async () => {
+      // findCoachByEmail filters by role==coach, so an athlete email
+      // looks identical to a non-existent one from the caller's view.
       await createProfile('athlete1', {email: 'ath@b.com'});
       await createProfile('athlete2', {email: 'other@b.com', role: 'athlete'});
       await expect(
         setCoachByEmail('athlete1', 'other@b.com'),
-      ).rejects.toMatchObject({code: 'coach/not-a-coach'});
+      ).rejects.toMatchObject({code: 'coach/not-found'});
     });
 
     it('rejects self-link with coach/self-link', async () => {
@@ -103,7 +119,7 @@ describe('coach data model', () => {
   });
 
   describe('removeCoach', () => {
-    it('clears both sides', async () => {
+    it("clears the athlete's coachId", async () => {
       await createProfile('athlete1', {email: 'ath@b.com'});
       await createProfile('coach1', {email: 'coach@b.com', role: 'coach'});
       await setCoachByEmail('athlete1', 'coach@b.com');
@@ -112,8 +128,6 @@ describe('coach data model', () => {
 
       const a = await getProfile('athlete1');
       expect(a.coachId).toBeNull();
-      const c = await getProfile('coach1');
-      expect(c.athleteIds).not.toContain('athlete1');
     });
 
     it('is a no-op when no coach is set', async () => {
