@@ -44,21 +44,14 @@ moment someone tries to sign up.
 2. ✅ **Create the Firestore database** (done — the same e2e script
    wrote profile/ski/log docs).
 
-3. **Redeploy Firestore security rules** — the coach feature added new
-   read predicates. The current `firestore.rules` at the project root
-   permits:
-   - owner reads (every doc the user owns)
-   - coach reads of any athlete doc with `coachId == coach.uid` (and of
-     their subcollections: skis, waxLogs, testLogs)
-   - any authenticated user reads of profiles where `role == 'coach'`
-     (needed so athletes can look up their coach by email at signup)
+3. ✅ **Firestore security rules deployed** — the coach feature's rules
+   (owner reads, coach reads of `coachId == self`, public coach
+   profiles for email lookup, all writes owner-only) were deployed
+   during the verify session via `firebase deploy --only firestore:rules`.
+   `firebase-tools@15.18.0` is installed globally.
 
-   To deploy:
+   If you ever need to re-deploy (e.g. after editing `firestore.rules`):
    ```
-   npm install -g firebase-tools       # if not already installed
-   firebase login
    firebase use nordicfleet-11e67
    firebase deploy --only firestore:rules
    ```
-   Alternatively, paste `firestore.rules` into the Firebase console
-   under Firestore → Rules → Publish.

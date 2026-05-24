@@ -1,5 +1,70 @@
 # Morning report — autonomous NordicFleet rewrite
 
+## Verification + coach feature session
+
+**Two new things landed:**
+1. **Six happy-path flows verified end-to-end against the live Firestore** (signup, add-ski, wax log, test log, profile edit, sign-out/sign-in persistence). `scripts/verify-flows.sh` is the automated check; `MANUAL_VERIFICATION.md` is the UI-side checklist for the user to walk through on the simulator.
+2. **Coach/team feature** — users now pick a role at signup (athlete/coach). Athletes can link to a coach by email. Coaches see a dashboard of their linked athletes and can drill into each athlete's ski fleet read-only.
+
+### All six happy-path flows verified working at the data layer
+
+| Flow | Pass | How verified |
+|---|---|---|
+| Signup → Home (empty state) | ✅ | `scripts/verify-flows.sh` step 1 (account + profile doc created against live Firestore) |
+| Add ski → SkiInfo → Home | ✅ | step 2 (POST + read-back of one ski doc) |
+| Wax log creation | ✅ | step 3 (POST waxLog with arrayValue glideWaxes) |
+| Test log creation | ✅ | step 4 (POST testLog with negative-temp + lowercased enums) |
+| Profile edit (weight) | ✅ | step 5 (PATCH with updateMask) |
+| Sign out → Sign in → data persists | ✅ | step 6 (re-signin + read-back of weight + ski list) |
+
+UI tap automation via osascript / System Events timed out (accessibility prompt didn't surface). Per the brief's fallback, the human-facing UI walkthrough is in `MANUAL_VERIFICATION.md` with explicit pass/fail criteria per step.
+
+### Coach feature added
+
+**Code:**
+- `src/services/userService.js`: new fields `role`, `coachId` on every profile (no denormalization — see below). New functions `findCoachByEmail`, `setCoachByEmail`, `removeCoach`, `listAthletesForCoach`, `subscribeAthletesForCoach`.
+- `src/services/skiService.js`: `listSkisForAthlete` / `subscribeSkisForAthlete` thin aliases for the read-only coach path.
+- `src/screens/roleSelect.js`: new screen pushed after Signup. Radio buttons for athlete / coach. Athletes optionally enter their coach's email.
+- `src/screens/coachDashboard.js`: list of linked athletes. No log-data footer (coaches consume, not produce).
+- `src/screens/athleteDetail.js`: read-only ski fleet view for a single athlete, reusing the SkiItem component.
+- `src/screens/skiInfo.js`: now honors a route `ownerUid` param so the same screen serves athlete (own ski) and coach (athlete's ski) views, hiding the Footer in coach mode.
+- `src/screens/AuthLoadingScreen.js`: reads profile and routes coaches to `CoachDashboard`, athletes to `Home`.
+- `firestore.rules`: rewritten with `isOwner` / `isCoachOf` helpers. Coach reads of athletes' docs + subcollections allowed; cross-user writes denied.
+
+**Architectural deviation from the brief**: the brief proposed denormalizing the relationship as `coach.athleteIds[]`, but that requires an athlete to write to the coach's doc — which Firestore rules can't permit cleanly without weakening the model. Dropped the array, added a `users where coachId == coachUid` query on the dashboard side. Trade-off documented in commits Coach 4+5.
+
+**Coach end-to-end verified live**: `scripts/verify-coach.sh` creates a real coach + real athlete in the production Firebase project, links them, has the athlete write a ski + wax log, and verifies every coach-side read path AND that cross-user writes are denied (HTTP 403). Nine checks, all pass.
+
+### Commits this session
+
+| Commit | What |
+|---|---|
+| `e1356ae` | Verify P2: 6 flows verified at data layer + manual UI checklist |
+| `d91d66b` | Coach 1: data model fields + service layer |
+| `ab0f95c` | Coach 2+3: role selection screen, dashboard, athlete detail |
+| `7f06b83` | Coach 4+5: Firestore rules + drop the athleteIds denormalization |
+| `0570235` | Coach 6: end-to-end verification passed against live Firestore |
+
+### Updated Firestore rules — already deployed
+
+The new `firestore.rules` were deployed to project `nordicfleet-11e67` via `firebase deploy --only firestore:rules` during the verification step (commit `0570235`). No user action required for rules deployment.
+
+### What the user must verify manually
+
+The data layer is fully verified by the two automated scripts. What's left is the UI walkthrough — actually tapping through the flows on the simulator:
+
+1. **Happy path** — `MANUAL_VERIFICATION.md` has six numbered flows with pass criteria. The app is installed on the booted iPhone 17 Pro simulator (`xcrun simctl launch booted com.NordicFleet.app`).
+2. **Coach flow** — sign up two accounts on the simulator (one coach, one athlete), link them via the RoleSelect screen, log in as the coach, verify the dashboard shows the athlete.
+
+### Open issues / nice-to-haves
+
+- **Coach email is case-sensitive at signup**: Firestore's `where('email', '==')` doesn't case-fold. If a coach signed up as `Coach@Example.com` and the athlete enters `coach@example.com`, the lookup misses. Fix would be a `lowercaseEmail` field at signup time. Low priority — Auth normalizes the email anyway for sign-in.
+- **No "change coach later" UI yet**. `removeCoach` and `setCoachByEmail` services exist; the Profile screen could expose a row for it.
+- **No bidirectional un-link**. If a coach wants to drop an athlete, the athlete's `coachId` stays set until the athlete clears it themselves. A coach-side "remove athlete" feature would need a Cloud Function or a rule that permits the coach to write `coachId=null` on the athlete's doc — both possible but out of scope here.
+- **The Firestore mock's `where(...).onSnapshot` triggers a callback fired once at register time but doesn't react to subsequent writes**. Doesn't affect production code (real Firestore handles this), but if a test asserts that `subscribeAthletesForCoach` fires on new athlete additions, it'd need the mock to track listeners more carefully.
+
+---
+
 ## Upgrade session (RN 0.73 → 0.76, Firebase 18 → 21)
 
 **Result:** app builds on Xcode 26.5 and runs on the iOS simulator. Welcome screen renders. Tested on iPhone 17 Pro simulator (iOS 26.5).
