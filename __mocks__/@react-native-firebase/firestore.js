@@ -120,8 +120,18 @@ function docRef(path) {
   return {
     id: path.split('/').pop(),
     path,
-    get: jest.fn(() => Promise.resolve(docSnapshot(path))),
+    get: jest.fn(() => {
+      const inj = firestore.__shouldInjectError();
+      if (inj) {
+        return Promise.reject(inj);
+      }
+      return Promise.resolve(docSnapshot(path));
+    }),
     set: jest.fn((data, options = {}) => {
+      const inj = firestore.__shouldInjectError();
+      if (inj) {
+        return Promise.reject(inj);
+      }
       const existing = store.get(path);
       if (options.merge && existing) {
         store.set(path, {...existing, ...data});
@@ -132,6 +142,10 @@ function docRef(path) {
       return Promise.resolve();
     }),
     update: jest.fn(data => {
+      const inj = firestore.__shouldInjectError();
+      if (inj) {
+        return Promise.reject(inj);
+      }
       const existing = store.get(path) || {};
       store.set(path, {...existing, ...data});
       notify(path);
@@ -163,6 +177,10 @@ function collectionRef(path) {
     path,
     doc: id => docRef(joinPath(path, id || `auto_${Date.now()}_${Math.random().toString(36).slice(2)}`)),
     add: jest.fn(data => {
+      const inj = firestore.__shouldInjectError();
+      if (inj) {
+        return Promise.reject(inj);
+      }
       const id = `auto_${Date.now()}_${Math.random().toString(36).slice(2)}`;
       const full = joinPath(path, id);
       store.set(full, {...data});
@@ -215,15 +233,33 @@ firestore.Timestamp = {
 firestore.CACHE_SIZE_UNLIMITED = -1;
 
 // Test helpers
+let injectedError = null;
 firestore.__resetFirestoreMock = () => {
   store.clear();
   listeners.clear();
+  injectedError = null;
 };
 firestore.__seedDoc = (path, data) => {
   store.set(path, {...data});
   notify(path);
 };
 firestore.__getStore = () => store;
+/**
+ * Force the next set/update/add/get to reject with the given error code.
+ * Auto-cleared after one call so tests don't leak state. Useful for
+ * exercising offline/network-failure code paths.
+ */
+firestore.__injectError = err => {
+  injectedError = err;
+};
+firestore.__shouldInjectError = () => {
+  if (!injectedError) {
+    return null;
+  }
+  const e = injectedError;
+  injectedError = null;
+  return e;
+};
 
 module.exports = firestore;
 module.exports.default = firestore;
