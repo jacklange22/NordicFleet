@@ -8,11 +8,11 @@
 
 /* Begin PBXBuildFile section */
 		00E356F31AD99517003FC87E /* NordicFleetTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 00E356F21AD99517003FC87E /* NordicFleetTests.m */; };
+		0C4D60CA32097D70CA5C980C /* Pods_NordicFleet.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2B07BE44A6B1FCA6ECD02226 /* Pods_NordicFleet.framework */; };
 		13B07FBC1A68108700A75B9A /* AppDelegate.mm in Sources */ = {isa = PBXBuildFile; fileRef = 13B07FB01A68108700A75B9A /* AppDelegate.mm */; };
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
 		13B07FC11A68108700A75B9A /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 13B07FB71A68108700A75B9A /* main.m */; };
-		41BB32B996EF3647F1F71E7E /* libPods-NordicFleet-NordicFleetTests.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 253612A2DAAD411E14F45B87 /* libPods-NordicFleet-NordicFleetTests.a */; };
-		75119EE4BFFCA42E73009FA2 /* libPods-NordicFleet.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 6C2F9C44A1942C4DD6A2BA80 /* libPods-NordicFleet.a */; };
+		3494D2D6C90EEF912B7D6F25 /* Pods_NordicFleet_NordicFleetTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3E9C72ADF6E31AEF790E5FF3 /* Pods_NordicFleet_NordicFleetTests.framework */; };
 		81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */; };
 		970AC4EC454CF4D28D7F0DCF /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */; };
 		C3E6D9552B37A61200E69852 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = C3E6D9542B37A61100E69852 /* GoogleService-Info.plist */; };
@@ -42,9 +42,9 @@
 		13B07FB71A68108700A75B9A /* main.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = main.m; path = NordicFleet/main.m; sourceTree = "<group>"; };
 		13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = PrivacyInfo.xcprivacy; path = NordicFleet/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		1F624BD63C2513C7C7B4E2EB /* Pods-NordicFleet.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-NordicFleet.release.xcconfig"; path = "Target Support Files/Pods-NordicFleet/Pods-NordicFleet.release.xcconfig"; sourceTree = "<group>"; };
-		253612A2DAAD411E14F45B87 /* libPods-NordicFleet-NordicFleetTests.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-NordicFleet-NordicFleetTests.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		2B07BE44A6B1FCA6ECD02226 /* Pods_NordicFleet.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_NordicFleet.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		3E9C72ADF6E31AEF790E5FF3 /* Pods_NordicFleet_NordicFleetTests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_NordicFleet_NordicFleetTests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		475D0BC632A076CAE2B640E3 /* Pods-NordicFleet-NordicFleetTests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-NordicFleet-NordicFleetTests.debug.xcconfig"; path = "Target Support Files/Pods-NordicFleet-NordicFleetTests/Pods-NordicFleet-NordicFleetTests.debug.xcconfig"; sourceTree = "<group>"; };
-		6C2F9C44A1942C4DD6A2BA80 /* libPods-NordicFleet.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-NordicFleet.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = NordicFleet/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		C3E6D9542B37A61100E69852 /* GoogleService-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = "GoogleService-Info.plist"; path = "NordicFleet/GoogleService-Info.plist"; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
@@ -55,7 +55,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				41BB32B996EF3647F1F71E7E /* libPods-NordicFleet-NordicFleetTests.a in Frameworks */,
+				3494D2D6C90EEF912B7D6F25 /* Pods_NordicFleet_NordicFleetTests.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -63,7 +63,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				75119EE4BFFCA42E73009FA2 /* libPods-NordicFleet.a in Frameworks */,
+				0C4D60CA32097D70CA5C980C /* Pods_NordicFleet.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -106,8 +106,8 @@
 			isa = PBXGroup;
 			children = (
 				ED297162215061F000B7C4FE /* JavaScriptCore.framework */,
-				6C2F9C44A1942C4DD6A2BA80 /* libPods-NordicFleet.a */,
-				253612A2DAAD411E14F45B87 /* libPods-NordicFleet-NordicFleetTests.a */,
+				2B07BE44A6B1FCA6ECD02226 /* Pods_NordicFleet.framework */,
+				3E9C72ADF6E31AEF790E5FF3 /* Pods_NordicFleet_NordicFleetTests.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -586,6 +586,17 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"${PODS_CONFIGURATION_BUILD_DIR}/ReactCommon/ReactCommon.framework/Headers",
+					"${PODS_CONFIGURATION_BUILD_DIR}/ReactCommon/ReactCommon.framework/Headers/react/nativemodule/core",
+					"${PODS_CONFIGURATION_BUILD_DIR}/ReactCommon-Samples/ReactCommon_Samples.framework/Headers",
+					"${PODS_CONFIGURATION_BUILD_DIR}/ReactCommon-Samples/ReactCommon_Samples.framework/Headers/platform/ios",
+					"${PODS_CONFIGURATION_BUILD_DIR}/React-Fabric/React_Fabric.framework/Headers/react/renderer/components/view/platform/cxx",
+					"${PODS_CONFIGURATION_BUILD_DIR}/React-NativeModulesApple/React_NativeModulesApple.framework/Headers",
+					"${PODS_CONFIGURATION_BUILD_DIR}/React-graphics/React_graphics.framework/Headers",
+					"${PODS_CONFIGURATION_BUILD_DIR}/React-graphics/React_graphics.framework/Headers/react/renderer/graphics/platform/ios",
+				);
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
 				LD_RUNPATH_SEARCH_PATHS = (
 					/usr/lib/swift,
@@ -658,6 +669,17 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"${PODS_CONFIGURATION_BUILD_DIR}/ReactCommon/ReactCommon.framework/Headers",
+					"${PODS_CONFIGURATION_BUILD_DIR}/ReactCommon/ReactCommon.framework/Headers/react/nativemodule/core",
+					"${PODS_CONFIGURATION_BUILD_DIR}/ReactCommon-Samples/ReactCommon_Samples.framework/Headers",
+					"${PODS_CONFIGURATION_BUILD_DIR}/ReactCommon-Samples/ReactCommon_Samples.framework/Headers/platform/ios",
+					"${PODS_CONFIGURATION_BUILD_DIR}/React-Fabric/React_Fabric.framework/Headers/react/renderer/components/view/platform/cxx",
+					"${PODS_CONFIGURATION_BUILD_DIR}/React-NativeModulesApple/React_NativeModulesApple.framework/Headers",
+					"${PODS_CONFIGURATION_BUILD_DIR}/React-graphics/React_graphics.framework/Headers",
+					"${PODS_CONFIGURATION_BUILD_DIR}/React-graphics/React_graphics.framework/Headers/react/renderer/graphics/platform/ios",
+				);
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
 				LD_RUNPATH_SEARCH_PATHS = (
 					/usr/lib/swift,

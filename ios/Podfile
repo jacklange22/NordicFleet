@@ -1,5 +1,10 @@
 use_modular_headers!
 
+# Firebase iOS 11 + Swift submodules need framework-style linkage so the
+# `<FirebaseAuth/FirebaseAuth-Swift.h>` umbrella import resolves. RNFB 21
+# documents this as the supported integration mode.
+use_frameworks! :linkage => :static
+
 # Resolve react_native_pods.rb with node to allow for hoisting
 require Pod::Executable.execute_command('node', ['-p',
   'require.resolve(
@@ -18,6 +23,26 @@ end
 
 target 'NordicFleet' do
   config = use_native_modules!
+
+  # Firebase iOS 11 ships several modules as Swift; the auto-generated
+  # *-Swift.h headers (e.g. FirebaseAuth-Swift.h) are only emitted when
+  # the pods are imported with modular_headers => true. Without these,
+  # RNFB's Objective-C wrappers can't find the bridge headers.
+  # The transitive deps (FirebaseAuthInterop, FirebaseAppCheckInterop,
+  # FirebaseCoreExtension, FirebaseFirestoreInternal, RecaptchaInterop)
+  # need modular_headers explicitly too since we don't enable
+  # use_modular_headers! globally (which causes ReactCommon modulemap
+  # duplication).
+  pod 'FirebaseAuth', :modular_headers => true
+  pod 'FirebaseAuthInterop', :modular_headers => true
+  pod 'FirebaseAppCheckInterop', :modular_headers => true
+  pod 'FirebaseCore', :modular_headers => true
+  pod 'FirebaseCoreExtension', :modular_headers => true
+  pod 'FirebaseCoreInternal', :modular_headers => true
+  pod 'FirebaseFirestore', :modular_headers => true
+  pod 'FirebaseFirestoreInternal', :modular_headers => true
+  pod 'GoogleUtilities', :modular_headers => true
+  pod 'RecaptchaInterop', :modular_headers => true
 
   use_react_native!(
     :path => config[:reactNativePath],
@@ -38,5 +63,120 @@ target 'NordicFleet' do
       :mac_catalyst_enabled => false,
       # :ccache_enabled => true
     )
+
+    # fmt 11.0.2 (pulled in by gRPC-Core 1.69) hits a consteval bug when
+    # built with Apple clang 17 / Xcode 26.5: its `consteval`-validated
+    # `basic_format_string` constructor isn't accepted as a constant
+    # expression at instantiation sites in fmt/format.cc.
+    #
+    # The header's elif chain unconditionally redefines FMT_USE_CONSTEVAL
+    # based on compiler detection, so a `-DFMT_USE_CONSTEVAL=0` cmdline
+    # define is overwritten. The cleanest workaround is to patch the
+    # header so the elif chain is skipped when the macro is already
+    # defined. Then the cmdline define wins.
+    fmt_base_h = File.join(__dir__, 'Pods', 'fmt', 'include', 'fmt', 'base.h')
+    if File.exist?(fmt_base_h)
+      text = File.read(fmt_base_h)
+      marker = '// NordicFleet: respect user-supplied FMT_USE_CONSTEVAL'
+      unless text.include?(marker)
+        text = text.sub(
+          /(\n)(\/\/ Detect consteval, C\+\+20 constexpr extensions and std::is_constant_evaluated\.\n)(#if !defined\(__cpp_lib_is_constant_evaluated\)\n)/,
+          "\\1\\2#ifndef FMT_USE_CONSTEVAL // #{marker}\n\\3",
+        )
+        # Close the new #ifndef right after the original block ends. The
+        # block ends with `#endif` immediately before `#if FMT_USE_CONSTEVAL`.
+        text = text.sub(
+          /(\n#endif\n)(#if FMT_USE_CONSTEVAL\n)/,
+          "\\1#endif // FMT_USE_CONSTEVAL guard\n\\2",
+        )
+        File.write(fmt_base_h, text)
+      end
+    end
+
+    require 'fileutils'
+    ios_dir = Pod::Config.instance.installation_root
+
+    # RN 0.76.9 + use_modular_headers! puts both ReactCommon.modulemap and
+    # React-RuntimeApple.modulemap in Pods/Headers/Public/ReactCommon/, both
+    # declaring `module ReactCommon` and both having umbrella headers in the
+    # same directory. clang refuses to load both. Drop the React-RuntimeApple
+    # modulemap and umbrella; the symbols are accessible through ReactCommon's
+    # umbrella too. Also strip explicit -fmodule-map-file references from any
+    # xcconfig so the compile commands stop asking for it.
+    runtime_apple_mm = File.join(ios_dir, 'Pods', 'Headers', 'Public', 'ReactCommon', 'React-RuntimeApple.modulemap')
+    runtime_apple_umbrella = File.join(ios_dir, 'Pods', 'Headers', 'Public', 'ReactCommon', 'React-RuntimeApple-umbrella.h')
+    File.delete(runtime_apple_mm) if File.exist?(runtime_apple_mm)
+    File.delete(runtime_apple_umbrella) if File.exist?(runtime_apple_umbrella)
+    Dir.glob(File.join(ios_dir, 'Pods', 'Target Support Files', '**', '*.xcconfig')).each do |xcconfig_path|
+      text = File.read(xcconfig_path)
+      next unless text.include?('React-RuntimeApple.modulemap')
+      new_text = text
+        .gsub(/-fmodule-map-file="[^"]*React-RuntimeApple\.modulemap"\s*/, '')
+        .gsub(/-Xcc -fmodule-map-file="[^"]*React-RuntimeApple\.modulemap"\s*/, '')
+      File.write(xcconfig_path, new_text)
+    end
+    Pod::UI.puts '[NordicFleet] Stripped React-RuntimeApple.modulemap references'
+
+    # cocoapods 1.15.2 references gRPC-Core.modulemap at
+    # Pods/Headers/Private/grpc/gRPC-Core.modulemap from several xcconfigs,
+    # but only writes the file to Pods/Target Support Files/gRPC-Core/.
+    # Sweep every Target Support Files xcconfig and redirect the bad path.
+    Dir.glob(File.join(ios_dir, 'Pods', 'Target Support Files', '**', '*.xcconfig')).each do |xcconfig_path|
+      text = File.read(xcconfig_path)
+      next unless text.include?('Headers/Private/grpc/gRPC-Core.modulemap')
+      new_text = text.gsub(
+        '"${PODS_ROOT}/Headers/Private/grpc/gRPC-Core.modulemap"',
+        '"${PODS_ROOT}/Target Support Files/gRPC-Core/gRPC-Core.modulemap"',
+      )
+      File.write(xcconfig_path, new_text)
+      Pod::UI.puts "[NordicFleet] Patched #{File.basename(xcconfig_path)} modulemap path"
+    end
+
+    # Firebase.h umbrella header (in Pods/Headers/Private/Firebase/Firebase.h)
+    # conditionally `#import <FirebaseAuth/FirebaseAuth-Swift.h>` when
+    # FirebaseAuth's umbrella header is present. The -Swift.h file lives at
+    # ${PODS_CONFIGURATION_BUILD_DIR}/FirebaseAuth/FirebaseAuth-Swift.h once
+    # the FirebaseAuth swift module compiles, but that directory isn't in
+    # the consuming targets' header search paths. Add it so the angle-bracket
+    # import resolves.
+    targets_needing_firebase_auth_swift = ['RNFBApp', 'RNFBAuth', 'RNFBFirestore', 'RNFBAnalytics']
+    installer.pods_project.targets.each do |t|
+      next unless targets_needing_firebase_auth_swift.include?(t.name)
+      t.build_configurations.each do |config|
+        xcconfig_path = config.base_configuration_reference&.real_path
+        next unless xcconfig_path && File.exist?(xcconfig_path)
+        text = File.read(xcconfig_path)
+        # Match HEADER_SEARCH_PATHS only (not OTHER_CFLAGS).
+        next if text =~ /^HEADER_SEARCH_PATHS = .*PODS_CONFIGURATION_BUILD_DIR..FirebaseAuth/
+        new_text = text.sub(
+          /^(HEADER_SEARCH_PATHS = .*)$/,
+          "\\1 \"${PODS_CONFIGURATION_BUILD_DIR}/FirebaseAuth\"",
+        )
+        File.write(xcconfig_path, new_text)
+      end
+    end
+    Pod::UI.puts '[NordicFleet] Added FirebaseAuth build dir to RNFB* header search paths'
+
+    # Inject FMT_USE_CONSTEVAL=0 via the xcconfig so the predefine reaches
+    # the compiler before fmt headers process it.
+    fmt_consteval_pods = ['fmt', 'gRPC-Core', 'gRPC-C++']
+    installer.pods_project.targets.each do |t|
+      next unless fmt_consteval_pods.include?(t.name)
+      t.build_configurations.each do |config|
+        xcconfig_path = config.base_configuration_reference&.real_path
+        next unless xcconfig_path && File.exist?(xcconfig_path)
+        text = File.read(xcconfig_path)
+        next if text.include?('FMT_USE_CONSTEVAL=0')
+        if text =~ /^GCC_PREPROCESSOR_DEFINITIONS = (.*)$/
+          new_text = text.sub(
+            /^GCC_PREPROCESSOR_DEFINITIONS = (.*)$/,
+            'GCC_PREPROCESSOR_DEFINITIONS = \1 FMT_USE_CONSTEVAL=0',
+          )
+        else
+          new_text = text + "\nGCC_PREPROCESSOR_DEFINITIONS = $(inherited) FMT_USE_CONSTEVAL=0\n"
+        end
+        File.write(xcconfig_path, new_text)
+      end
+    end
   end
 end
