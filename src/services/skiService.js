@@ -118,6 +118,34 @@ export async function hardDeleteSki(uid, skiId) {
 }
 
 /**
+ * Coach read of an athlete's ski list. This is a thin alias of listSkis
+ * with the athlete's uid — the access check happens in Firestore rules
+ * (only the owner or the athlete's coach can read). `coachUid` isn't
+ * passed to Firestore (the rules use request.auth.uid), but the parameter
+ * is here to make the call site self-documenting at the screen layer.
+ *
+ * @param {string} _coachUid  unused, kept for call-site clarity
+ * @param {string} athleteUid
+ * @returns {Promise<Array<object>>}
+ */
+export async function listSkisForAthlete(_coachUid, athleteUid) {
+  return listSkis(athleteUid);
+}
+
+/**
+ * Real-time subscription to an athlete's ski list, gated by Firestore
+ * rules to the owning athlete or their linked coach.
+ *
+ * @param {string} _coachUid  unused, kept for call-site clarity
+ * @param {string} athleteUid
+ * @param {(skis: Array<object>) => void} callback
+ * @returns {() => void} unsubscribe
+ */
+export function subscribeSkisForAthlete(_coachUid, athleteUid, callback) {
+  return subscribeSkis(athleteUid, callback);
+}
+
+/**
  * Subscribe to live updates of the ski list.
  * @param {string} uid
  * @param {(skis: Array<object>) => void} callback

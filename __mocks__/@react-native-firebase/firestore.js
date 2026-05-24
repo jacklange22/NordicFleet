@@ -116,6 +116,55 @@ function querySnapshot(path, filters = [], orderBy = null) {
   };
 }
 
+// Resolve FieldValue marker objects against an existing record. Returns the
+// effective value to store for a given field.
+function resolveFieldValue(existingValue, incomingValue) {
+  if (!incomingValue || typeof incomingValue !== 'object' || !incomingValue.__type) {
+    return incomingValue;
+  }
+  switch (incomingValue.__type) {
+    case 'serverTimestamp':
+      // Real Firestore writes a Timestamp; tests just need a truthy marker.
+      return {seconds: Math.floor(Date.now() / 1000), nanoseconds: 0, toDate: () => new Date()};
+    case 'delete':
+      return undefined; // caller should remove the key
+    case 'arrayUnion': {
+      const arr = Array.isArray(existingValue) ? existingValue.slice() : [];
+      for (const v of incomingValue.values) {
+        if (!arr.includes(v)) {
+          arr.push(v);
+        }
+      }
+      return arr;
+    }
+    case 'arrayRemove': {
+      const arr = Array.isArray(existingValue) ? existingValue.slice() : [];
+      return arr.filter(v => !incomingValue.values.includes(v));
+    }
+    case 'increment': {
+      const base = typeof existingValue === 'number' ? existingValue : 0;
+      return base + incomingValue.n;
+    }
+    default:
+      return incomingValue;
+  }
+}
+
+// Apply a partial-data write to a record, resolving FieldValue markers
+// against the existing record. Returns the new record.
+function applyFieldValues(existing, data) {
+  const next = {...existing};
+  for (const key of Object.keys(data)) {
+    const resolved = resolveFieldValue(existing ? existing[key] : undefined, data[key]);
+    if (resolved === undefined && data[key] && data[key].__type === 'delete') {
+      delete next[key];
+    } else {
+      next[key] = resolved;
+    }
+  }
+  return next;
+}
+
 function docRef(path) {
   return {
     id: path.split('/').pop(),
@@ -133,10 +182,10 @@ function docRef(path) {
         return Promise.reject(inj);
       }
       const existing = store.get(path);
-      if (options.merge && existing) {
-        store.set(path, {...existing, ...data});
+      if (options.merge) {
+        store.set(path, applyFieldValues(existing || {}, data));
       } else {
-        store.set(path, {...data});
+        store.set(path, applyFieldValues({}, data));
       }
       notify(path);
       return Promise.resolve();
@@ -147,7 +196,7 @@ function docRef(path) {
         return Promise.reject(inj);
       }
       const existing = store.get(path) || {};
-      store.set(path, {...existing, ...data});
+      store.set(path, applyFieldValues(existing, data));
       notify(path);
       return Promise.resolve();
     }),
