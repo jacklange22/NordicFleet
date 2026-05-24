@@ -11,7 +11,11 @@ const items = [
 describe('MultiSelectDropdown', () => {
   it('renders the trigger label', () => {
     const tree = render(
-      <MultiSelectDropdown items={items} label="Pick" onSelectionDone={() => {}} />,
+      <MultiSelectDropdown
+        items={items}
+        label="Pick"
+        onSelectionDone={() => {}}
+      />,
     );
     expect(tree.getByText('Pick')).toBeTruthy();
   });
@@ -19,7 +23,11 @@ describe('MultiSelectDropdown', () => {
   it('returns selected ids on Done', () => {
     const onDone = jest.fn();
     const tree = render(
-      <MultiSelectDropdown items={items} label="Pick" onSelectionDone={onDone} />,
+      <MultiSelectDropdown
+        items={items}
+        label="Pick"
+        onSelectionDone={onDone}
+      />,
     );
     fireEvent.press(tree.getByLabelText('Pick'));
     fireEvent.press(tree.getByLabelText('Alpha'));
@@ -31,7 +39,11 @@ describe('MultiSelectDropdown', () => {
   it('toggles selection on second tap', () => {
     const onDone = jest.fn();
     const tree = render(
-      <MultiSelectDropdown items={items} label="Pick" onSelectionDone={onDone} />,
+      <MultiSelectDropdown
+        items={items}
+        label="Pick"
+        onSelectionDone={onDone}
+      />,
     );
     fireEvent.press(tree.getByLabelText('Pick'));
     fireEvent.press(tree.getByLabelText('Alpha'));
@@ -42,9 +54,7 @@ describe('MultiSelectDropdown', () => {
 
   it('survives missing items array', () => {
     expect(() =>
-      render(
-        <MultiSelectDropdown label="Pick" onSelectionDone={() => {}} />,
-      ),
+      render(<MultiSelectDropdown label="Pick" onSelectionDone={() => {}} />),
     ).not.toThrow();
   });
 });

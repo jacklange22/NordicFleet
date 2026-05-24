@@ -1,4 +1,11 @@
-import React, {createContext, useContext, useEffect, useState, useCallback, useMemo} from 'react';
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useCallback,
+  useMemo,
+} from 'react';
 import {auth} from '../services/firebase';
 import {createProfile} from '../services/userService';
 
@@ -32,9 +39,8 @@ export const AuthProvider = ({children}) => {
     // the write and the profile shows up after the user reconnects.
     try {
       await createProfile(cred.user.uid, {email: cred.user.email});
-    } catch (err) {
+    } catch {
       // Swallow — surfaceable via subscribeProfile on next mount.
-      void err;
     }
   }, []);
 

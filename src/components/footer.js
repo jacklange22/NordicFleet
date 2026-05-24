@@ -13,7 +13,7 @@ const Footer = () => {
         onPress={() => navigation.navigate('Home')}>
         <Image
           source={require('../assets/home.png')}
-          style={{...styles.icon, tintColor: 'white'}}
+          style={styles.icon}
           accessibilityElementsHidden={true}
           importantForAccessibility="no"
         />
@@ -25,7 +25,7 @@ const Footer = () => {
         onPress={() => navigation.navigate('newSki')}>
         <Image
           source={require('../assets/newski.png')}
-          style={{...styles.icon, tintColor: 'white'}}
+          style={styles.icon}
           accessibilityElementsHidden={true}
           importantForAccessibility="no"
         />
@@ -37,7 +37,7 @@ const Footer = () => {
         onPress={() => navigation.navigate('WaxLog')}>
         <Image
           source={require('../assets/waxlog.png')}
-          style={{...styles.icon, tintColor: 'white'}}
+          style={styles.icon}
           accessibilityElementsHidden={true}
           importantForAccessibility="no"
         />
@@ -49,7 +49,7 @@ const Footer = () => {
         onPress={() => navigation.navigate('TestingLog')}>
         <Image
           source={require('../assets/note.png')}
-          style={{...styles.icon, tintColor: 'white'}}
+          style={styles.icon}
           accessibilityElementsHidden={true}
           importantForAccessibility="no"
         />
@@ -69,6 +69,7 @@ const styles = StyleSheet.create({
   icon: {
     width: 25,
     height: 25,
+    tintColor: 'white',
   },
 });
 

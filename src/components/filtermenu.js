@@ -1,15 +1,15 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import React, {useState} from 'react';
+import {View, Text, TouchableOpacity, StyleSheet} from 'react-native';
 
-const FilterMenu = ({ onApplyFilter }) => {
+const FilterMenu = ({onApplyFilter}) => {
   const [selectedTechnique, setSelectedTechnique] = useState(null);
   const [selectedCondition, setSelectedCondition] = useState(null);
 
-  const toggleTechnique = (technique) => {
+  const toggleTechnique = technique => {
     setSelectedTechnique(technique === selectedTechnique ? null : technique);
   };
 
-  const toggleCondition = (condition) => {
+  const toggleCondition = condition => {
     setSelectedCondition(condition === selectedCondition ? null : condition);
   };
 
@@ -63,13 +63,16 @@ const FilterMenu = ({ onApplyFilter }) => {
   );
 };
 
-const FilterButton = ({ title, onPress, isSelected }) => (
+const FilterButton = ({title, onPress, isSelected}) => (
   <TouchableOpacity
     accessibilityRole="button"
     accessibilityLabel={title}
     accessibilityState={{selected: isSelected}}
     onPress={onPress}
-    style={[styles.filterButton, isSelected ? styles.selected : styles.unselected]}>
+    style={[
+      styles.filterButton,
+      isSelected ? styles.selected : styles.unselected,
+    ]}>
     <Text style={styles.filterButtonText}>{title}</Text>
   </TouchableOpacity>
 );

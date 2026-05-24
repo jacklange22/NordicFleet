@@ -1,5 +1,11 @@
 import React from 'react';
-import {TouchableOpacity, Text, StyleSheet, View, ActivityIndicator} from 'react-native';
+import {
+  TouchableOpacity,
+  Text,
+  StyleSheet,
+  View,
+  ActivityIndicator,
+} from 'react-native';
 
 /**
  * Standard red Save button. While `submitting` is true, the button shows a

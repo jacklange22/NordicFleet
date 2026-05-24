@@ -1,7 +1,7 @@
 import React from 'react';
-import { TextInput, StyleSheet, View } from 'react-native';
+import {TextInput, StyleSheet, View} from 'react-native';
 
-const InputField = ({ placeholder, keyboardType, onChangeText, value }) => {
+const InputField = ({placeholder, keyboardType, onChangeText, value}) => {
   return (
     <View style={styles.inputContainer}>
       <TextInput

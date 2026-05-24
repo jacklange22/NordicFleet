@@ -1,10 +1,5 @@
 import firestoreMock from '@react-native-firebase/firestore';
-import {
-  createSki,
-  updateSki,
-  hardDeleteSki,
-  getSki,
-} from '../skiService';
+import {createSki, updateSki, hardDeleteSki, getSki} from '../skiService';
 
 beforeEach(() => {
   firestoreMock.__resetFirestoreMock();

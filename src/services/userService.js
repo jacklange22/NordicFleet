@@ -82,9 +82,8 @@ export function subscribeProfile(uid, callback) {
       }
       callback({uid, ...snap.data()});
     },
-    err => {
+    () => {
       // Errors in subscriptions deliver null; callers decide what to show.
-      void err;
       callback(null);
     },
   );

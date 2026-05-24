@@ -1,5 +1,11 @@
 import React from 'react';
-import {View, Text, TextInput, TouchableOpacity, StyleSheet} from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+} from 'react-native';
 import Dropdown from './dropdown';
 
 const BINDER_OPTIONS = [
@@ -55,14 +61,8 @@ const WaxInputComponent = ({ski, technique, value, onChange}) => {
     notes: '',
   };
 
-  const {
-    binder,
-    kickLayers,
-    kickWax,
-    glideLayers,
-    glideWaxes,
-    notes,
-  } = safeValue;
+  const {binder, kickLayers, kickWax, glideLayers, glideWaxes, notes} =
+    safeValue;
 
   const update = partial => onChange && onChange(partial);
 

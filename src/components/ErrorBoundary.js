@@ -11,9 +11,8 @@ class ErrorBoundary extends React.Component {
     return {hasError: true, error};
   }
 
-  componentDidCatch(error, info) {
-    // In real life we'd ship to crash reporting. Here we just keep the state.
-    void info;
+  componentDidCatch() {
+    // In real life we'd ship to crash reporting. Here we just keep state.
   }
 
   render() {

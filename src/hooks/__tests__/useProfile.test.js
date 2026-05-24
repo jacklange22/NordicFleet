@@ -13,7 +13,11 @@ const Probe = ({uid, onResult}) => {
   onResult(r);
   return (
     <Text>
-      {r.loading ? 'loading' : r.profile ? r.profile.email || 'no-email' : 'null'}
+      {r.loading
+        ? 'loading'
+        : r.profile
+        ? r.profile.email || 'no-email'
+        : 'null'}
     </Text>
   );
 };

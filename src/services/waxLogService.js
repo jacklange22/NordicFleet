@@ -94,8 +94,7 @@ export function subscribeWaxLogsForSki(uid, skiId, callback) {
         snap.forEach(d => logs.push(mapDoc(d)));
         callback(logs);
       },
-      err => {
-        void err;
+      () => {
         callback([]);
       },
     );

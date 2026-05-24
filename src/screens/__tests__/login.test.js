@@ -47,7 +47,9 @@ describe('LoginScreen', () => {
     await act(async () => {
       fireEvent.press(tree.getByLabelText('Login'));
     });
-    expect(tree.getByText('Password must be at least 6 characters')).toBeTruthy();
+    expect(
+      tree.getByText('Password must be at least 6 characters'),
+    ).toBeTruthy();
   });
 
   it('maps invalid-credential to friendly error', async () => {

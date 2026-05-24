@@ -33,9 +33,7 @@ export async function seedCurrentUser(uid) {
   });
 
   const existing = await listSkis(uid);
-  const existingSeedIds = new Set(
-    existing.map(s => s.seedId).filter(Boolean),
-  );
+  const existingSeedIds = new Set(existing.map(s => s.seedId).filter(Boolean));
 
   let created = 0;
   let skipped = 0;

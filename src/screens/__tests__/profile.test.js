@@ -49,9 +49,7 @@ describe('ProfileScreen', () => {
     fireEvent.press(tree.getByLabelText('Edit Weight (kg):'));
     // The modal's TextInput is now visible.
     // Find the modal TextInput by walking the tree.
-    const inputs = tree.UNSAFE_getAllByType(
-      require('react-native').TextInput,
-    );
+    const inputs = tree.UNSAFE_getAllByType(require('react-native').TextInput);
     // Last TextInput is the modal one.
     fireEvent.changeText(inputs[inputs.length - 1], '72');
     fireEvent.press(tree.getByText('Save'));

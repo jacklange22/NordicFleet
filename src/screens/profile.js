@@ -139,7 +139,10 @@ const ProfileScreen = () => {
       Alert.alert('Password updated');
     } catch (err) {
       const code = err && err.code;
-      if (code === 'auth/wrong-password' || code === 'auth/invalid-credential') {
+      if (
+        code === 'auth/wrong-password' ||
+        code === 'auth/invalid-credential'
+      ) {
         setPwError('Current password is incorrect');
       } else if (code === 'auth/weak-password') {
         setPwError('New password is too weak');

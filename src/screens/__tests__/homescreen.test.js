@@ -22,7 +22,9 @@ describe('HomeScreen', () => {
   it('shows empty state when no skis', async () => {
     authMock.__setCurrentUser({uid: 'u1', email: 'a@b.com'});
     const tree = renderHome();
-    await waitFor(() => tree.getByText('No skis yet — tap the + to add your first.'));
+    await waitFor(() =>
+      tree.getByText('No skis yet — tap the + to add your first.'),
+    );
   });
 
   it('renders ski names from subscribeSkis', async () => {
@@ -48,7 +50,10 @@ describe('HomeScreen', () => {
   it('hides retired skis', async () => {
     authMock.__setCurrentUser({uid: 'u1', email: 'a@b.com'});
     firestoreMock.__seedDoc('users/u1/skis/a', {name: 'Alive'});
-    firestoreMock.__seedDoc('users/u1/skis/b', {name: 'Retired', retired: true});
+    firestoreMock.__seedDoc('users/u1/skis/b', {
+      name: 'Retired',
+      retired: true,
+    });
     const tree = renderHome();
     await waitFor(() => tree.getByText('Alive'));
     expect(tree.queryByText('Retired')).toBeNull();

@@ -1,6 +1,7 @@
 import {db, firestore} from './firebase';
 
-const skisCollection = uid => db.collection('users').doc(uid).collection('skis');
+const skisCollection = uid =>
+  db.collection('users').doc(uid).collection('skis');
 const skiDoc = (uid, skiId) => skisCollection(uid).doc(skiId);
 
 function snapshotToSki(snap) {
@@ -58,8 +59,12 @@ export async function createSki(uid, data) {
     build: data.build || '',
     base: data.base || '',
     grind: data.grind || '',
-    length: data.length !== undefined && data.length !== '' ? Number(data.length) : null,
-    flex: data.flex !== undefined && data.flex !== '' ? Number(data.flex) : null,
+    length:
+      data.length !== undefined && data.length !== ''
+        ? Number(data.length)
+        : null,
+    flex:
+      data.flex !== undefined && data.flex !== '' ? Number(data.flex) : null,
     year: data.year ?? null,
     notes: data.notes || '',
     retired: data.retired || false,
@@ -129,8 +134,7 @@ export function subscribeSkis(uid, callback) {
       snap.forEach(d => skis.push({id: d.id, ...d.data()}));
       callback(skis);
     },
-    err => {
-      void err;
+    () => {
       callback([]);
     },
   );
@@ -150,8 +154,7 @@ export function subscribeSki(uid, skiId, callback) {
   }
   return skiDoc(uid, skiId).onSnapshot(
     snap => callback(snapshotToSki(snap)),
-    err => {
-      void err;
+    () => {
       callback(null);
     },
   );

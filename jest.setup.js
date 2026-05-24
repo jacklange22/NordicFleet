@@ -1,3 +1,4 @@
+/* eslint-env jest */
 // Mocks loaded before every test.
 
 jest.mock('@react-native-firebase/app', () => ({}));

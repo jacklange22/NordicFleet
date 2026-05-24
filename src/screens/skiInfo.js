@@ -17,7 +17,9 @@ import {subscribeTestLogsForSki} from '../services/testLogService';
 const InfoRow = ({label, value}) => (
   <View style={styles.infoRow}>
     <Text style={styles.label}>{label}:</Text>
-    <Text style={styles.value}>{value === undefined || value === null ? '—' : String(value)}</Text>
+    <Text style={styles.value}>
+      {value === undefined || value === null ? '—' : String(value)}
+    </Text>
   </View>
 );
 
@@ -98,7 +100,9 @@ const SkiInfo = ({route, navigation}) => {
         <Text style={styles.header}>{ski.name}</Text>
         <ProfileButton />
       </View>
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollViewContent}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollViewContent}>
         <View style={styles.infoContainer}>
           <Text style={styles.header}>Ski Information</Text>
           <InfoRow label="Flex" value={ski.flex} />

@@ -1,5 +1,12 @@
 import React, {useState} from 'react';
-import {View, Text, TouchableOpacity, Modal, StyleSheet, ScrollView} from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  Modal,
+  StyleSheet,
+  ScrollView,
+} from 'react-native';
 
 const optionHeight = 40;
 const doneButtonHeight = 50;
@@ -24,7 +31,8 @@ const Dropdown = ({options, onSelect, placeholder, value}) => {
     setIsVisible(false);
   };
 
-  const optionsHeight = (options || []).length * optionHeight + doneButtonHeight;
+  const optionsHeight =
+    (options || []).length * optionHeight + doneButtonHeight;
 
   return (
     <View style={styles.dropdownContainer}>

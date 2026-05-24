@@ -1,5 +1,13 @@
 import React, {useState, useMemo} from 'react';
-import {SafeAreaView, View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator} from 'react-native';
+import {
+  SafeAreaView,
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  TouchableOpacity,
+  ActivityIndicator,
+} from 'react-native';
 import ProfileButton from '../components/profilebutton.js';
 import Footer from '../components/footer.js';
 import SearchBar from '../components/searchbar.js';
