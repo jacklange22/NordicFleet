@@ -1,5 +1,84 @@
 # Morning report — autonomous NordicFleet rewrite
 
+## Upgrade session (RN 0.73 → 0.76, Firebase 18 → 21)
+
+**Result:** app builds on Xcode 26.5 and runs on the iOS simulator. Welcome screen renders. Tested on iPhone 17 Pro simulator (iOS 26.5).
+
+**Stack now on:**
+- React Native 0.76.9
+- React 18.3.1
+- @react-native-firebase/* 21.14.0
+- Firebase iOS SDK 11.11.0
+- react-native-reanimated 3.16.7, react-native-screens 4.4.0, react-native-gesture-handler 2.20.2, react-native-safe-area-context 4.12.0
+- async-storage 1.24.0
+- iOS deployment target 15.1
+- Node 20.20.2, CocoaPods 1.15.2 (via Homebrew Ruby 3.3.11)
+- New Architecture: **disabled** (`RCT_NEW_ARCH_ENABLED=0` at pod install time)
+
+**Upgrade commits (this session):**
+| Commit | What |
+|---|---|
+| `0ad69cf` | B1: RN 0.73 → 0.76 template diff applied |
+| `bd5a32a` | C1: npm install clean, lint and tests green on 0.76 |
+| `b6e35ae` | D1: pod install clean with Firebase iOS 11.11.0 |
+| `3dd3f13` | E1: Firebase 21 API audit + reanimated babel plugin |
+| `4b82217` | F1: confirmed RN 0.76 + Firebase 21 build runs on simulator |
+
+### What I changed
+
+**JS side (Phases B, C, E):**
+- `package.json` bumped per the upgrade-helper diff plus the target table; added `@react-native-community/cli@15.0.1` family and updated `@babel/*` family.
+- `babel.config.js` adds `react-native-reanimated/plugin` as the last plugin (required by reanimated 3.16).
+- `Gemfile` updated per the RN template (bundler/cocoapods/xcodeproj pins).
+- `metro.config.js` docs URL refresh (cosmetic).
+- `App.tsx`, all service files, all hooks: zero functional changes needed — RNFB 21 preserves the v18 namespaced API surface (`firestore()`, `auth()`, `FieldValue.serverTimestamp()`, `EmailAuthProvider.credential()`, etc.).
+- Tests still pass: 135/135 (1 intentionally skipped). Lint exits 0.
+
+**iOS side (Phases B, D, F):**
+- `ios/NordicFleet/AppDelegate.mm` — `getBundleURL` → `bundleURL` (RN 0.76 RCTAppDelegate vtable rename); `@import Firebase;` → `#import <FirebaseCore/FirebaseCore.h>` (works under use_frameworks).
+- `ios/NordicFleet/Info.plist` — `armv7` → `arm64` in `UIRequiredDeviceCapabilities`.
+- `ios/NordicFleet/PrivacyInfo.xcprivacy` — new file per Apple's privacy manifest spec.
+- `ios/NordicFleet.xcodeproj/project.pbxproj` — deployment target 13.4 → 15.1 (all 4 targets); `with-environment.sh` path now uses `$REACT_NATIVE_PATH`; `-DFOLLY_HAVE_CLOCK_GETTIME=1` added; PrivacyInfo file ref and group entry added.
+- `ios/Podfile` — Flipper removed (gone in 0.76 template); `use_frameworks! :linkage => :static` (required for Firebase iOS 11's Swift modules); per-pod `:modular_headers => true` on FirebaseAuth, FirebaseAuthInterop, FirebaseAppCheckInterop, FirebaseCore, FirebaseCoreExtension, FirebaseCoreInternal, FirebaseFirestore, FirebaseFirestoreInternal, GoogleUtilities, RecaptchaInterop.
+
+**Six `post_install` workarounds in `ios/Podfile`** for Xcode 26.5 / RN 0.76 / Firebase iOS 11 quirks that don't have official fixes yet:
+1. **fmt 11 consteval rejection** — Xcode 26.5's clang 17 rejects fmt's `basic_format_string` consteval. Patch `fmt/include/fmt/base.h` to gate the `FMT_USE_CONSTEVAL` elif chain on `#ifndef FMT_USE_CONSTEVAL`, then inject `FMT_USE_CONSTEVAL=0` via xcconfig.
+2. **gRPC-Core modulemap path** — cocoapods 1.15.2 writes `gRPC-Core.modulemap` to `Pods/Target Support Files/gRPC-Core/` but xcconfigs reference it at `Pods/Headers/Private/grpc/`. Sweep every xcconfig and redirect.
+3. **ReactCommon + React-RuntimeApple modulemap collision** — both pods write modulemaps to `Pods/Headers/Public/ReactCommon/` declaring `module ReactCommon`. Delete the React-RuntimeApple modulemap and umbrella; strip its `-fmodule-map-file` references from xcconfigs.
+4. **FirebaseAuth-Swift.h header search** — Firebase.h umbrella imports `<FirebaseAuth/FirebaseAuth-Swift.h>` which is generated to a Swift-Compatibility-Header subdir. Add the FirebaseAuth build dir to RNFB* targets' header search paths.
+5. **AppDelegate import style** — `@import Firebase` is rejected when C++ modules are disabled; use the framework-style include instead.
+6. **`use_frameworks! :linkage => :static`** — documented requirement for Firebase iOS 11 + Swift modules per the RNFB 21 docs. Enables the angle-bracket include in Firebase.h to resolve.
+
+### What's still TODO for the user
+
+1. **Enable Email/Password auth in Firebase console** for project `nordicfleet-11e67`. Without this, signup will fail with `auth/operation-not-allowed`.
+2. **Create the Firestore database** in production mode in the Firebase console. Without this, every Firestore read/write fails.
+3. **Deploy Firestore security rules**: `npm install -g firebase-tools && firebase login && firebase use nordicfleet-11e67 && firebase deploy --only firestore:rules`. Or paste `firestore.rules` into the console.
+4. **Verify the happy path manually on the simulator** using the steps below.
+
+### Recommended first manual test on the simulator
+
+App is already installed on the booted iPhone 17 Pro simulator (bundle id `com.NordicFleet.app`). To relaunch:
+```
+xcrun simctl launch booted com.NordicFleet.app
+```
+
+Walk through:
+1. Welcome screen → tap **Track now** → Signup screen appears.
+2. Enter `you@example.com`, `password1`, `password1` → tap **Sign up**. Should land on Home with "No skis yet" empty state. (Will fail with `auth/operation-not-allowed` until you enable Email/Password auth in the Firebase console.)
+3. Tap the round profile button (top-right) → Profile screen. Email shown. Tap **Seed sample data** (visible only in `__DEV__` builds) → "Created 2, skipped 0".
+4. Footer Home icon → Home → two skis (Fischer Speedmax, Salomon S/Lab Carbon).
+5. Tap Fischer Speedmax → SkiInfo. All ski fields visible, "No wax logs yet" / "No tests yet" placeholders.
+6. Footer wax-log icon → WaxLog. Pick a ski in the dropdown → controlled wax input appears. Save → routes back to Home. SkiInfo wax history now shows the entry.
+7. Same flow for TestingLog: snow=Old, surface=Hardpack, temperature, humidity, ratings, Save → Home.
+8. Profile → tap Edit next to Weight → enter `72` → Save → field shows 72.
+9. Profile → Sign out → confirm Alert → back to Welcome.
+10. Welcome → Already a member? Log in → log in with the same credentials → Home with the two skis still there (Firestore persistence works).
+
+If anything fails, the JS-level coverage of every screen is in `src/screens/__tests__/`; the service contract is in `src/services/__tests__/`. Both pass 135/135 currently.
+
+---
+
 ## Cleanup session (run by Claude Code after overnight)
 
 ### What worked
