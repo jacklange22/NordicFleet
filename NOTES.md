@@ -49,5 +49,12 @@ Decisions made during autonomous overnight rewrite — see commit log for contex
 
 ## Audit / loop-back decisions
 
-(Will be appended as audits are done.)
+- **Pass 1 (test coverage):** added component tests for Dropdown, MultiSelectDropdown, FilterMenu, SkiItem, WaxInputComponent, SkiInputComponent. Added a partial-seed test (one seedId already in Firestore). README rewritten to reflect the new architecture. AuthLoadingScreen now uses the shared LoadingScreen component.
+- **Pass 2 (screen render + mock self-tests):** added screen tests for HomeScreen (empty, render, retired filter), SkiInfo (not-found, fields, empty logs, log rows), Profile (loading, fields, write). Wrote tests for the Firestore mock itself so the service tests remain trustworthy as the mock evolves.
+- **Pass 3 (hook extraction):** pulled `subscribeSkis` / `subscribeProfile` `useEffect` boilerplate out of four screens into `src/hooks/useSkis.js` and `src/hooks/useProfile.js`. Each screen drops to one line; the hook owns the subscribe/unsubscribe/retired filter. Added tests for both hooks plus an AuthContext test that signUp tolerates a failing profile write (offline-first).
+- **Pass 4 (SkiSaveButton ergonomics):** instead of passing a no-op when submitting, the Save button now owns `submitting` and `disabled` props and shows a spinner. Cleaner contract.
+- **Pass 5 (data-model fidelity):** when saving a wax log for a skate ski, force `kickLayers=0` and `kickWax=null` per the data model. Test logs: skate sets `kickRating`/`kickWax` to null, classic sets `stabilityRating`/`climbingRating` to null. SearchBar now filters on every keystroke (live) instead of only on submit.
+- **Pass 6 (coverage gates):** added `npm run test:coverage` and `npm run deploy:rules` scripts. Jest collects coverage from `src/**`; 60% gate on `src/services/`.
+
+
 
