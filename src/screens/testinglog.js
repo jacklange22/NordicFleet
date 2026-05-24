@@ -201,9 +201,7 @@ const TestingLogScreen = () => {
         <SkiSaveButton onPress={submitting ? () => {} : handleSubmit} />
       </ScrollView>
 
-      <View style={styles.Footer}>
-        <Footer />
-      </View>
+      <Footer />
     </SafeAreaView>
   );
 };
@@ -238,17 +236,11 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#fff',
   },
-  Footer: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 35,
-  },
   scrollView: {
     flex: 1,
   },
   scrollContentContainer: {
-    paddingBottom: 100,
+    paddingBottom: 20,
     paddingTop: 0,
   },
 });

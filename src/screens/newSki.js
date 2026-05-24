@@ -191,14 +191,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#000',
   },
   scrollViewContent: {
+    flex: 1,
     width: '100%',
     backgroundColor: 'black',
   },
   infoContainer: {
     width: '100%',
-    height: '100%',
     paddingHorizontal: 16,
-    paddingBottom: 80,
+    paddingBottom: 20,
   },
   header: {
     flexDirection: 'row',

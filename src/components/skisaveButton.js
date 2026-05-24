@@ -1,10 +1,14 @@
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet, View } from 'react-native';
 
-const SkiSaveButton = ({ onPress }) => {
+const SkiSaveButton = ({onPress}) => {
   return (
     <View style={styles.container}>
-      <TouchableOpacity style={styles.saveButton} onPress={onPress}>
+      <TouchableOpacity
+        accessibilityRole="button"
+        accessibilityLabel="Save"
+        style={styles.saveButton}
+        onPress={onPress}>
         <Text style={styles.saveButtonText}>Save</Text>
       </TouchableOpacity>
     </View>
@@ -13,11 +17,9 @@ const SkiSaveButton = ({ onPress }) => {
 
 const styles = StyleSheet.create({
   container: {
-    // This will make sure the button stays at the bottom of the container
-    flex: 1,
     justifyContent: 'flex-end',
     marginTop: 20,
-    marginBottom: 10, // Adjust this value as needed for bottom margin
+    marginBottom: 10,
   },
   saveButton: {
     backgroundColor: 'red', // Changed from blue to red

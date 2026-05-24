@@ -52,7 +52,11 @@ const FilterMenu = ({ onApplyFilter }) => {
         />
       </View>
 
-      <TouchableOpacity style={styles.applyButton} onPress={applyFilter}>
+      <TouchableOpacity
+        accessibilityRole="button"
+        accessibilityLabel="Apply filter"
+        style={styles.applyButton}
+        onPress={applyFilter}>
         <Text style={styles.applyButtonText}>Apply</Text>
       </TouchableOpacity>
     </View>
@@ -61,9 +65,11 @@ const FilterMenu = ({ onApplyFilter }) => {
 
 const FilterButton = ({ title, onPress, isSelected }) => (
   <TouchableOpacity
+    accessibilityRole="button"
+    accessibilityLabel={title}
+    accessibilityState={{selected: isSelected}}
     onPress={onPress}
-    style={[styles.filterButton, isSelected ? styles.selected : styles.unselected]}
-  >
+    style={[styles.filterButton, isSelected ? styles.selected : styles.unselected]}>
     <Text style={styles.filterButtonText}>{title}</Text>
   </TouchableOpacity>
 );

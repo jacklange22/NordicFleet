@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 
 import Footer from '../components/footer';
+import LoadingScreen from '../components/LoadingScreen';
 import {useAuth} from '../context/AuthContext';
 import {subscribeProfile, updateProfile} from '../services/userService';
 import {seedCurrentUser} from '../services/seed';
@@ -198,11 +199,7 @@ const ProfileScreen = () => {
   const isSecure = SECURE_FIELDS.has(editField);
 
   if (loading) {
-    return (
-      <SafeAreaView style={styles.safeArea}>
-        <ActivityIndicator color="#fff" style={styles.loading} />
-      </SafeAreaView>
-    );
+    return <LoadingScreen label="Loading profile…" />;
   }
 
   return (

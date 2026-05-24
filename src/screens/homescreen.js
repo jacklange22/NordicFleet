@@ -89,6 +89,7 @@ const HomeScreen = () => {
         <ActivityIndicator color="#fff" style={styles.loading} />
       ) : (
         <FlatList
+          style={styles.list}
           data={filteredSkis}
           renderItem={({item}) => (
             <SkiItem
@@ -115,9 +116,7 @@ const HomeScreen = () => {
         />
       )}
 
-      <View style={styles.Footer}>
-        <Footer />
-      </View>
+      <Footer />
     </SafeAreaView>
   );
 };
@@ -140,7 +139,11 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   loading: {
+    flex: 1,
     marginTop: 40,
+  },
+  list: {
+    flex: 1,
   },
   filterButton: {
     paddingHorizontal: 20,
@@ -171,11 +174,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 40,
     fontStyle: 'italic',
-  },
-  Footer: {
-    position: 'absolute',
-    bottom: 20,
-    width: '100%',
   },
 });
 

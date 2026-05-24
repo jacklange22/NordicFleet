@@ -86,9 +86,8 @@ const SkiInfo = ({route, navigation}) => {
           <Text style={styles.header}>Ski not found</Text>
           <ProfileButton />
         </View>
-        <View style={styles.Footer}>
-          <Footer />
-        </View>
+        <View style={styles.spacer} />
+        <Footer />
       </View>
     );
   }
@@ -99,7 +98,7 @@ const SkiInfo = ({route, navigation}) => {
         <Text style={styles.header}>{ski.name}</Text>
         <ProfileButton />
       </View>
-      <ScrollView contentContainerStyle={styles.scrollViewContent}>
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollViewContent}>
         <View style={styles.infoContainer}>
           <Text style={styles.header}>Ski Information</Text>
           <InfoRow label="Flex" value={ski.flex} />
@@ -167,9 +166,7 @@ const SkiInfo = ({route, navigation}) => {
           </Text>
         </View>
       </ScrollView>
-      <View style={styles.Footer}>
-        <Footer />
-      </View>
+      <Footer />
     </View>
   );
 };
@@ -182,10 +179,11 @@ const styles = StyleSheet.create({
   loading: {
     marginTop: 40,
   },
+  scrollView: {
+    flex: 1,
+  },
   scrollViewContent: {
-    flexGrow: 1,
-    justifyContent: 'flex-start',
-    paddingBottom: 200,
+    paddingBottom: 20,
   },
   infoContainer: {
     padding: 20,
@@ -241,10 +239,8 @@ const styles = StyleSheet.create({
     color: '#777',
     fontStyle: 'italic',
   },
-  Footer: {
-    position: 'absolute',
-    bottom: 20,
-    width: '100%',
+  spacer: {
+    flex: 1,
   },
 });
 
