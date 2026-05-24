@@ -152,6 +152,10 @@ function docRef(path) {
       return Promise.resolve();
     }),
     delete: jest.fn(() => {
+      const inj = firestore.__shouldInjectError();
+      if (inj) {
+        return Promise.reject(inj);
+      }
       store.delete(path);
       notify(path);
       return Promise.resolve();
@@ -195,7 +199,13 @@ function collectionRef(path) {
       order = [field, direction || 'asc'];
       return api;
     },
-    get: jest.fn(() => Promise.resolve(querySnapshot(path, filters, order))),
+    get: jest.fn(() => {
+      const inj = firestore.__shouldInjectError();
+      if (inj) {
+        return Promise.reject(inj);
+      }
+      return Promise.resolve(querySnapshot(path, filters, order));
+    }),
     onSnapshot: jest.fn(callback => {
       if (!listeners.has(path)) {
         listeners.set(path, new Set());
