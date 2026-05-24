@@ -1,79 +1,89 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# NordicFleet
 
-# Getting Started
+iOS-only React Native app for cross-country ski fleet tracking. Built with React Native 0.73.6, JavaScript, React Navigation 6, and Firebase (Auth + Firestore) via `@react-native-firebase/*`.
 
->**Note**: Make sure you have completed the [React Native - Environment Setup](https://reactnative.dev/docs/environment-setup) instructions till "Creating a new application" step, before proceeding.
-
-## Step 1: Start the Metro Server
-
-First, you will need to start **Metro**, the JavaScript _bundler_ that ships _with_ React Native.
-
-To start Metro, run the following command from the _root_ of your React Native project:
+## Quick start
 
 ```bash
-# using npm
-npm start
-
-# OR using Yarn
-yarn start
-```
-
-## Step 2: Start your Application
-
-Let Metro Bundler run in its _own_ terminal. Open a _new_ terminal from the _root_ of your React Native project. Run the following command to start your _Android_ or _iOS_ app:
-
-### For Android
-
-```bash
-# using npm
-npm run android
-
-# OR using Yarn
-yarn android
-```
-
-### For iOS
-
-```bash
-# using npm
+npm install
+cd ios && bundle install && bundle exec pod install && cd ..
 npm run ios
-
-# OR using Yarn
-yarn ios
 ```
 
-If everything is set up _correctly_, you should see your new app running in your _Android Emulator_ or _iOS Simulator_ shortly provided you have set up your emulator/simulator correctly.
+First-time setup requires Xcode and a Firebase project (see "Firebase setup" below).
 
-This is one way to run your app — you can also run it directly from within Android Studio and Xcode respectively.
+## Project structure
 
-## Step 3: Modifying your App
+```
+App.tsx                  Root: ErrorBoundary > AuthProvider > NavigationContainer
+src/
+  context/               React Context (AuthProvider, useAuth)
+  services/              Firestore + Auth service layer
+    firebase.js          Shared init; explicitly enables disk persistence
+    userService.js       getProfile, updateProfile, subscribeProfile, …
+    skiService.js        listSkis, createSki, updateSki, deleteSki (soft), subscribeSkis, subscribeSki, …
+    waxLogService.js     createWaxLog, listWaxLogsForSki, subscribeWaxLogsForSki, …
+    testLogService.js    createTestLog, listTestLogsForSki, subscribeTestLogsForSki, …
+    seed.js              Idempotent seedCurrentUser(uid) using seedId markers
+  components/            Stateless UI atoms (Dropdown, MultiSelectDropdown, Footer, etc.)
+  screens/               One file per route (Welcome, Login, Signup, Home, Profile, NewSki, SkiInfo, WaxLog, TestingLog, AuthLoading)
+  seedData.json          Sample-data source for the seed function
+__mocks__/               Jest mocks for @react-native-firebase/* and AsyncStorage
+firestore.rules          Per-user rules; only the owning uid can read or write their docs
+firebase.json            Points firestore CLI at firestore.rules
+```
 
-Now that you have successfully run the app, let's modify it.
+## How auth works
 
-1. Open `App.tsx` in your text editor of choice and edit some lines.
-2. For **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Developer Menu** (<kbd>Ctrl</kbd> + <kbd>M</kbd> (on Window and Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (on macOS)) to see your changes!
+`AuthProvider` (in `src/context/AuthContext.js`) wraps `<NavigationContainer>` and listens to `auth().onAuthStateChanged`. It exposes `{ user, loading, signIn, signUp, signOut }` via `useAuth()`. `AuthLoadingScreen` is the initial route — it renders a spinner while `loading`, then `navigation.replace`s into `Home` (if `user`) or `Welcome` (if not).
 
-   For **iOS**: Hit <kbd>Cmd ⌘</kbd> + <kbd>R</kbd> in your iOS Simulator to reload the app and see your changes!
+Sign-up creates the user's Firestore profile doc as part of the flow. Errors are mapped to user-facing strings in `login.js` and `signup.js`.
 
-## Congratulations! :tada:
+## Data model
 
-You've successfully run and modified your React Native App. :partying_face:
+```
+users/{uid}                              email, displayName, weight, height, team, location, createdAt, updatedAt
+  /skis/{skiId}                          name, brand, model, technique, type, build, base, grind, length, flex, year, notes, retired, seedId, createdAt, updatedAt
+  /waxLogs/{logId}                       skiId, date, binder, kickLayers, kickWax, glideLayers, glideWaxes[], notes, createdAt
+  /testLogs/{logId}                      skiId, date, temperature, humidity, snowType, surface, glideWax, kickWax, glideRating, kickRating, stabilityRating, climbingRating, notes, createdAt
+```
 
-### Now what?
+Firestore disk persistence is enabled at app boot in `src/services/firebase.js`, so offline writes queue locally and replay when the device reconnects.
 
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [Introduction to React Native](https://reactnative.dev/docs/getting-started).
+## Tests
 
-# Troubleshooting
+```bash
+npm test                  # Jest, fully mocked Firebase
+npm test -- --coverage    # coverage report
+```
 
-If you can't get this to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
+Tests use the in-memory Firestore mock in `__mocks__/@react-native-firebase/firestore.js`. Reset between tests with `firestoreMock.__resetFirestoreMock()`; seed with `__seedDoc(path, data)`.
 
-# Learn More
+Auth tests reset with `authMock.__resetAuthMock()` and can seed a user with `__seedUser(email, password, uid)` or directly set the current user with `__setCurrentUser({...})`.
 
-To learn more about React Native, take a look at the following resources:
+## Firebase setup (one-time)
 
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+1. Make sure `ios/GoogleService-Info.plist` is present and the project name in `app.json`/`AppDelegate.mm` matches.
+2. In the Firebase console for the project:
+   - Authentication → Sign-in method → Email/Password → Enable.
+   - Firestore Database → Create database → Production mode.
+3. Deploy the rules:
+   ```bash
+   firebase deploy --only firestore:rules
+   ```
+   (or paste `firestore.rules` into the console under Firestore → Rules → Publish).
+4. The seed button on the Profile screen (visible in `__DEV__` builds) populates the current user with sample skis. It is idempotent.
+
+## Lint
+
+```bash
+npm run lint
+```
+
+## What's iOS-only
+
+The `android/` directory is shipped from the React Native template but the app is never built for Android. Do not bother with Gradle.
+
+## Notes from the rewrite
+
+See `NOTES.md` for design decisions and `BLOCKERS.md` for any outstanding items.

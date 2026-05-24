@@ -42,4 +42,15 @@ describe('seedCurrentUser', () => {
       expect(refetched.seedId).toBe(ski.seedId);
     }
   });
+
+  it('skips only already-seeded skis on partial reseed', async () => {
+    // Pre-seed one of the ski ids directly to simulate a partial state.
+    firestoreMock.__seedDoc('users/u1/skis/manual', {
+      name: 'Already here',
+      seedId: '334', // matches first seedData ski
+    });
+    const result = await seedCurrentUser('u1');
+    expect(result.skipped).toBe(1);
+    expect(result.created).toBeGreaterThan(0);
+  });
 });
