@@ -1,5 +1,6 @@
 import React from 'react';
 import {render, waitFor} from '@testing-library/react-native';
+import {NavigationContainer} from '@react-navigation/native';
 import authMock from '@react-native-firebase/auth';
 import firestoreMock from '@react-native-firebase/firestore';
 
@@ -16,9 +17,11 @@ beforeEach(() => {
 
 const renderSkiInfo = skiId =>
   render(
-    <AuthProvider>
-      <SkiInfo route={{params: {skiId}}} navigation={navProp} />
-    </AuthProvider>,
+    <NavigationContainer>
+      <AuthProvider>
+        <SkiInfo route={{params: {skiId}}} navigation={navProp} />
+      </AuthProvider>
+    </NavigationContainer>,
   );
 
 describe('SkiInfo', () => {

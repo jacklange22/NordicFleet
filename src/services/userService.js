@@ -29,6 +29,9 @@ export async function createProfile(uid, data = {}) {
   if (!uid) {
     throw new Error('createProfile: uid is required');
   }
+  // Initial profile write: every field exists with a default (null) if not
+  // supplied. Use updateProfile for subsequent merges that should preserve
+  // existing values.
   await userDoc(uid).set(
     {
       email: data.email || null,

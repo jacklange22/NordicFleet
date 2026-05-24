@@ -43,12 +43,16 @@ describe('userService', () => {
       expect(profile.createdAt).toBeDefined();
     });
 
-    it('is safe to call twice (merge semantics)', async () => {
-      await createProfile('u1', {email: 'a@b.com'});
-      await createProfile('u1', {displayName: 'Anna'});
+    it('a second createProfile call overwrites omitted fields with defaults', async () => {
+      // createProfile is for the INITIAL write. It does not preserve fields
+      // omitted on a re-call — use updateProfile for that. This test pins the
+      // contract so callers don't accidentally call createProfile twice
+      // expecting merge semantics.
+      await createProfile('u1', {email: 'a@b.com', displayName: 'Anna'});
+      await createProfile('u1', {displayName: 'Bob'});
       const profile = await getProfile('u1');
-      expect(profile.email).toBe('a@b.com');
-      expect(profile.displayName).toBe('Anna');
+      expect(profile.email).toBeNull();
+      expect(profile.displayName).toBe('Bob');
     });
   });
 

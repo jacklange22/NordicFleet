@@ -1,5 +1,6 @@
 import React from 'react';
 import {render, fireEvent, act, waitFor} from '@testing-library/react-native';
+import {NavigationContainer} from '@react-navigation/native';
 import authMock from '@react-native-firebase/auth';
 import firestoreMock from '@react-native-firebase/firestore';
 
@@ -13,9 +14,11 @@ beforeEach(() => {
 
 const renderProfile = () =>
   render(
-    <AuthProvider>
-      <ProfileScreen />
-    </AuthProvider>,
+    <NavigationContainer>
+      <AuthProvider>
+        <ProfileScreen />
+      </AuthProvider>
+    </NavigationContainer>,
   );
 
 describe('ProfileScreen', () => {
