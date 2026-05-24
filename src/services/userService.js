@@ -83,8 +83,7 @@ export function subscribeProfile(uid, callback) {
       callback({uid, ...snap.data()});
     },
     err => {
-      // Errors in subscriptions deliver null; callers can decide what to show.
-      // eslint-disable-next-line no-console
+      // Errors in subscriptions deliver null; callers decide what to show.
       void err;
       callback(null);
     },
