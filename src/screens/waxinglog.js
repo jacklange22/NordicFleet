@@ -142,7 +142,7 @@ const WaxLogScreen = () => {
             );
           })}
         </View>
-        <SkiSaveButton onPress={submitting ? () => {} : handleSavePress} />
+        <SkiSaveButton onPress={handleSavePress} submitting={submitting} />
       </ScrollView>
       <Footer />
     </SafeAreaView>

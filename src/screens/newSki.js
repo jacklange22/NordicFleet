@@ -7,7 +7,6 @@ import {
   StyleSheet,
   SafeAreaView,
   Alert,
-  ActivityIndicator,
 } from 'react-native';
 import Dropdown from '../components/dropdown';
 import Footer from '../components/footer';
@@ -173,11 +172,7 @@ const AddSkiForm = () => {
             placeholder="Enter notes"
             placeholderTextColor="#888"
           />
-          {submitting ? (
-            <ActivityIndicator color="#fff" style={styles.spinner} />
-          ) : (
-            <SkiSaveButton onPress={handleSubmit} />
-          )}
+          <SkiSaveButton onPress={handleSubmit} submitting={submitting} />
         </View>
       </ScrollView>
       <Footer />
@@ -224,9 +219,6 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     marginTop: 10,
-  },
-  spinner: {
-    marginTop: 20,
   },
 });
 

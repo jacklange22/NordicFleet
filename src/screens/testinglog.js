@@ -183,7 +183,7 @@ const TestingLogScreen = () => {
             );
           })}
         </View>
-        <SkiSaveButton onPress={submitting ? () => {} : handleSubmit} />
+        <SkiSaveButton onPress={handleSubmit} submitting={submitting} />
       </ScrollView>
 
       <Footer />
