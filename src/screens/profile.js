@@ -12,7 +12,7 @@ import {
   Button,
 } from 'react-native';
 
-import testData from '../testingdata.json';
+import testData from '../seedData.json';
 import Footer from '../components/footer';
 
 const NUMERIC_FIELDS = new Set(['weight', 'height']);

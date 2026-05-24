@@ -1,0 +1,158 @@
+import {db, firestore} from './firebase';
+
+const skisCollection = uid => db.collection('users').doc(uid).collection('skis');
+const skiDoc = (uid, skiId) => skisCollection(uid).doc(skiId);
+
+function snapshotToSki(snap) {
+  if (!snap || !snap.exists) {
+    return null;
+  }
+  return {id: snap.id, ...snap.data()};
+}
+
+/**
+ * One-time read of every ski for a user, including retired.
+ * @param {string} uid
+ * @returns {Promise<Array<object>>}
+ */
+export async function listSkis(uid) {
+  if (!uid) {
+    return [];
+  }
+  const snap = await skisCollection(uid).get();
+  const out = [];
+  snap.forEach(d => out.push({id: d.id, ...d.data()}));
+  return out;
+}
+
+/**
+ * Read a single ski.
+ * @param {string} uid
+ * @param {string} skiId
+ * @returns {Promise<object|null>}
+ */
+export async function getSki(uid, skiId) {
+  if (!uid || !skiId) {
+    return null;
+  }
+  const snap = await skiDoc(uid, skiId).get();
+  return snapshotToSki(snap);
+}
+
+/**
+ * Create a new ski. Returns the doc ID.
+ * @param {string} uid
+ * @param {object} data
+ * @returns {Promise<string>} new skiId
+ */
+export async function createSki(uid, data) {
+  if (!uid) {
+    throw new Error('createSki: uid is required');
+  }
+  const payload = {
+    name: data.name || '',
+    brand: data.brand || '',
+    model: data.model || '',
+    technique: (data.technique || '').toLowerCase(),
+    type: (data.type || '').toLowerCase(),
+    build: data.build || '',
+    base: data.base || '',
+    grind: data.grind || '',
+    length: data.length !== undefined && data.length !== '' ? Number(data.length) : null,
+    flex: data.flex !== undefined && data.flex !== '' ? Number(data.flex) : null,
+    year: data.year ?? null,
+    notes: data.notes || '',
+    retired: data.retired || false,
+    // Preserve a seed identifier so seeding can stay idempotent.
+    seedId: data.seedId || null,
+    createdAt: firestore.FieldValue.serverTimestamp(),
+    updatedAt: firestore.FieldValue.serverTimestamp(),
+  };
+  const ref = await skisCollection(uid).add(payload);
+  return ref.id;
+}
+
+/**
+ * Merge a partial update.
+ * @param {string} uid
+ * @param {string} skiId
+ * @param {object} partial
+ * @returns {Promise<void>}
+ */
+export async function updateSki(uid, skiId, partial) {
+  if (!uid || !skiId) {
+    throw new Error('updateSki: uid and skiId required');
+  }
+  await skiDoc(uid, skiId).set(
+    {...partial, updatedAt: firestore.FieldValue.serverTimestamp()},
+    {merge: true},
+  );
+}
+
+/**
+ * Soft delete — sets retired=true. Wired to the UI.
+ * @param {string} uid
+ * @param {string} skiId
+ * @returns {Promise<void>}
+ */
+export async function deleteSki(uid, skiId) {
+  await updateSki(uid, skiId, {retired: true});
+}
+
+/**
+ * Hard delete — permanently removes the ski doc. Not wired to UI.
+ * @param {string} uid
+ * @param {string} skiId
+ * @returns {Promise<void>}
+ */
+export async function hardDeleteSki(uid, skiId) {
+  if (!uid || !skiId) {
+    throw new Error('hardDeleteSki: uid and skiId required');
+  }
+  await skiDoc(uid, skiId).delete();
+}
+
+/**
+ * Subscribe to live updates of the ski list.
+ * @param {string} uid
+ * @param {(skis: Array<object>) => void} callback
+ * @returns {() => void} unsubscribe
+ */
+export function subscribeSkis(uid, callback) {
+  if (!uid) {
+    callback([]);
+    return () => {};
+  }
+  return skisCollection(uid).onSnapshot(
+    snap => {
+      const skis = [];
+      snap.forEach(d => skis.push({id: d.id, ...d.data()}));
+      callback(skis);
+    },
+    err => {
+      void err;
+      callback([]);
+    },
+  );
+}
+
+/**
+ * Subscribe to live updates of a single ski.
+ * @param {string} uid
+ * @param {string} skiId
+ * @param {(ski: object|null) => void} callback
+ * @returns {() => void} unsubscribe
+ */
+export function subscribeSki(uid, skiId, callback) {
+  if (!uid || !skiId) {
+    callback(null);
+    return () => {};
+  }
+  return skiDoc(uid, skiId).onSnapshot(
+    snap => callback(snapshotToSki(snap)),
+    err => {
+      void err;
+      callback(null);
+    },
+  );
+}

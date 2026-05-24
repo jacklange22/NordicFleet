@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import ProfileButton from '../components/profilebutton';
 import Footer from '../components/footer';
-import testData from '../testingdata.json';
+import testData from '../seedData.json';
 import MultiSelectDropdown from '../components/checkboxDropdown';
 import WaxInputComponent from '../components/waxinput.js';
 import SkiSaveButton from '../components/skisaveButton';

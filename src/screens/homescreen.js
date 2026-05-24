@@ -5,7 +5,7 @@ import Footer from '../components/footer.js';
 import SearchBar from '../components/searchbar.js';
 import SkiItem from '../components/skiitem.js';
 import FilterMenu from '../components/filtermenu.js';
-import testingData from '../testingdata.json';
+import testingData from '../seedData.json';
 
 const HomeScreen = () => {
   const [userSkis, setUserSkis] = useState([]);

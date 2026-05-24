@@ -9,7 +9,7 @@ import {
 import Dropdown from '../components/dropdown';
 import ProfileButton from '../components/profilebutton';
 import Footer from '../components/footer';
-import testData from '../testingdata.json';
+import testData from '../seedData.json';
 import MultiSelectDropdown from '../components/checkboxDropdown';
 import InputField from '../components/inputfield';
 import SkiInputComponent from '../components/testInput';

@@ -1,0 +1,111 @@
+import {db, firestore} from './firebase';
+
+const testLogsCollection = uid =>
+  db.collection('users').doc(uid).collection('testLogs');
+
+function mapDoc(d) {
+  return {id: d.id, ...d.data()};
+}
+
+function toNumberOrNull(v) {
+  if (v === undefined || v === null || v === '') {
+    return null;
+  }
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+/**
+ * Test logs for a single ski, newest first.
+ * @param {string} uid
+ * @param {string} skiId
+ * @returns {Promise<Array<object>>}
+ */
+export async function listTestLogsForSki(uid, skiId) {
+  if (!uid || !skiId) {
+    return [];
+  }
+  const snap = await testLogsCollection(uid)
+    .where('skiId', '==', skiId)
+    .orderBy('date', 'desc')
+    .get();
+  const out = [];
+  snap.forEach(d => out.push(mapDoc(d)));
+  return out;
+}
+
+/**
+ * Every test log for the user, newest first.
+ * @param {string} uid
+ * @returns {Promise<Array<object>>}
+ */
+export async function listAllTestLogs(uid) {
+  if (!uid) {
+    return [];
+  }
+  const snap = await testLogsCollection(uid).orderBy('date', 'desc').get();
+  const out = [];
+  snap.forEach(d => out.push(mapDoc(d)));
+  return out;
+}
+
+/**
+ * Create a test log. Returns the new doc ID.
+ * @param {string} uid
+ * @param {object} data
+ * @returns {Promise<string>}
+ */
+export async function createTestLog(uid, data) {
+  if (!uid) {
+    throw new Error('createTestLog: uid is required');
+  }
+  if (!data || !data.skiId) {
+    throw new Error('createTestLog: data.skiId is required');
+  }
+  const payload = {
+    skiId: data.skiId,
+    date: data.date || firestore.FieldValue.serverTimestamp(),
+    temperature: toNumberOrNull(data.temperature),
+    humidity: toNumberOrNull(data.humidity),
+    snowType: data.snowType ? String(data.snowType).toLowerCase() : null,
+    surface: data.surface ? String(data.surface).toLowerCase() : null,
+    glideWax: data.glideWax || null,
+    kickWax: data.kickWax || null,
+    glideRating: toNumberOrNull(data.glideRating) ?? 0,
+    kickRating: toNumberOrNull(data.kickRating),
+    stabilityRating: toNumberOrNull(data.stabilityRating),
+    climbingRating: toNumberOrNull(data.climbingRating),
+    notes: data.notes || '',
+    createdAt: firestore.FieldValue.serverTimestamp(),
+  };
+  const ref = await testLogsCollection(uid).add(payload);
+  return ref.id;
+}
+
+/**
+ * Subscribe to test logs for a single ski, newest first.
+ * @param {string} uid
+ * @param {string} skiId
+ * @param {(logs: Array<object>) => void} callback
+ * @returns {() => void} unsubscribe
+ */
+export function subscribeTestLogsForSki(uid, skiId, callback) {
+  if (!uid || !skiId) {
+    callback([]);
+    return () => {};
+  }
+  return testLogsCollection(uid)
+    .where('skiId', '==', skiId)
+    .orderBy('date', 'desc')
+    .onSnapshot(
+      snap => {
+        const logs = [];
+        snap.forEach(d => logs.push(mapDoc(d)));
+        callback(logs);
+      },
+      err => {
+        void err;
+        callback([]);
+      },
+    );
+}
