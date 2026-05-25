@@ -15,7 +15,6 @@ jest.mock('../../context/AuthContext', () => {
 // Pull the shared mock fn out via require() so we can drive its return value
 // in each test. The factory above closes over `sendPasswordResetEmail` so
 // both the screen and the test reach the same jest.fn.
-// eslint-disable-next-line @typescript-eslint/no-var-requires
 const {__mock: authMock} = require('../../context/AuthContext');
 const sendPasswordResetEmail = authMock.sendPasswordResetEmail;
 
