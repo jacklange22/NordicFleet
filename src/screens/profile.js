@@ -5,7 +5,6 @@ import {
   Text,
   ScrollView,
   Modal,
-  Pressable,
   Alert,
   StatusBar,
   KeyboardAvoidingView,
@@ -13,7 +12,6 @@ import {
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useNavigation} from '@react-navigation/native';
-import Ionicons from 'react-native-vector-icons/Ionicons';
 
 import Toast from 'react-native-toast-message';
 import LoadingScreen from '../components/LoadingScreen';
@@ -405,23 +403,7 @@ const ProfileScreen = () => {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <StatusBar barStyle="light-content" />
-      <Header
-        title="Profile"
-        right={
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Settings"
-            onPress={() => {}}
-            hitSlop={8}
-            style={({pressed}) => pressed && {opacity: 0.6}}>
-            <Ionicons
-              name="settings-outline"
-              size={22}
-              color={colors.textPrimary}
-            />
-          </Pressable>
-        }
-      />
+      <Header title="Profile" />
       <ScrollView contentContainerStyle={styles.scroll}>
         {/* Hero */}
         <View style={styles.hero}>
