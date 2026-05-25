@@ -1,6 +1,6 @@
 # NordicFleet — Launch Readiness Assessment
 
-**Generated:** 2026-05-25 (updated after the bug-fix + sharing session)
+**Generated:** 2026-05-25 (updated after the targeted polish session)
 **Stack:** React Native 0.76.x · @react-native-firebase 21.x · Firebase iOS 11.x · Xcode 26.5 · Node 20.20 LTS
 **Branch:** `claude-rewrite`
 **Last commit before report:** `a523380 Docs F1: device install guide for free Apple ID path`
@@ -112,8 +112,10 @@ were not exercised against live Firebase in this session.
 
 | Severity | Bug | Fix status |
 |---|---|---|
-| Critical | "Seed sample data" overwrote profile fields + reset role | **Fixed** in commit `b1a7421 Fix A1`. Verified by `scripts/verify-seed.sh` (12/12 against live Firestore — profile + custom ski preserved across two seed runs). |
+| Critical | "Seed sample data" overwrote profile fields + reset role | **Fixed** in commit `b1a7421 Fix A1`. Verified by `scripts/verify-seed.sh` (12/12 against live Firestore — profile + custom ski preserved across two seed runs). The visible "Seed sample data" button itself was also removed from the Profile UI in `94dd77a` (polish session). |
 | Critical | "Add a coach" button did nothing | **Fixed** in commit `0ecf78f Fix B1`. Three bugs (no-op onPress, wrong field name `coachUid` vs `coachId`, missing modal). 5 jest specs + the existing live coach-pairing script (14/14) cover it. |
+| Minor | Settings button at the top of Profile did nothing | **Fixed** in commit `8f25ca3` (polish session). Removed the no-op `settings-outline` action from Profile's Header. CoachDashboard's settings icon — which navigates to Profile and *is* functional — stays. |
+| Minor | Numeric inputs lacked unit affordances | **Fixed** in commit `81843ef` (polish session). Length cm / flex kg / weight kg / height cm / temperature °C / humidity % suffixes on every relevant Input; keyboards tightened to `number-pad` or `decimal-pad`; SkiInfo hero displays now show units explicitly. |
 | App Store blocker | No way to delete account (guideline 5.1.1(v)) | **Implemented** in commit `88318f3 Feature C1`. Full reauth-then-delete flow with cascading subcollection cleanup. Live-verified by the new DELETE ACCOUNT section in `verify-data-integrity.sh` (29/29). |
 | Feature ask | Lighter-weight sharing than the coach relationship | **Implemented** in commit `25e4d26 Feature D1`. Native iOS share sheet of styled PNG snapshots of single-ski or full-fleet cards. |
 

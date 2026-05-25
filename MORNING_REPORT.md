@@ -1,5 +1,41 @@
 # Morning report — autonomous NordicFleet rewrite
 
+## Targeted polish session
+
+Three narrow fixes after a device walkthrough — one commit each, no
+scope creep.
+
+- **Removed seed sample data button from Profile.** The `__DEV__`-gated
+  affordance never shipped in release but was visible / anxiety-inducing
+  on the simulator. `seedCurrentUser` and `seedData.json` stay in the
+  repo for internal use; only the UI is gone.
+- **Removed the non-functional settings button from the Profile
+  header.** It was a no-op `onPress={() => {}}`. The actions a Settings
+  screen would expose are already on Profile itself (edit fields,
+  change password, sign out, delete account). The CoachDashboard
+  settings icon stays — it navigates to Profile and isn't a no-op.
+- **Unit affordances on every numeric input.** Length cm, flex kg
+  (AddSki); temperature °C, humidity % (TestingLog); weight kg, height
+  cm (Profile edit modal). Keyboards tightened to `number-pad` for
+  whole numbers and `decimal-pad` for decimals; temperature stays on
+  `numbers-and-punctuation` to preserve the minus key for cold-snow
+  conditions (see NOTES.md). SkiInfo hero now shows "90 kg" and
+  "200 cm" with explicit spaces and units. The `Input` atom's suffix
+  color bumped from `textTertiary` to `textSecondary` for better
+  contrast.
+
+### Verification
+
+```
+npm test       →  187 / 188 pass (1 skipped — App.test.tsx pre-existing)
+npm run lint   →  0 errors, 6 warnings (pre-existing inline-style nits)
+iOS build      →  ** BUILD SUCCEEDED **  (Xcode 26.5, all native deps)
+verification-screenshots/polish-01-launch.png — confirms the new
+build loads cleanly (CoachDashboard for the signed-in coach user).
+Per-screen taps would need the user's iPhone — Profile / AddSki /
+TestingLog visual confirmation is covered in MANUAL_VERIFICATION.md.
+```
+
 ## Bug fixes + sharing session — ready for device install
 
 Open `DEVICE_INSTALL.md` first. It walks you through getting the app
