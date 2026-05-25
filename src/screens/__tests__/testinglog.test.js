@@ -1,5 +1,6 @@
 import React from 'react';
 import {render, fireEvent, act, waitFor} from '@testing-library/react-native';
+import {SafeAreaProvider} from 'react-native-safe-area-context';
 import authMock from '@react-native-firebase/auth';
 import firestoreMock from '@react-native-firebase/firestore';
 
@@ -11,11 +12,18 @@ jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({navigate: mockNavigate}),
 }));
 
+const SA_METRICS = {
+  frame: {x: 0, y: 0, width: 320, height: 640},
+  insets: {top: 0, left: 0, right: 0, bottom: 0},
+};
+
 const renderScreen = () =>
   render(
-    <AuthProvider>
-      <TestingLogScreen />
-    </AuthProvider>,
+    <SafeAreaProvider initialMetrics={SA_METRICS}>
+      <AuthProvider>
+        <TestingLogScreen />
+      </AuthProvider>
+    </SafeAreaProvider>,
   );
 
 beforeEach(() => {
@@ -32,7 +40,8 @@ describe('TestingLogScreen', () => {
       technique: 'Classic',
     });
     const tree = renderScreen();
-    await waitFor(() => tree.getByLabelText('Select Skis Tested'));
+    // Wait for the ski to render as a selectable pill.
+    await waitFor(() => tree.getByLabelText('Speedmax'));
     fireEvent.press(tree.getByLabelText('Save'));
     await act(async () => {});
     expect(mockNavigate).not.toHaveBeenCalled();
@@ -45,10 +54,8 @@ describe('TestingLogScreen', () => {
       technique: 'Skate',
     });
     const tree = renderScreen();
-    await waitFor(() => tree.getByLabelText('Select Skis Tested'));
-    fireEvent.press(tree.getByLabelText('Select Skis Tested'));
+    await waitFor(() => tree.getByLabelText('Speedmax'));
     fireEvent.press(tree.getByLabelText('Speedmax'));
-    fireEvent.press(tree.getByLabelText('Done'));
     await act(async () => {});
     fireEvent.press(tree.getByLabelText('Save'));
     await act(async () => {});

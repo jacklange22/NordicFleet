@@ -4,22 +4,32 @@ import {
   Text,
   View,
   ScrollView,
-  SafeAreaView,
-  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  StatusBar,
+  Pressable,
   ActivityIndicator,
 } from 'react-native';
-import Dropdown from '../components/dropdown';
-import ProfileButton from '../components/profilebutton';
-import Footer from '../components/footer';
-import MultiSelectDropdown from '../components/checkboxDropdown';
-import InputField from '../components/inputfield';
-import SkiInputComponent from '../components/testInput';
-import SkiSaveButton from '../components/skisaveButton';
+import {SafeAreaView} from 'react-native-safe-area-context';
 import {useNavigation} from '@react-navigation/native';
+
 import {useAuth} from '../context/AuthContext';
 import useSkis from '../hooks/useSkis';
 import {createTestLog} from '../services/testLogService';
 import {firestore} from '../services/firebase';
+import {
+  Header,
+  Card,
+  Input,
+  Button,
+  Pill,
+  SectionHeader,
+  EmptyState,
+} from '../components/ui';
+import {colors, spacing, typography} from '../theme';
+
+const SNOW_OPTIONS = ['Old', 'New', 'Manmade'];
+const SURFACE_OPTIONS = ['Hardpack', 'Powder', 'Corduroy', 'Slush'];
 
 const emptyTestEntry = () => ({
   glideWax: '',
@@ -31,6 +41,102 @@ const emptyTestEntry = () => ({
   notes: '',
 });
 
+// 1-10 rating picker using a row of small numbered tappable pills.
+const RatingPicker = ({label, value, onChange}) => (
+  <View style={styles.ratingBlock}>
+    <View style={styles.ratingHeader}>
+      <Text style={styles.ratingLabel}>{label}</Text>
+      <Text style={styles.ratingValue}>{value ?? '—'}</Text>
+    </View>
+    <View style={styles.ratingRow}>
+      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => {
+        const selected = Number(value) === n;
+        return (
+          <Pressable
+            key={n}
+            accessibilityRole="button"
+            accessibilityLabel={`${label} ${n}`}
+            onPress={() => onChange(n)}
+            style={({pressed}) => [
+              styles.ratingDot,
+              selected && styles.ratingDotSelected,
+              pressed && {opacity: 0.7},
+            ]}>
+            <Text
+              style={[
+                styles.ratingDotText,
+                selected && styles.ratingDotTextSelected,
+              ]}>
+              {n}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  </View>
+);
+
+const TestEntryCard = ({ski, entry, onChange}) => {
+  const tech = (ski.technique || '').toLowerCase();
+  return (
+    <Card style={styles.entryCard}>
+      <Text style={styles.entryTitle}>{ski.name || ski.id}</Text>
+      <View style={styles.entryPillRow}>
+        {!!ski.technique && (
+          <View style={styles.entryPillWrap}>
+            <Pill variant="outline" color="red">
+              {ski.technique}
+            </Pill>
+          </View>
+        )}
+        {!!ski.type && (
+          <View style={styles.entryPillWrap}>
+            <Pill variant="ghost" color="neutral">
+              {ski.type}
+            </Pill>
+          </View>
+        )}
+      </View>
+
+      <RatingPicker
+        label="Glide"
+        value={entry.glideRating}
+        onChange={v => onChange({glideRating: v})}
+      />
+      {tech === 'classic' && (
+        <RatingPicker
+          label="Kick"
+          value={entry.kickRating}
+          onChange={v => onChange({kickRating: v})}
+        />
+      )}
+      {tech === 'skate' && (
+        <>
+          <RatingPicker
+            label="Stability"
+            value={entry.stabilityRating}
+            onChange={v => onChange({stabilityRating: v})}
+          />
+          <RatingPicker
+            label="Climbing"
+            value={entry.climbingRating}
+            onChange={v => onChange({climbingRating: v})}
+          />
+        </>
+      )}
+
+      <View style={styles.fieldSpacer} />
+      <Input
+        label="Notes"
+        icon="create-outline"
+        value={entry.notes}
+        onChangeText={t => onChange({notes: t})}
+        multiline
+      />
+    </Card>
+  );
+};
+
 const TestingLogScreen = () => {
   const navigation = useNavigation();
   const {user} = useAuth();
@@ -38,21 +144,12 @@ const TestingLogScreen = () => {
 
   const {skis: skisForUser, loading: loadingSkis} = useSkis(uid);
   const [submitting, setSubmitting] = useState(false);
-
-  const dropdownItems = useMemo(
-    () => skisForUser.map(ski => ({id: ski.id, label: ski.name || ski.id})),
-    [skisForUser],
-  );
-
-  const getTechniqueBySkiId = skiId => {
-    const ski = skisForUser.find(s => s.id === skiId);
-    return ski ? ski.technique : null;
-  };
+  const [error, setError] = useState('');
 
   const [selectedSkis, setSelectedSkis] = useState([]);
-  const [testingLog, setTestingLog] = useState({
-    humidity: '',
+  const [conditions, setConditions] = useState({
     temperature: '',
+    humidity: '',
     snowType: '',
     surface: '',
   });
@@ -68,11 +165,23 @@ const TestingLogScreen = () => {
     });
   }, [selectedSkis]);
 
-  const handleSelectionDone = items => setSelectedSkis(items);
+  const skiById = useMemo(() => {
+    const map = {};
+    skisForUser.forEach(s => {
+      map[s.id] = s;
+    });
+    return map;
+  }, [skisForUser]);
 
-  const handleTestingLogChange = (field, value) => {
-    setTestingLog(prev => ({...prev, [field]: value}));
+  const toggleSki = skiId => {
+    setSelectedSkis(prev =>
+      prev.includes(skiId) ? prev.filter(s => s !== skiId) : [...prev, skiId],
+    );
   };
+
+  const setCondition = (k, v) => setConditions(prev => ({...prev, [k]: v}));
+  const togglePill = (k, v) =>
+    setConditions(prev => ({...prev, [k]: prev[k] === v ? '' : v}));
 
   const handleEntryChange = (skiId, partial) => {
     setSkiTestEntries(prev => ({
@@ -81,27 +190,31 @@ const TestingLogScreen = () => {
     }));
   };
 
+  const canSave = !!uid && selectedSkis.length > 0;
+
   const handleSubmit = async () => {
+    setError('');
     if (!uid) {
-      Alert.alert('Please sign in to save');
+      setError('Sign in to save');
       return;
     }
     if (selectedSkis.length === 0) {
-      Alert.alert('Please pick at least one ski');
+      setError('Pick at least one ski');
       return;
     }
     setSubmitting(true);
     const date = firestore.FieldValue.serverTimestamp();
     const writes = selectedSkis.map(skiId => {
-      const entry = skiTestEntries[skiId] || {};
-      const technique = (getTechniqueBySkiId(skiId) || '').toLowerCase();
+      const entry = skiTestEntries[skiId] || emptyTestEntry();
+      const ski = skiById[skiId] || {};
+      const technique = (ski.technique || '').toLowerCase();
       const payload = {
         skiId,
         date,
-        temperature: testingLog.temperature,
-        humidity: testingLog.humidity,
-        snowType: testingLog.snowType,
-        surface: testingLog.surface,
+        temperature: conditions.temperature,
+        humidity: conditions.humidity,
+        snowType: conditions.snowType,
+        surface: conditions.surface,
         ...entry,
       };
       if (technique === 'skate') {
@@ -118,7 +231,7 @@ const TestingLogScreen = () => {
     } catch (err) {
       const code = err && err.code;
       if (code && !String(code).includes('unavailable')) {
-        Alert.alert('Save failed', String(err.message || err));
+        setError(String(err.message || err));
         setSubmitting(false);
         return;
       }
@@ -127,116 +240,269 @@ const TestingLogScreen = () => {
     navigation.navigate('Home');
   };
 
-  const snowOptions = ['Old', 'New', 'Manmade'];
-  const surfaceOptions = ['Hardpack', 'Powder', 'Corduroy', 'Slush'];
-
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.headerText}>Testing Log</Text>
-          <ProfileButton />
-        </View>
-      </View>
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContentContainer}>
-        <View style={styles.dropdownContainer}>
-          <Text style={styles.dropdownLabel}>Snow:</Text>
-          <Dropdown
-            options={snowOptions}
-            onSelect={v => handleTestingLogChange('snowType', v)}
-            placeholder="Choose one"
-          />
-          <Text style={styles.dropdownLabel}>Surface:</Text>
-          <Dropdown
-            options={surfaceOptions}
-            onSelect={v => handleTestingLogChange('surface', v)}
-            placeholder="Choose one"
-          />
-          <Text style={styles.dropdownLabel}>Skis:</Text>
+    <SafeAreaView style={styles.safe} edges={['top']}>
+      <StatusBar barStyle="light-content" />
+      <Header
+        title="Log test"
+        right={
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Save"
+            disabled={!canSave || submitting}
+            onPress={handleSubmit}
+            hitSlop={8}
+            style={({pressed}) => [
+              styles.headerSave,
+              (!canSave || submitting) && {opacity: 0.4},
+              pressed && {opacity: 0.6},
+            ]}>
+            <Text style={styles.headerSaveText}>Save</Text>
+          </Pressable>
+        }
+      />
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView
+          contentContainerStyle={styles.scroll}
+          keyboardShouldPersistTaps="handled">
           {loadingSkis ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <MultiSelectDropdown
-              items={dropdownItems}
-              onSelectionDone={handleSelectionDone}
-              label={'Select Skis Tested'}
+            <View style={styles.loadingWrap}>
+              <ActivityIndicator color={colors.red} />
+            </View>
+          ) : skisForUser.length === 0 ? (
+            <EmptyState
+              icon="snow-outline"
+              title="No skis in your fleet yet"
+              description="Add a ski first so you can log a test for it."
+              cta={{
+                label: 'Add a ski',
+                icon: 'add',
+                onPress: () => navigation.navigate('newSki'),
+              }}
             />
-          )}
-          <Text style={styles.dropdownLabel}>Temperature:</Text>
-          <InputField
-            placeholder="Enter temperature"
-            keyboardType="numeric"
-            onChangeText={text => handleTestingLogChange('temperature', text)}
-            value={testingLog.temperature}
-          />
-          <Text style={styles.dropdownLabel}>Humidity:</Text>
-          <InputField
-            placeholder="Enter humidity"
-            keyboardType="numeric"
-            onChangeText={text => handleTestingLogChange('humidity', text)}
-            value={testingLog.humidity}
-          />
-          <Text style={styles.dropdownLabel}>Tests:</Text>
-          {selectedSkis.map(skiId => {
-            const technique = getTechniqueBySkiId(skiId);
-            const ski = skisForUser.find(s => s.id === skiId);
-            return (
-              <SkiInputComponent
-                key={skiId}
-                ski={ski ? ski.name : skiId}
-                technique={technique}
-                value={skiTestEntries[skiId] || emptyTestEntry()}
-                onChange={partial => handleEntryChange(skiId, partial)}
-              />
-            );
-          })}
-        </View>
-        <SkiSaveButton onPress={handleSubmit} submitting={submitting} />
-      </ScrollView>
+          ) : (
+            <>
+              <SectionHeader title="Conditions" />
+              <Card>
+                <View style={styles.row2}>
+                  <View style={styles.row2Cell}>
+                    <Input
+                      label="Temperature"
+                      icon="thermometer-outline"
+                      value={conditions.temperature}
+                      onChangeText={t => setCondition('temperature', t)}
+                      keyboardType="numbers-and-punctuation"
+                      suffix="°C"
+                    />
+                  </View>
+                  <View style={styles.row2Spacer} />
+                  <View style={styles.row2Cell}>
+                    <Input
+                      label="Humidity"
+                      icon="water-outline"
+                      value={conditions.humidity}
+                      onChangeText={t => setCondition('humidity', t)}
+                      keyboardType="numeric"
+                      suffix="%"
+                    />
+                  </View>
+                </View>
+                <View style={styles.fieldSpacer} />
+                <Text style={styles.miniLabel}>Snow</Text>
+                <View style={styles.chipRow}>
+                  {SNOW_OPTIONS.map(o => (
+                    <View key={o} style={styles.chipWrap}>
+                      <Pill
+                        variant={conditions.snowType === o ? 'solid' : 'outline'}
+                        color="red"
+                        onPress={() => togglePill('snowType', o)}>
+                        {o}
+                      </Pill>
+                    </View>
+                  ))}
+                </View>
+                <View style={styles.fieldSpacer} />
+                <Text style={styles.miniLabel}>Surface</Text>
+                <View style={styles.chipRow}>
+                  {SURFACE_OPTIONS.map(o => (
+                    <View key={o} style={styles.chipWrap}>
+                      <Pill
+                        variant={conditions.surface === o ? 'solid' : 'outline'}
+                        color="red"
+                        onPress={() => togglePill('surface', o)}>
+                        {o}
+                      </Pill>
+                    </View>
+                  ))}
+                </View>
+              </Card>
 
-      <Footer />
+              <SectionHeader title="Select skis" />
+              <Card style={styles.selectorCard}>
+                <View style={styles.chipRow}>
+                  {skisForUser.map(ski => {
+                    const selected = selectedSkis.includes(ski.id);
+                    return (
+                      <View key={ski.id} style={styles.chipWrap}>
+                        <Pill
+                          variant={selected ? 'solid' : 'outline'}
+                          color="red"
+                          onPress={() => toggleSki(ski.id)}
+                          accessibilityLabel={ski.name || ski.id}>
+                          {ski.name || ski.id}
+                        </Pill>
+                      </View>
+                    );
+                  })}
+                </View>
+                {selectedSkis.length === 0 && (
+                  <Text style={styles.hint}>
+                    Tap one or more skis to rate.
+                  </Text>
+                )}
+              </Card>
+
+              {selectedSkis.length > 0 && (
+                <>
+                  <SectionHeader title="Ratings" />
+                  {selectedSkis.map(skiId => {
+                    const ski = skiById[skiId];
+                    if (!ski) {
+                      return null;
+                    }
+                    return (
+                      <TestEntryCard
+                        key={skiId}
+                        ski={ski}
+                        entry={skiTestEntries[skiId] || emptyTestEntry()}
+                        onChange={partial => handleEntryChange(skiId, partial)}
+                      />
+                    );
+                  })}
+                </>
+              )}
+
+              {!!error && <Text style={styles.error}>{error}</Text>}
+
+              <View style={styles.fieldSpacer} />
+              <Button
+                variant="primary"
+                size="lg"
+                fullWidth
+                icon="checkmark"
+                loading={submitting}
+                disabled={!canSave}
+                onPress={handleSubmit}>
+                Save test log
+              </Button>
+            </>
+          )}
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#000',
+  safe: {flex: 1, backgroundColor: colors.bg},
+  flex: {flex: 1},
+  scroll: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing['4xl'],
   },
-  container: {
-    paddingHorizontal: 0,
+  headerSave: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
   },
-  header: {
+  headerSaveText: {
+    ...typography.headingMd,
+    color: colors.red,
+  },
+  loadingWrap: {
+    paddingVertical: spacing['4xl'],
+    alignItems: 'center',
+  },
+  row2: {flexDirection: 'row'},
+  row2Cell: {flex: 1},
+  row2Spacer: {width: spacing.md},
+  miniLabel: {
+    ...typography.caption,
+    color: colors.textTertiary,
+    marginBottom: spacing.sm,
+  },
+  chipRow: {flexDirection: 'row', flexWrap: 'wrap'},
+  chipWrap: {marginRight: spacing.sm, marginBottom: spacing.sm},
+  fieldSpacer: {height: spacing.lg},
+  selectorCard: {marginBottom: spacing.lg},
+  hint: {
+    ...typography.bodySm,
+    color: colors.textTertiary,
+    marginTop: spacing.md,
+  },
+  entryCard: {marginBottom: spacing.lg},
+  entryTitle: {
+    ...typography.headingLg,
+    color: colors.textPrimary,
+    marginBottom: spacing.sm,
+  },
+  entryPillRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: spacing.lg,
+  },
+  entryPillWrap: {marginRight: spacing.sm, marginBottom: spacing.sm},
+
+  ratingBlock: {
+    marginBottom: spacing.lg,
+  },
+  ratingHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    marginBottom: spacing.sm,
+  },
+  ratingLabel: {
+    ...typography.headingMd,
+    color: colors.textPrimary,
+  },
+  ratingValue: {
+    ...typography.displayMd,
+    color: colors.red,
+    fontWeight: '700',
+  },
+  ratingRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  ratingDot: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.bg,
     alignItems: 'center',
-    paddingHorizontal: 16,
-    backgroundColor: '#282828',
-    height: 50,
+    justifyContent: 'center',
   },
-  headerText: {
-    fontSize: 24,
-    color: '#fff',
+  ratingDotSelected: {
+    backgroundColor: colors.red,
+    borderColor: colors.red,
   },
-  dropdownContainer: {
-    paddingHorizontal: 10,
-    paddingVertical: 20,
-    textAlignVertical: 'center',
+  ratingDotText: {
+    ...typography.bodySm,
+    color: colors.textSecondary,
+    fontWeight: '600',
   },
-  dropdownLabel: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#fff',
+  ratingDotTextSelected: {
+    color: colors.textPrimary,
   },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContentContainer: {
-    paddingBottom: 20,
-    paddingTop: 0,
+  error: {
+    ...typography.body,
+    color: colors.red,
+    textAlign: 'center',
+    marginTop: spacing.lg,
   },
 });
 
