@@ -2,28 +2,57 @@ import React, {useState} from 'react';
 import {
   View,
   Text,
-  TextInput,
-  TouchableOpacity,
   StyleSheet,
-  ActivityIndicator,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+  StatusBar,
 } from 'react-native';
+import {SafeAreaView} from 'react-native-safe-area-context';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 import {useAuth} from '../context/AuthContext';
 import {updateProfile, setCoachByEmail} from '../services/userService';
+import {Header, Card, Button, Input} from '../components/ui';
+import {colors, spacing, typography} from '../theme';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-/**
- * RoleSelectScreen — shown immediately after Signup. The user picks
- * athlete or coach; athletes may optionally enter their coach's email
- * to link up automatically.
- *
- * On commit, the profile's `role` (and `athleteIds=[]` for coaches) are
- * persisted, and the user is routed to Home (athlete) or CoachDashboard
- * (coach).
- */
+const RoleCard = ({icon, title, description, selected, onPress}) => (
+  <Card
+    onPress={onPress}
+    accessibilityLabel={title}
+    padding={spacing['2xl']}
+    style={[
+      styles.roleCard,
+      selected && {
+        borderColor: colors.red,
+        backgroundColor: 'rgba(229, 57, 53, 0.06)',
+      },
+    ]}>
+    <View style={styles.roleHeader}>
+      <View
+        style={[
+          styles.roleIcon,
+          selected && {backgroundColor: 'rgba(229, 57, 53, 0.16)'},
+        ]}>
+        <Ionicons name={icon} size={28} color={colors.red} />
+      </View>
+      <View style={styles.roleCheck}>
+        {selected ? (
+          <Ionicons name="checkmark-circle" size={26} color={colors.red} />
+        ) : (
+          <View style={styles.checkRing} />
+        )}
+      </View>
+    </View>
+    <Text style={styles.roleTitle}>{title}</Text>
+    <Text style={styles.roleDescription}>{description}</Text>
+  </Card>
+);
+
 const RoleSelectScreen = ({navigation}) => {
   const {user} = useAuth();
-  const [role, setRole] = useState(null); // 'athlete' | 'coach'
+  const [role, setRole] = useState(null);
   const [coachEmail, setCoachEmail] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -38,17 +67,14 @@ const RoleSelectScreen = ({navigation}) => {
       setError('Pick athlete or coach');
       return;
     }
-
     setSubmitting(true);
     try {
       if (role === 'coach') {
-        await updateProfile(user.uid, {role: 'coach', athleteIds: []});
+        await updateProfile(user.uid, {role: 'coach'});
         navigation.replace('CoachDashboard');
         return;
       }
 
-      // Athlete path. Update role first so subsequent setCoachByEmail
-      // sees the correct shape.
       await updateProfile(user.uid, {role: 'athlete'});
 
       const trimmed = coachEmail.trim();
@@ -64,10 +90,8 @@ const RoleSelectScreen = ({navigation}) => {
           const code = err && err.code;
           if (code === 'coach/not-found') {
             setError(
-              'No account with that email. You can skip this and add a coach later.',
+              'No coach account with that email. Skip for now and add a coach later in Profile.',
             );
-          } else if (code === 'coach/not-a-coach') {
-            setError('That account is not a coach.');
           } else if (code === 'coach/self-link') {
             setError('You cannot be your own coach.');
           } else {
@@ -84,10 +108,9 @@ const RoleSelectScreen = ({navigation}) => {
     }
   };
 
-  const handleSkipCoachLink = async () => {
+  const handleSkipCoach = async () => {
     setError('');
     if (!user) {
-      setError('Not signed in');
       return;
     }
     setSubmitting(true);
@@ -101,165 +124,163 @@ const RoleSelectScreen = ({navigation}) => {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Pick your role</Text>
-      <Text style={styles.subtitle}>
-        Athletes log their own waxes and tests. Coaches review their athletes'
-        fleets read-only.
-      </Text>
-
-      <View style={styles.row}>
-        <TouchableOpacity
-          accessibilityRole="radio"
-          accessibilityState={{selected: role === 'athlete'}}
-          accessibilityLabel="Athlete"
-          style={[styles.choice, role === 'athlete' && styles.choiceSelected]}
-          onPress={() => setRole('athlete')}>
-          <Text style={styles.choiceText}>Athlete</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          accessibilityRole="radio"
-          accessibilityState={{selected: role === 'coach'}}
-          accessibilityLabel="Coach"
-          style={[styles.choice, role === 'coach' && styles.choiceSelected]}
-          onPress={() => setRole('coach')}>
-          <Text style={styles.choiceText}>Coach</Text>
-        </TouchableOpacity>
-      </View>
-
-      {role === 'athlete' && (
-        <>
-          <Text style={styles.label}>
-            Your coach's email (optional — add it later from Profile)
+    <SafeAreaView style={styles.safe} edges={['top']}>
+      <StatusBar barStyle="light-content" />
+      <Header title="Choose your role" />
+      <KeyboardAvoidingView
+        style={{flex: 1}}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView
+          contentContainerStyle={styles.scroll}
+          keyboardShouldPersistTaps="handled">
+          <Text style={styles.intro}>
+            How will you use NordicFleet?
           </Text>
-          <TextInput
-            style={styles.input}
-            placeholder="coach@example.com"
-            placeholderTextColor="#888"
-            value={coachEmail}
-            onChangeText={setCoachEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            editable={!submitting}
+
+          <RoleCard
+            icon="person-outline"
+            title="Athlete"
+            description="Track your fleet, log wax and test sessions, share with your coach."
+            selected={role === 'athlete'}
+            onPress={() => setRole('athlete')}
           />
-        </>
-      )}
+          <View style={{height: spacing.md}} />
+          <RoleCard
+            icon="people-outline"
+            title="Coach"
+            description="Review your athletes' fleets and waxing history."
+            selected={role === 'coach'}
+            onPress={() => setRole('coach')}
+          />
 
-      {!!error && <Text style={styles.errorText}>{error}</Text>}
+          {role === 'athlete' && (
+            <View style={styles.coachBlock}>
+              <Text style={styles.coachLabel}>Link a coach (optional)</Text>
+              <Input
+                label="Coach email"
+                icon="mail-outline"
+                value={coachEmail}
+                onChangeText={setCoachEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                editable={!submitting}
+              />
+              <Text style={styles.coachHint}>
+                You can add or change your coach later in Profile.
+              </Text>
+            </View>
+          )}
 
-      <TouchableOpacity
-        accessibilityRole="button"
-        accessibilityLabel="Continue"
-        style={[
-          styles.button,
-          (!role || submitting) && styles.buttonDisabled,
-        ]}
-        onPress={handleSubmit}
-        disabled={!role || submitting}>
-        {submitting ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text style={styles.buttonText}>Continue</Text>
-        )}
-      </TouchableOpacity>
+          {!!error && <Text style={styles.error}>{error}</Text>}
+        </ScrollView>
 
-      {role === 'athlete' && !!coachEmail && (
-        <TouchableOpacity
-          accessibilityRole="button"
-          accessibilityLabel="Skip coach link for now"
-          onPress={handleSkipCoachLink}
-          disabled={submitting}>
-          <Text style={styles.linkText}>Skip — add a coach later</Text>
-        </TouchableOpacity>
-      )}
-    </View>
+        <View style={styles.footer}>
+          <Button
+            variant="primary"
+            size="lg"
+            fullWidth
+            disabled={!role}
+            loading={submitting}
+            icon="arrow-forward"
+            iconRight
+            onPress={handleSubmit}>
+            Continue
+          </Button>
+          {role === 'athlete' && !!coachEmail && (
+            <>
+              <View style={{height: spacing.sm}} />
+              <Button
+                variant="ghost"
+                size="md"
+                fullWidth
+                onPress={handleSkipCoach}
+                disabled={submitting}>
+                Skip — add a coach later
+              </Button>
+            </>
+          )}
+        </View>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#000',
-    padding: 20,
-    justifyContent: 'center',
+  safe: {flex: 1, backgroundColor: colors.bg},
+  scroll: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.xl,
+    paddingBottom: spacing['3xl'],
   },
-  title: {
-    fontSize: 28,
-    color: '#fff',
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 8,
+  intro: {
+    ...typography.bodyLg,
+    color: colors.textSecondary,
+    marginBottom: spacing.xl,
+    paddingHorizontal: spacing.xs,
   },
-  subtitle: {
-    color: '#aaa',
-    fontSize: 14,
-    textAlign: 'center',
-    marginBottom: 30,
-  },
-  row: {
+  roleCard: {},
+  roleHeader: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  roleIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: 'rgba(229, 57, 53, 0.08)',
+    alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 24,
   },
-  choice: {
-    paddingHorizontal: 24,
-    paddingVertical: 14,
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: '#444',
-    marginHorizontal: 8,
-    minWidth: 120,
+  roleCheck: {
+    width: 26,
+    height: 26,
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  choiceSelected: {
-    backgroundColor: '#E53935',
-    borderColor: '#E53935',
+  checkRing: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 2,
+    borderColor: colors.borderStrong,
   },
-  choiceText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+  roleTitle: {
+    ...typography.displayMd,
+    color: colors.textPrimary,
+    marginBottom: spacing.xs,
   },
-  label: {
-    color: '#bbb',
-    fontSize: 14,
-    marginTop: 8,
-    marginBottom: 6,
+  roleDescription: {
+    ...typography.body,
+    color: colors.textSecondary,
+    lineHeight: 20,
   },
-  input: {
-    height: 44,
-    borderColor: '#444',
-    borderWidth: 1,
-    marginBottom: 12,
-    padding: 10,
-    color: '#fff',
-    borderRadius: 8,
+  coachBlock: {
+    marginTop: spacing.xl,
+    paddingHorizontal: spacing.xs,
   },
-  errorText: {
-    color: '#E53935',
-    marginBottom: 12,
+  coachLabel: {
+    ...typography.caption,
+    color: colors.textTertiary,
+    marginBottom: spacing.md,
+  },
+  coachHint: {
+    ...typography.bodySm,
+    color: colors.textTertiary,
+    marginTop: spacing.sm,
+  },
+  error: {
+    ...typography.body,
+    color: colors.red,
     textAlign: 'center',
+    marginTop: spacing.lg,
   },
-  button: {
-    backgroundColor: '#E53935',
-    paddingVertical: 12,
-    borderRadius: 24,
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  buttonDisabled: {
-    opacity: 0.5,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  linkText: {
-    color: '#bbb',
-    textAlign: 'center',
-    textDecorationLine: 'underline',
-    marginTop: 8,
+  footer: {
+    padding: spacing.lg,
+    paddingBottom: spacing.xl,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
   },
 });
 
