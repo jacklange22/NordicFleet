@@ -31,7 +31,7 @@ describe('AddSkiForm', () => {
     expect(mockReplace).not.toHaveBeenCalled();
   });
 
-  it('writes to Firestore and navigates to SkiInfo on success', async () => {
+  it('refuses to save when chip-selector fields (brand/technique/type) are still missing', async () => {
     // Sign in first so AuthProvider has a uid.
     authMock.__setCurrentUser({uid: 'user_x', email: 'a@b.com'});
 
@@ -40,22 +40,40 @@ describe('AddSkiForm', () => {
     // Wait for AuthProvider to flip past loading.
     await act(async () => {});
 
-    fireEvent.changeText(tree.getByPlaceholderText('Enter model'), 'Speedmax');
-    fireEvent.changeText(tree.getByPlaceholderText('Enter base'), 'Plus');
-    fireEvent.changeText(tree.getByPlaceholderText('Enter build'), 'World Cup');
-    fireEvent.changeText(tree.getByPlaceholderText('Enter grind'), 'Universal');
-    fireEvent.changeText(tree.getByPlaceholderText('Enter length'), '195');
-    fireEvent.changeText(tree.getByPlaceholderText('Enter name'), 'My Ski');
-    fireEvent.changeText(tree.getByPlaceholderText('Enter flex'), '90');
-    fireEvent.changeText(
-      tree.getByPlaceholderText('Enter notes'),
-      'Test notes',
-    );
-    // Dropdowns require interacting with the modal — to keep the test focused,
-    // we bypass that and check that filled-out non-dropdown state still
-    // refuses to save (brand/technique/type missing).
+    // Fill the plain-text fields but leave the brand / technique / type
+    // pill selectors untouched. The form should still refuse to save.
+    fireEvent.changeText(tree.getByLabelText('Ski name'), 'My Ski');
+    fireEvent.changeText(tree.getByLabelText('Model'), 'Speedmax');
+    fireEvent.changeText(tree.getByLabelText('Length'), '195');
+    fireEvent.changeText(tree.getByLabelText('Flex'), '90');
+    fireEvent.changeText(tree.getByLabelText('Base'), 'Plus');
+    fireEvent.changeText(tree.getByLabelText('Build'), 'World Cup');
+    fireEvent.changeText(tree.getByLabelText('Grind'), 'Universal');
+    fireEvent.changeText(tree.getByLabelText('Notes (optional)'), 'Test');
+
     fireEvent.press(tree.getByLabelText('Save'));
     await act(async () => {});
     expect(mockReplace).not.toHaveBeenCalled();
+  });
+
+  it('saves and navigates when name, brand, technique, and type are all set', async () => {
+    authMock.__setCurrentUser({uid: 'user_x', email: 'a@b.com'});
+
+    const tree = renderWithAuth(<AddSkiForm />);
+    await act(async () => {});
+
+    fireEvent.changeText(tree.getByLabelText('Ski name'), 'My Ski');
+    // The brand pill row, technique pill row, and type pill row all expose
+    // each option as an accessibility-label'd button.
+    fireEvent.press(tree.getByLabelText('Fischer'));
+    fireEvent.press(tree.getByLabelText('Classic'));
+    fireEvent.press(tree.getByLabelText('Cold'));
+
+    fireEvent.press(tree.getByLabelText('Save'));
+    await act(async () => {});
+    expect(mockReplace).toHaveBeenCalledWith(
+      'SkiInfo',
+      expect.objectContaining({skiId: expect.any(String)}),
+    );
   });
 });

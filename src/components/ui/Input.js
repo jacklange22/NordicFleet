@@ -27,6 +27,8 @@ import {colors, radius, spacing, typography} from '../../theme';
  *   editable
  *   onBlur / onFocus
  *   testID
+ *   suffix             trailing static text (e.g. "cm", "kg")
+ *   multiline          taller field, auto-grows, no fixed height
  */
 const Input = ({
   label,
@@ -42,6 +44,8 @@ const Input = ({
   onBlur,
   onFocus,
   testID,
+  suffix,
+  multiline = false,
 }) => {
   const [focused, setFocused] = useState(false);
   const [showSecure, setShowSecure] = useState(false);
@@ -76,6 +80,7 @@ const Input = ({
       <View
         style={[
           styles.container,
+          multiline && styles.containerMultiline,
           {
             borderColor: error
               ? colors.red
@@ -98,7 +103,11 @@ const Input = ({
         <TextInput
           testID={testID}
           accessibilityLabel={label}
-          style={[styles.input, {paddingLeft: icon ? spacing['3xl'] : spacing.lg}]}
+          style={[
+            styles.input,
+            {paddingLeft: icon ? spacing['3xl'] : spacing.lg},
+            multiline && styles.inputMultiline,
+          ]}
           value={value}
           onChangeText={onChangeText}
           placeholder={focused ? placeholder || '' : ''}
@@ -107,6 +116,8 @@ const Input = ({
           secureTextEntry={secureTextEntry && !showSecure}
           autoCapitalize={autoCapitalize}
           editable={editable}
+          multiline={multiline}
+          textAlignVertical={multiline ? 'top' : 'center'}
           onFocus={e => {
             setFocused(true);
             onFocus && onFocus(e);
@@ -117,6 +128,11 @@ const Input = ({
           }}
           selectionColor={colors.red}
         />
+        {!!suffix && !secureTextEntry && (
+          <Text style={styles.suffix} accessibilityElementsHidden>
+            {suffix}
+          </Text>
+        )}
         {secureTextEntry && (
           <Pressable
             accessibilityRole="button"
@@ -147,6 +163,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingRight: spacing.lg,
   },
+  containerMultiline: {
+    height: undefined,
+    minHeight: 110,
+    alignItems: 'stretch',
+  },
   leadingIcon: {
     position: 'absolute',
     left: spacing.md,
@@ -159,8 +180,19 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     ...typography.bodyLg,
   },
+  inputMultiline: {
+    paddingTop: 26,
+    paddingBottom: spacing.md,
+    minHeight: 90,
+  },
   trailingButton: {
     marginLeft: spacing.sm,
+  },
+  suffix: {
+    ...typography.body,
+    color: colors.textTertiary,
+    marginLeft: spacing.sm,
+    fontWeight: '600',
   },
   error: {
     ...typography.bodySm,

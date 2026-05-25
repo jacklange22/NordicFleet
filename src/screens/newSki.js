@@ -1,224 +1,346 @@
-import React, {useState} from 'react';
+import React, {useState, useMemo} from 'react';
 import {
   View,
   Text,
-  TextInput,
-  ScrollView,
   StyleSheet,
-  SafeAreaView,
-  Alert,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+  StatusBar,
+  Pressable,
 } from 'react-native';
-import Dropdown from '../components/dropdown';
-import Footer from '../components/footer';
-import ProfileButton from '../components/profilebutton';
-import SkiSaveButton from '../components/skisaveButton';
+import {SafeAreaView} from 'react-native-safe-area-context';
 import {useNavigation} from '@react-navigation/native';
 import {useAuth} from '../context/AuthContext';
 import {createSki} from '../services/skiService';
+import {
+  Header,
+  Input,
+  Button,
+  Pill,
+  SectionHeader,
+} from '../components/ui';
+import {colors, spacing, typography} from '../theme';
+
+const BRAND_OPTIONS = [
+  'Fischer',
+  'Salomon',
+  'Atomic',
+  'Madshus',
+  'Rossignol',
+];
+const TECHNIQUE_OPTIONS = ['Classic', 'Skate'];
+const TYPE_OPTIONS = ['Cold', 'Universal', 'Warm', 'Zero'];
+
+const ChipGroup = ({options, value, onChange, accessibilityLabel}) => (
+  <View
+    style={styles.chipRow}
+    accessibilityLabel={accessibilityLabel}
+    accessibilityRole="radiogroup">
+    {options.map(opt => {
+      const selected = value?.toLowerCase() === opt.toLowerCase();
+      return (
+        <View key={opt} style={styles.chipWrap}>
+          <Pill
+            variant={selected ? 'solid' : 'outline'}
+            color="red"
+            onPress={() => onChange(selected ? '' : opt)}
+            accessibilityLabel={opt}>
+            {opt}
+          </Pill>
+        </View>
+      );
+    })}
+  </View>
+);
 
 const AddSkiForm = () => {
   const navigation = useNavigation();
   const {user} = useAuth();
   const uid = user?.uid;
 
+  const [name, setName] = useState('');
   const [brand, setBrand] = useState('');
+  const [customBrand, setCustomBrand] = useState('');
+  const [brandIsOther, setBrandIsOther] = useState(false);
   const [model, setModel] = useState('');
+  const [technique, setTechnique] = useState('');
+  const [type, setType] = useState('');
+  const [length, setLength] = useState('');
+  const [flex, setFlex] = useState('');
   const [base, setBase] = useState('');
   const [build, setBuild] = useState('');
   const [grind, setGrind] = useState('');
-  const [length, setLength] = useState('');
-  const [name, setName] = useState('');
-  const [flex, setFlex] = useState('');
   const [notes, setNotes] = useState('');
-  const [technique, setTechnique] = useState('');
-  const [type, setType] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
+
+  const effectiveBrand = brandIsOther ? customBrand.trim() : brand;
+
+  const isValid = useMemo(
+    () => !!name.trim() && !!effectiveBrand && !!technique && !!type,
+    [name, effectiveBrand, technique, type],
+  );
 
   const handleSubmit = async () => {
-    if (
-      !brand ||
-      !model ||
-      !base ||
-      !build ||
-      !grind ||
-      !length ||
-      !name ||
-      !flex ||
-      !technique ||
-      !type
-    ) {
-      Alert.alert('Please fill out all required fields.');
+    setError('');
+    if (!isValid) {
+      setError('Name, brand, technique, and type are required.');
       return;
     }
     if (!uid) {
-      Alert.alert('Please sign in to add a ski');
+      setError('Sign in to add a ski.');
       return;
     }
     setSubmitting(true);
     try {
       const newId = await createSki(uid, {
-        brand,
-        model,
-        base,
-        build,
-        grind,
-        length,
-        name,
-        flex,
-        notes,
+        name: name.trim(),
+        brand: effectiveBrand,
+        model: model.trim(),
         technique,
         type,
+        length,
+        flex,
+        base: base.trim(),
+        build: build.trim(),
+        grind: grind.trim(),
+        notes: notes.trim(),
       });
       navigation.replace('SkiInfo', {skiId: newId});
     } catch (err) {
-      Alert.alert('Could not save', String(err.message || err));
+      setError(String(err.message || err));
     } finally {
       setSubmitting(false);
     }
   };
 
+  const handleBrandSelect = b => {
+    setBrandIsOther(false);
+    setBrand(prev => (prev === b ? '' : b));
+  };
+
+  const handleOther = () => {
+    setBrand('');
+    setBrandIsOther(o => !o);
+  };
+
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.header}>
-        <Text style={styles.headerText}>New Ski!</Text>
-        <ProfileButton />
-      </View>
-      <ScrollView style={styles.scrollViewContent}>
-        <View style={styles.infoContainer}>
-          <Text style={styles.label}>Brand:</Text>
-          <Dropdown
-            placeholder="Select a Brand"
-            options={['Salomon', 'Atomic', 'Fischer', 'Madshus', 'Rossignol']}
-            onSelect={setBrand}
-            value={brand}
-          />
-          <Text style={styles.label}>Model:</Text>
-          <TextInput
-            style={styles.input}
-            value={model}
-            onChangeText={setModel}
-            placeholder="Enter model"
-            placeholderTextColor="#888"
-          />
-          <Text style={styles.label}>Base:</Text>
-          <TextInput
-            style={styles.input}
-            value={base}
-            onChangeText={setBase}
-            placeholder="Enter base"
-            placeholderTextColor="#888"
-          />
-          <Text style={styles.label}>Technique:</Text>
-          <Dropdown
-            placeholder="Technique?"
-            options={['Skate', 'Classic']}
-            onSelect={setTechnique}
-            value={technique}
-          />
-          <Text style={styles.label}>Type:</Text>
-          <Dropdown
-            placeholder="Type?"
-            options={['warm', 'universal', 'cold', 'zero']}
-            onSelect={setType}
-            value={type}
-          />
-          <Text style={styles.label}>Build:</Text>
-          <TextInput
-            style={styles.input}
-            value={build}
-            onChangeText={setBuild}
-            placeholder="Enter build"
-            placeholderTextColor="#888"
-          />
-          <Text style={styles.label}>Grind:</Text>
-          <TextInput
-            style={styles.input}
-            value={grind}
-            onChangeText={setGrind}
-            placeholder="Enter grind"
-            placeholderTextColor="#888"
-          />
-          <Text style={styles.label}>Length:</Text>
-          <TextInput
-            style={styles.input}
-            value={length}
-            onChangeText={setLength}
-            placeholder="Enter length"
-            keyboardType="numeric"
-            placeholderTextColor="#888"
-          />
-          <Text style={styles.label}>Name:</Text>
-          <TextInput
-            style={styles.input}
+    <SafeAreaView style={styles.safe} edges={['top']}>
+      <StatusBar barStyle="light-content" />
+      <Header
+        title="Add ski"
+        right={
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Save"
+            disabled={!isValid || submitting}
+            onPress={handleSubmit}
+            hitSlop={8}
+            style={({pressed}) => [
+              styles.headerSave,
+              (!isValid || submitting) && {opacity: 0.4},
+              pressed && {opacity: 0.6},
+            ]}>
+            <Text style={styles.headerSaveText}>Save</Text>
+          </Pressable>
+        }
+      />
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView
+          contentContainerStyle={styles.scroll}
+          keyboardShouldPersistTaps="handled">
+          <SectionHeader title="Identity" />
+          <Input
+            label="Ski name"
+            icon="bookmark-outline"
             value={name}
             onChangeText={setName}
-            placeholder="Enter name"
-            placeholderTextColor="#888"
+            autoCapitalize="words"
           />
-          <Text style={styles.label}>Flex:</Text>
-          <TextInput
-            style={styles.input}
-            value={flex}
-            onChangeText={setFlex}
-            placeholder="Enter flex"
-            keyboardType="numeric"
-            placeholderTextColor="#888"
+          <View style={styles.fieldSpacer} />
+          <Text style={styles.miniLabel}>Brand</Text>
+          <View style={styles.chipRow}>
+            {BRAND_OPTIONS.map(b => {
+              const selected = brand === b;
+              return (
+                <View key={b} style={styles.chipWrap}>
+                  <Pill
+                    variant={selected ? 'solid' : 'outline'}
+                    color="red"
+                    onPress={() => handleBrandSelect(b)}>
+                    {b}
+                  </Pill>
+                </View>
+              );
+            })}
+            <View style={styles.chipWrap}>
+              <Pill
+                variant={brandIsOther ? 'solid' : 'outline'}
+                color="red"
+                onPress={handleOther}>
+                Other
+              </Pill>
+            </View>
+          </View>
+          {brandIsOther && (
+            <>
+              <View style={styles.fieldSpacer} />
+              <Input
+                label="Brand name"
+                icon="business-outline"
+                value={customBrand}
+                onChangeText={setCustomBrand}
+                autoCapitalize="words"
+              />
+            </>
+          )}
+          <View style={styles.fieldSpacer} />
+          <Input
+            label="Model"
+            icon="layers-outline"
+            value={model}
+            onChangeText={setModel}
+            autoCapitalize="words"
           />
-          <Text style={styles.label}>Notes (optional):</Text>
-          <TextInput
-            style={styles.input}
+
+          <SectionHeader title="Specs" />
+          <Text style={styles.miniLabel}>Technique</Text>
+          <ChipGroup
+            options={TECHNIQUE_OPTIONS}
+            value={technique}
+            onChange={setTechnique}
+            accessibilityLabel="Technique"
+          />
+          <View style={styles.fieldSpacer} />
+          <Text style={styles.miniLabel}>Type</Text>
+          <ChipGroup
+            options={TYPE_OPTIONS}
+            value={type}
+            onChange={setType}
+            accessibilityLabel="Type"
+          />
+          <View style={styles.fieldSpacer} />
+          <View style={styles.row2}>
+            <View style={styles.row2Cell}>
+              <Input
+                label="Length"
+                icon="resize-outline"
+                value={length}
+                onChangeText={setLength}
+                keyboardType="numeric"
+                suffix="cm"
+              />
+            </View>
+            <View style={styles.row2Spacer} />
+            <View style={styles.row2Cell}>
+              <Input
+                label="Flex"
+                icon="pulse-outline"
+                value={flex}
+                onChangeText={setFlex}
+                keyboardType="numeric"
+                suffix="kg"
+              />
+            </View>
+          </View>
+
+          <SectionHeader title="Setup" />
+          <Input
+            label="Base"
+            icon="snow-outline"
+            value={base}
+            onChangeText={setBase}
+            autoCapitalize="words"
+          />
+          <View style={styles.fieldSpacer} />
+          <Input
+            label="Build"
+            icon="construct-outline"
+            value={build}
+            onChangeText={setBuild}
+            autoCapitalize="words"
+          />
+          <View style={styles.fieldSpacer} />
+          <Input
+            label="Grind"
+            icon="grid-outline"
+            value={grind}
+            onChangeText={setGrind}
+            autoCapitalize="words"
+          />
+
+          <SectionHeader title="Notes" />
+          <Input
+            label="Notes (optional)"
+            icon="create-outline"
             value={notes}
             onChangeText={setNotes}
-            placeholder="Enter notes"
-            placeholderTextColor="#888"
+            multiline
           />
-          <SkiSaveButton onPress={handleSubmit} submitting={submitting} />
-        </View>
-      </ScrollView>
-      <Footer />
+
+          {!!error && <Text style={styles.error}>{error}</Text>}
+
+          <View style={styles.fieldSpacer} />
+          <Button
+            variant="primary"
+            size="lg"
+            fullWidth
+            icon="checkmark"
+            loading={submitting}
+            disabled={!isValid}
+            onPress={handleSubmit}>
+            Save ski
+          </Button>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#000',
+  safe: {flex: 1, backgroundColor: colors.bg},
+  flex: {flex: 1},
+  scroll: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing['4xl'],
   },
-  scrollViewContent: {
-    flex: 1,
-    width: '100%',
-    backgroundColor: 'black',
+  headerSave: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
   },
-  infoContainer: {
-    width: '100%',
-    paddingHorizontal: 16,
-    paddingBottom: 20,
+  headerSaveText: {
+    ...typography.headingMd,
+    color: colors.red,
   },
-  header: {
+  miniLabel: {
+    ...typography.caption,
+    color: colors.textTertiary,
+    marginBottom: spacing.sm,
+    paddingHorizontal: spacing.xs,
+  },
+  chipRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    backgroundColor: '#282828',
-    height: 50,
+    flexWrap: 'wrap',
+    paddingHorizontal: spacing.xs,
   },
-  headerText: {
-    fontSize: 24,
-    color: '#fff',
+  chipWrap: {
+    marginRight: spacing.sm,
+    marginBottom: spacing.sm,
   },
-  input: {
-    height: 40,
-    borderColor: 'gray',
-    borderWidth: 1,
-    color: 'white',
-    paddingLeft: 10,
-    borderRadius: 6,
+  fieldSpacer: {height: spacing.lg},
+  row2: {
+    flexDirection: 'row',
   },
-  label: {
-    color: 'white',
-    fontSize: 16,
-    marginTop: 10,
+  row2Cell: {flex: 1},
+  row2Spacer: {width: spacing.md},
+  error: {
+    ...typography.body,
+    color: colors.red,
+    textAlign: 'center',
+    marginTop: spacing.lg,
   },
 });
 
