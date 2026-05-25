@@ -213,6 +213,85 @@ com.NordicFleet.app && npm run ios`).
 
 ---
 
+## Flow 9: Add a coach (the bug from last session, now fixed)
+
+1. Sign in as an athlete who has NO coach linked.
+2. Profile tab.
+3. Scroll to the **Coach** section. The Card shows "Add a coach" with a
+   plus icon.
+4. Tap **Add a coach**.
+   - ✅ **PASS**: a modal opens with title "Add a coach", subtitle,
+     a Coach email Input, and Cancel + Save Buttons.
+   - **REGRESSION INDICATOR**: if nothing happens on tap, the
+     onPress wiring broke again — re-check `openCoachModal` in
+     `src/screens/profile.js`.
+5. Type a coach email that doesn't exist → tap **Save**.
+   - ✅ **PASS**: red inline error "No coach account found with that
+     email. Make sure your coach has signed up first."
+6. Type a valid coach email (you'll need a real coach account in
+   another session) → tap **Save**.
+   - ✅ **PASS**: modal closes, a green "Coach added" toast slides in,
+     the Coach section now shows the coach's Avatar + email and a
+     red "Change" right-action.
+7. The Card below shows a destructive **Remove coach** ListItem.
+   Tap it → confirm in the Alert → the coachId is cleared and the
+   "Add a coach" state returns.
+
+## Flow 10: Delete account (App Store 5.1.1(v) compliance)
+
+This is destructive; use a throwaway test account.
+
+1. Sign up `del-ui-<ts>@nordicfleet.test`, add a couple of skis, log
+   one wax and one test so subcollections have data.
+2. Profile tab → scroll to the bottom.
+3. ✅ **PASS**: a new **Danger zone** SectionHeader is visible.
+   Below it: a red **Delete account** ListItem with "Permanently
+   removes all your data" subtitle and a trash icon.
+4. Tap **Delete account**.
+   - ✅ **PASS**: Native Alert: "Delete your account? This permanently
+     removes all your skis, wax logs, test logs, and profile data.
+     This cannot be undone." with Cancel + "I want to delete" buttons.
+5. Tap **I want to delete**.
+   - ✅ **PASS**: the confirm modal opens with a password Input and
+     a red Delete Button.
+6. Type a wrong password → tap Delete.
+   - ✅ **PASS**: red inline error "Wrong password".
+7. Type the correct password → tap Delete.
+   - ✅ **PASS**: green "Account deleted" toast, app routes back to
+     Welcome.
+8. Try to sign in with the same email/password.
+   - ✅ **PASS**: "Wrong email or password" — auth user was deleted.
+9. Optional: Firebase console → Authentication → Users → confirm the
+   email is gone. Firestore → users/{the deleted uid} → also gone.
+
+## Flow 11: Share a single ski
+
+1. Sign in to any athlete account with at least one ski.
+2. Home → tap a ski card → SkiInfo loads.
+3. ✅ **PASS**: top-right of the Header is a `share-outline` icon
+   (only visible when you own the ski; hidden in coach view).
+4. Tap **Share ski**.
+   - ✅ **PASS**: iOS share sheet slides up with a preview of the
+     1080×1080 share card. The card shows: NordicFleet header, large
+     ski name, brand/model subhead, 3×2 specs grid, "Last wax
+     sessions" with up to 5 rows, "Last test sessions" with up to 5
+     rows, "Tracked with NordicFleet" footer.
+5. Pick Photos or Messages or Mail or save-to-files — any sink works.
+6. Verify the image landed in the destination cleanly.
+
+## Flow 12: Share my fleet
+
+1. Athlete Profile tab.
+2. In the **Account** section there's a new ListItem **Share my fleet**
+   with a share-outline icon.
+3. Tap it.
+   - ✅ **PASS**: share sheet slides up with a multi-row card showing
+     athlete name, ski/wax-log/test counts, and one row per ski
+     with technique-tinted accent bars + length on the right.
+4. Pick any sink and verify the image.
+
+---
+
 ## What to do if anything fails
 
 1. Capture a screenshot: `xcrun simctl io booted screenshot

@@ -1,10 +1,10 @@
 === NordicFleet data integrity verification ===
-User A: data-a-1779683072@nordicfleet.test
-User B: data-b-1779683072@nordicfleet.test
+User A: data-a-1779683727@nordicfleet.test
+User B: data-b-1779683727@nordicfleet.test
 
 [setup] Creating two test users…
-  A uid=8JIRVWblnuPkLGrvraHvtNUiztr1
-  B uid=DvT0bOcoIrW59mkbGTHiQuz3MOm1
+  A uid=0q8NFZvgIaeGZ7rc49IDDpZ2k8t2
+  B uid=xHMKjW7MoDYBa40EZ4Q9VkmYr493
 
 [1/5] CREATE operations
   ✓ profile doc created with email
@@ -23,7 +23,7 @@ User B: data-b-1779683072@nordicfleet.test
 [3/5] UPDATE operations
   ✓ PATCH weight=72 succeeded
   ✓ PATCH preserved role
-  ✓ ski update bumped updateTime (2026-05-25T04:24:33.982580Z → 2026-05-25T04:24:37.162072Z)
+  ✓ ski update bumped updateTime (2026-05-25T04:35:28.956192Z → 2026-05-25T04:35:32.214713Z)
 
 [4/5] DELETE operations
   ✓ soft delete: retired flag set true, doc still exists

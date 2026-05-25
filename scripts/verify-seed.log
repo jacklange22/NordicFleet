@@ -1,10 +1,10 @@
 === Seed bug regression verification ===
-User: seed-verify-1779682474@nordicfleet.test
+User: seed-verify-1779683743@nordicfleet.test
 
 [setup] Sign up + write real profile (weight=70, role=coach)
-  uid=veB5tZBbmCN0ovVqDpjzPwDHIbC2, role=coach, weight=70, team=Real Team
+  uid=QAXGdbUsM7QejqYxxY0XtLcVF2H2, role=coach, weight=70, team=Real Team
 [setup] Add a real (non-seed) ski
-  real ski id=LeDDEyatCsZHoSYliARN
+  real ski id=uh0ykPaq8bbOx3Mi8z5S
 
 [run 1] Seed first time
   ✓ first run created 2 seed skis
