@@ -3,37 +3,61 @@ import {
   StyleSheet,
   View,
   Text,
-  Image,
-  TextInput,
-  TouchableOpacity,
   ScrollView,
-  SafeAreaView,
   Modal,
-  Button,
+  Pressable,
   Alert,
-  ActivityIndicator,
+  StatusBar,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
-
+import {SafeAreaView} from 'react-native-safe-area-context';
 import {useNavigation} from '@react-navigation/native';
-import Footer from '../components/footer';
+import Ionicons from 'react-native-vector-icons/Ionicons';
+
 import LoadingScreen from '../components/LoadingScreen';
 import {useAuth} from '../context/AuthContext';
 import useProfile from '../hooks/useProfile';
+import useSkis from '../hooks/useSkis';
+import useDashboardStats from '../hooks/useDashboardStats';
 import {updateProfile} from '../services/userService';
 import {seedCurrentUser} from '../services/seed';
 import {auth} from '../services/firebase';
+import {
+  Header,
+  Card,
+  Avatar,
+  StatCard,
+  ListItem,
+  SectionHeader,
+  Button,
+  Input,
+  TabBar,
+} from '../components/ui';
+import {colors, radius, spacing, typography} from '../theme';
 
 const NUMERIC_FIELDS = new Set(['weight', 'height']);
-const SECURE_FIELDS = new Set(['password']);
+
+const FIELD_DEFS = [
+  {key: 'weight', label: 'Weight', suffix: ' kg', icon: 'barbell-outline'},
+  {key: 'height', label: 'Height', suffix: ' cm', icon: 'resize-outline'},
+  {key: 'team', label: 'Team', icon: 'people-outline'},
+  {key: 'location', label: 'Location', icon: 'location-outline'},
+];
 
 const keyboardTypeFor = field => {
   if (NUMERIC_FIELDS.has(field)) {
     return 'numeric';
   }
-  if (field === 'email') {
-    return 'email-address';
-  }
   return 'default';
+};
+
+const fieldDisplay = (def, profile) => {
+  const v = profile?.[def.key];
+  if (v === undefined || v === null || v === '') {
+    return '—';
+  }
+  return `${v}${def.suffix || ''}`;
 };
 
 const ProfileScreen = () => {
@@ -42,6 +66,9 @@ const ProfileScreen = () => {
   const uid = user?.uid;
 
   const {profile, loading} = useProfile(uid);
+  const {skis} = useSkis(uid);
+  const {totalWaxes, totalTests} = useDashboardStats(uid);
+
   const [editField, setEditField] = useState(null);
   const [tempValue, setTempValue] = useState('');
   const [seeding, setSeeding] = useState(false);
@@ -53,24 +80,24 @@ const ProfileScreen = () => {
   const [pwError, setPwError] = useState('');
   const [pwSubmitting, setPwSubmitting] = useState(false);
 
+  const openEdit = def => {
+    const v = profile?.[def.key];
+    setTempValue(v !== undefined && v !== null ? String(v) : '');
+    setEditField(def);
+  };
+
   const handleSave = useCallback(async () => {
     if (!editField || !uid) {
       setEditField(null);
       return;
     }
-    if (editField === 'password') {
-      // Routed through the password modal, not the simple edit modal.
-      setEditField(null);
-      setPwModalOpen(true);
-      return;
-    }
-    const next = NUMERIC_FIELDS.has(editField)
+    const next = NUMERIC_FIELDS.has(editField.key)
       ? tempValue === ''
         ? null
         : Number(tempValue)
       : tempValue;
     try {
-      await updateProfile(uid, {[editField]: next});
+      await updateProfile(uid, {[editField.key]: next});
     } catch (err) {
       Alert.alert('Save failed', String(err.message || err));
     } finally {
@@ -156,319 +183,358 @@ const ProfileScreen = () => {
     }
   }, [currentPw, newPw]);
 
-  const renderProfileField = (label, field) => {
-    return (
-      <View style={styles.profileField} key={field}>
-        <Text style={styles.fieldLabel}>{label}</Text>
-        <Text style={styles.fieldValue}>
-          {SECURE_FIELDS.has(field)
-            ? '•'.repeat(8)
-            : profile && profile[field] !== undefined && profile[field] !== null
-            ? String(profile[field])
-            : '—'}
-        </Text>
-        <TouchableOpacity
-          accessibilityRole="button"
-          accessibilityLabel={`Edit ${label}`}
-          style={styles.editButton}
-          onPress={() => {
-            if (field === 'password') {
-              setPwModalOpen(true);
-              return;
-            }
-            const fieldValue =
-              profile && profile[field] !== undefined && profile[field] !== null
-                ? String(profile[field])
-                : '';
-            setTempValue(fieldValue);
-            setEditField(field);
-          }}>
-          <Text style={styles.editButtonText}>Edit</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  };
-
-  const isSecure = SECURE_FIELDS.has(editField);
-
   if (loading) {
     return <LoadingScreen label="Loading profile…" />;
   }
 
+  const isCoach = profile?.role === 'coach';
+  const role = isCoach ? 'coach' : 'athlete';
+  const displayName =
+    profile?.name ||
+    profile?.displayName ||
+    profile?.email ||
+    user?.email ||
+    '';
+
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView style={styles.scrollView}>
-        <View style={styles.profileHeader}>
-          <Image
-            source={require('../assets/profile.png')}
-            style={styles.profileImage}
-            accessibilityElementsHidden={true}
-            importantForAccessibility="no"
+    <SafeAreaView style={styles.safe} edges={['top']}>
+      <StatusBar barStyle="light-content" />
+      <Header
+        title="Profile"
+        right={
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Settings"
+            onPress={() => {}}
+            hitSlop={8}
+            style={({pressed}) => pressed && {opacity: 0.6}}>
+            <Ionicons
+              name="settings-outline"
+              size={22}
+              color={colors.textPrimary}
+            />
+          </Pressable>
+        }
+      />
+      <ScrollView contentContainerStyle={styles.scroll}>
+        {/* Hero */}
+        <View style={styles.hero}>
+          <Avatar
+            uri={profile?.image}
+            name={displayName}
+            size={80}
           />
-          <Text style={styles.profileName}>
-            {profile?.displayName || profile?.email || user?.email || ''}
+          <Text style={styles.heroName} numberOfLines={1}>
+            {displayName || '—'}
           </Text>
-          <Text style={styles.profileLocation}>
-            📍 Location: {profile?.location || '—'}
-          </Text>
-          <Text style={styles.profileEmail}>
-            ✉️ Email: {profile?.email || user?.email || '—'}
+          <Text style={styles.heroEmail} numberOfLines={1}>
+            {profile?.email || user?.email || '—'}
           </Text>
         </View>
 
-        {renderProfileField('Weight (kg):', 'weight')}
-        {renderProfileField('Height:', 'height')}
-        {renderProfileField('Team:', 'team')}
-        {renderProfileField('Location:', 'location')}
-        {renderProfileField('Password:', 'password')}
+        {/* Stat row — athlete only */}
+        {!isCoach && (
+          <View style={styles.statRow}>
+            <View style={styles.statCell}>
+              <StatCard compact value={skis.length} label="Skis" />
+            </View>
+            <View style={styles.statCellSpacer} />
+            <View style={styles.statCell}>
+              <StatCard compact value={totalWaxes} label="Wax logs" />
+            </View>
+            <View style={styles.statCellSpacer} />
+            <View style={styles.statCell}>
+              <StatCard compact value={totalTests} label="Tests" />
+            </View>
+          </View>
+        )}
+
+        {/* Personal info */}
+        <SectionHeader title="Personal info" />
+        <Card padding={0}>
+          {FIELD_DEFS.map((def, i) => (
+            <View key={def.key} style={styles.rowOuter}>
+              <ListItem
+                icon={def.icon}
+                title={`${def.label} (${def.suffix?.trim() || ''})`.replace(
+                  / \(\)$/,
+                  '',
+                )}
+                subtitle={fieldDisplay(def, profile)}
+                onPress={() => openEdit(def)}
+                accessibilityLabel={`Edit ${def.label}${
+                  def.suffix ? ` (${def.suffix.trim()}):` : ''
+                }`}
+                right={
+                  <Text style={styles.editAction}>Edit</Text>
+                }
+                showDivider={i < FIELD_DEFS.length - 1}
+                chevron={false}
+              />
+            </View>
+          ))}
+        </Card>
+
+        {/* Coach section — athletes only */}
+        {!isCoach && (
+          <>
+            <SectionHeader title="Coach" />
+            <Card padding={0}>
+              <View style={styles.rowOuter}>
+                {profile?.coachUid ? (
+                  <ListItem
+                    leading={
+                      <Avatar
+                        name={profile.coachName || profile.coachEmail || ''}
+                        size={32}
+                      />
+                    }
+                    title={profile.coachName || profile.coachEmail || 'Coach'}
+                    subtitle={
+                      profile.coachEmail && profile.coachName
+                        ? profile.coachEmail
+                        : 'Linked coach'
+                    }
+                    right={<Text style={styles.editAction}>Change</Text>}
+                    onPress={() => {}}
+                    accessibilityLabel="Change coach"
+                    chevron={false}
+                  />
+                ) : (
+                  <ListItem
+                    icon="add-circle-outline"
+                    title="Add a coach"
+                    subtitle="Share your fleet with a coach"
+                    onPress={() => {}}
+                    accessibilityLabel="Add a coach"
+                  />
+                )}
+              </View>
+            </Card>
+          </>
+        )}
+
+        {/* Account */}
+        <SectionHeader title="Account" />
+        <Card padding={0}>
+          <View style={styles.rowOuter}>
+            <ListItem
+              icon="key-outline"
+              title="Change password"
+              onPress={() => setPwModalOpen(true)}
+              accessibilityLabel="Change password"
+              showDivider
+            />
+          </View>
+          <View style={styles.rowOuter}>
+            <ListItem
+              icon="log-out-outline"
+              iconColor={colors.red}
+              title="Sign out"
+              destructive
+              onPress={handleSignOut}
+              accessibilityLabel="Sign out"
+              chevron={false}
+            />
+          </View>
+        </Card>
 
         {__DEV__ && (
-          <View style={styles.seedRow}>
-            <TouchableOpacity
-              accessibilityRole="button"
-              accessibilityLabel="Seed sample data"
-              style={[styles.seedButton, seeding && styles.disabledButton]}
-              onPress={handleSeed}
-              disabled={seeding}>
-              {seeding ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={styles.seedButtonText}>Seed sample data</Text>
-              )}
-            </TouchableOpacity>
+          <View style={styles.devRow}>
+            <Button
+              variant="secondary"
+              size="md"
+              icon="leaf-outline"
+              loading={seeding}
+              onPress={handleSeed}>
+              Seed sample data
+            </Button>
           </View>
         )}
+      </ScrollView>
 
-        <View style={styles.signOutRow}>
-          <TouchableOpacity
-            accessibilityRole="button"
-            accessibilityLabel="Sign out"
-            style={styles.signOutButton}
-            onPress={handleSignOut}>
-            <Text style={styles.signOutText}>Sign out</Text>
-          </TouchableOpacity>
-        </View>
-
-        {editField && (
-          <Modal
-            animationType="slide"
-            transparent={true}
-            visible={!!editField}
-            onRequestClose={() => setEditField(null)}>
-            <View style={styles.centeredView}>
-              <View style={styles.modalView}>
-                <TextInput
-                  style={styles.modalInput}
-                  value={tempValue}
-                  onChangeText={text => setTempValue(text)}
-                  secureTextEntry={isSecure}
-                  keyboardType={keyboardTypeFor(editField)}
-                  autoCapitalize={
-                    editField === 'email' || isSecure ? 'none' : 'sentences'
-                  }
-                />
-                <Button title="Save" onPress={handleSave} />
+      {/* Edit-field modal */}
+      <Modal
+        animationType="fade"
+        transparent
+        visible={!!editField}
+        onRequestClose={() => setEditField(null)}>
+        <KeyboardAvoidingView
+          style={styles.modalBackdrop}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>
+              {editField ? `Edit ${editField.label}` : ''}
+            </Text>
+            {editField && (
+              <Input
+                label={editField.label}
+                icon={editField.icon}
+                value={tempValue}
+                onChangeText={setTempValue}
+                keyboardType={keyboardTypeFor(editField.key)}
+                autoCapitalize={
+                  editField.key === 'location' || editField.key === 'team'
+                    ? 'words'
+                    : 'sentences'
+                }
+              />
+            )}
+            <View style={styles.modalActions}>
+              <View style={styles.modalActionCell}>
                 <Button
-                  title="Cancel"
-                  color="#777"
-                  onPress={() => setEditField(null)}
-                />
+                  variant="ghost"
+                  size="md"
+                  fullWidth
+                  onPress={() => setEditField(null)}>
+                  Cancel
+                </Button>
+              </View>
+              <View style={styles.modalActionCell}>
+                <Button
+                  variant="primary"
+                  size="md"
+                  fullWidth
+                  icon="checkmark"
+                  onPress={handleSave}>
+                  Save
+                </Button>
               </View>
             </View>
-          </Modal>
-        )}
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
 
-        <Modal
-          animationType="slide"
-          transparent={true}
-          visible={pwModalOpen}
-          onRequestClose={() => setPwModalOpen(false)}>
-          <View style={styles.centeredView}>
-            <View style={styles.modalView}>
-              <Text style={styles.pwTitle}>Change password</Text>
-              <TextInput
-                style={styles.modalInput}
-                placeholder="Current password"
-                placeholderTextColor="#888"
-                value={currentPw}
-                onChangeText={setCurrentPw}
-                secureTextEntry
-                autoCapitalize="none"
-              />
-              <TextInput
-                style={styles.modalInput}
-                placeholder="New password"
-                placeholderTextColor="#888"
-                value={newPw}
-                onChangeText={setNewPw}
-                secureTextEntry
-                autoCapitalize="none"
-              />
-              {!!pwError && <Text style={styles.pwError}>{pwError}</Text>}
-              <Button
-                title={pwSubmitting ? 'Saving…' : 'Update password'}
-                onPress={handlePasswordSubmit}
-                disabled={pwSubmitting}
-              />
-              <Button
-                title="Cancel"
-                color="#777"
-                onPress={() => {
-                  setPwModalOpen(false);
-                  setCurrentPw('');
-                  setNewPw('');
-                  setPwError('');
-                }}
-              />
+      {/* Password modal */}
+      <Modal
+        animationType="fade"
+        transparent
+        visible={pwModalOpen}
+        onRequestClose={() => setPwModalOpen(false)}>
+        <KeyboardAvoidingView
+          style={styles.modalBackdrop}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Change password</Text>
+            <Input
+              label="Current password"
+              icon="lock-closed-outline"
+              value={currentPw}
+              onChangeText={setCurrentPw}
+              secureTextEntry
+              autoCapitalize="none"
+            />
+            <View style={{height: spacing.md}} />
+            <Input
+              label="New password"
+              icon="key-outline"
+              value={newPw}
+              onChangeText={setNewPw}
+              secureTextEntry
+              autoCapitalize="none"
+              error={pwError || undefined}
+            />
+            <View style={styles.modalActions}>
+              <View style={styles.modalActionCell}>
+                <Button
+                  variant="ghost"
+                  size="md"
+                  fullWidth
+                  disabled={pwSubmitting}
+                  onPress={() => {
+                    setPwModalOpen(false);
+                    setCurrentPw('');
+                    setNewPw('');
+                    setPwError('');
+                  }}>
+                  Cancel
+                </Button>
+              </View>
+              <View style={styles.modalActionCell}>
+                <Button
+                  variant="primary"
+                  size="md"
+                  fullWidth
+                  icon="checkmark"
+                  loading={pwSubmitting}
+                  onPress={handlePasswordSubmit}>
+                  Update
+                </Button>
+              </View>
             </View>
           </View>
-        </Modal>
-      </ScrollView>
-      <Footer />
+        </KeyboardAvoidingView>
+      </Modal>
+
+      <TabBar role={role} />
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: 'black',
+  safe: {flex: 1, backgroundColor: colors.bg},
+  scroll: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing['3xl'],
   },
-  scrollView: {},
-  loading: {
-    flex: 1,
-  },
-  profileHeader: {
+  hero: {
     alignItems: 'center',
-    backgroundColor: '#282828',
-    paddingBottom: 20,
+    paddingBottom: spacing.xl,
   },
-  profileImage: {
-    width: 140,
-    height: 140,
-    borderRadius: 70,
-    marginTop: 20,
-    borderColor: 'white',
-    borderWidth: 3,
+  heroName: {
+    ...typography.displayMd,
+    color: colors.textPrimary,
+    marginTop: spacing.md,
   },
-  profileName: {
-    color: 'white',
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginTop: 10,
+  heroEmail: {
+    ...typography.body,
+    color: colors.textSecondary,
+    marginTop: spacing.xs,
   },
-  profileLocation: {
-    color: 'white',
-    fontSize: 16,
-    marginTop: 5,
+  statRow: {
+    flexDirection: 'row',
+    marginBottom: spacing.md,
   },
-  profileEmail: {
-    color: 'white',
-    fontSize: 16,
-    marginTop: 5,
+  statCell: {flex: 1},
+  statCellSpacer: {width: spacing.sm},
+
+  rowOuter: {
+    paddingHorizontal: spacing.lg,
   },
-  profileField: {
-    backgroundColor: '#282828',
-    paddingVertical: 15,
-    paddingHorizontal: 20,
-    marginHorizontal: 20,
-    marginVertical: 10,
-    borderRadius: 10,
+  editAction: {
+    ...typography.bodySm,
+    color: colors.red,
+    fontWeight: '600',
   },
-  centeredView: {
+  devRow: {
+    marginTop: spacing.xl,
+    alignItems: 'center',
+  },
+
+  modalBackdrop: {
     flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.7)',
     justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 22,
+    paddingHorizontal: spacing.xl,
   },
-  modalView: {
-    margin: 20,
-    backgroundColor: 'white',
-    borderRadius: 20,
-    padding: 35,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
-    minWidth: 260,
-  },
-  modalInput: {
+  modalCard: {
+    backgroundColor: colors.surfaceElevated,
+    borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: 'grey',
-    borderRadius: 5,
-    padding: 10,
-    color: 'black',
-    fontSize: 16,
-    width: '100%',
-    marginBottom: 12,
+    borderColor: colors.border,
+    padding: spacing.xl,
   },
-  fieldLabel: {
-    fontSize: 16,
-    color: 'white',
-    fontWeight: 'bold',
-    marginBottom: 5,
+  modalTitle: {
+    ...typography.displayMd,
+    color: colors.textPrimary,
+    marginBottom: spacing.lg,
   },
-  fieldValue: {
-    fontSize: 14,
-    color: '#aaa',
+  modalActions: {
+    flexDirection: 'row',
+    marginTop: spacing.xl,
   },
-  editButton: {
-    backgroundColor: 'red',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 20,
-    alignSelf: 'flex-end',
-  },
-  editButtonText: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  seedRow: {
-    alignItems: 'center',
-    marginTop: 20,
-  },
-  seedButton: {
-    backgroundColor: '#444',
-    paddingHorizontal: 28,
-    paddingVertical: 10,
-    borderRadius: 20,
-  },
-  seedButtonText: {
-    color: 'white',
-    fontWeight: '600',
-  },
-  signOutRow: {
-    alignItems: 'center',
-    marginTop: 28,
-    marginBottom: 90,
-  },
-  signOutButton: {
-    backgroundColor: '#E53935',
-    paddingHorizontal: 36,
-    paddingVertical: 12,
-    borderRadius: 24,
-  },
-  signOutText: {
-    color: 'white',
-    fontWeight: '600',
-    fontSize: 16,
-  },
-  disabledButton: {
-    opacity: 0.6,
-  },
-  pwTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 10,
-  },
-  pwError: {
-    color: '#E53935',
-    marginBottom: 10,
-    textAlign: 'center',
-  },
+  modalActionCell: {flex: 1, marginHorizontal: spacing.xs},
 });
 
 export default ProfileScreen;

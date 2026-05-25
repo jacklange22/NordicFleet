@@ -1,6 +1,7 @@
 import React from 'react';
 import {render, fireEvent, act, waitFor} from '@testing-library/react-native';
 import {NavigationContainer} from '@react-navigation/native';
+import {SafeAreaProvider} from 'react-native-safe-area-context';
 import authMock from '@react-native-firebase/auth';
 import firestoreMock from '@react-native-firebase/firestore';
 
@@ -12,13 +13,20 @@ beforeEach(() => {
   firestoreMock.__resetFirestoreMock();
 });
 
+const SA_METRICS = {
+  frame: {x: 0, y: 0, width: 320, height: 640},
+  insets: {top: 0, left: 0, right: 0, bottom: 0},
+};
+
 const renderProfile = () =>
   render(
-    <NavigationContainer>
-      <AuthProvider>
-        <ProfileScreen />
-      </AuthProvider>
-    </NavigationContainer>,
+    <SafeAreaProvider initialMetrics={SA_METRICS}>
+      <NavigationContainer>
+        <AuthProvider>
+          <ProfileScreen />
+        </AuthProvider>
+      </NavigationContainer>
+    </SafeAreaProvider>,
   );
 
 describe('ProfileScreen', () => {
@@ -41,7 +49,8 @@ describe('ProfileScreen', () => {
     await waitFor(() => tree.getByText('Dartmouth'));
     expect(tree.getByText('Dartmouth')).toBeTruthy();
     expect(tree.getByText('Hanover, NH')).toBeTruthy();
-    expect(tree.getByText('70')).toBeTruthy();
+    // Weight is now rendered with its unit suffix, e.g. "70 kg".
+    expect(tree.getByText('70 kg')).toBeTruthy();
   });
 
   it('writes weight on save', async () => {
