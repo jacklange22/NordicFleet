@@ -25,6 +25,14 @@ function makeUser({uid, email}) {
     email,
     reauthenticateWithCredential: jest.fn(() => Promise.resolve()),
     updatePassword: jest.fn(() => Promise.resolve()),
+    delete: jest.fn(() => {
+      // Match real Firebase: deletes the auth user, which then null-fires
+      // onAuthStateChanged. Tests that need to assert call order can pass a
+      // pre-built user via __setCurrentUser with their own delete jest.fn.
+      currentUser = null;
+      notify();
+      return Promise.resolve();
+    }),
   };
 }
 
@@ -99,7 +107,23 @@ auth.__resetAuthMock = () => {
 };
 
 auth.__setCurrentUser = user => {
-  currentUser = user;
+  // Normalize: if the caller passed a plain {uid, email} object, wrap it
+  // so user.delete() / reauthenticateWithCredential / updatePassword all
+  // exist. Tests that need their own implementation (e.g. to assert call
+  // order) can override individual methods on the returned object before
+  // calling __setCurrentUser, or override them post-set via
+  // authMock().currentUser.
+  if (user && typeof user.delete !== 'function') {
+    currentUser = makeUser({uid: user.uid, email: user.email});
+    Object.assign(currentUser, user);
+    // Re-install delete if the caller didn't supply one.
+    if (typeof user.delete !== 'function') {
+      const base = makeUser({uid: user.uid, email: user.email});
+      currentUser.delete = base.delete;
+    }
+  } else {
+    currentUser = user;
+  }
   notify();
 };
 

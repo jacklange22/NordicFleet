@@ -277,8 +277,144 @@ LOOKUP_COUNT=$(python3 -c "import sys,json;d=json.load(sys.stdin);print(sum(1 fo
 check "coach lookup by email returns the coach doc" "1" "$LOOKUP_COUNT"
 echo
 
-# ─── 6. Offline persistence config (code-level) ──────────────────────
-echo "[6/6] OFFLINE persistence (code-level — verified via grep)"
+# ─── 6. DELETE ACCOUNT (App Store guideline 5.1.1(v)) ────────────────
+echo "[6/7] DELETE ACCOUNT — destructive end-to-end"
+
+# Fresh disposable user (D) + coach (DC) that has an athlete pointing
+# to D as its coach. We'll delete D and verify cascade.
+D_EMAIL="del-${TS}@nordicfleet.test"
+DC_EMAIL="del-ath-${TS}@nordicfleet.test"
+D_SIGNUP=$(curl -s "${AUTH}:signUp?key=${API_KEY}" \
+  -H "Content-Type: application/json" \
+  -d "{\"email\":\"$D_EMAIL\",\"password\":\"$PASS\",\"returnSecureToken\":true}")
+D_TOKEN=$(python3 -c "import sys,json;print(json.load(sys.stdin)['idToken'])" <<<"$D_SIGNUP")
+D_UID=$(python3 -c "import sys,json;print(json.load(sys.stdin)['localId'])" <<<"$D_SIGNUP")
+
+# Mark D as a coach so the cascade branch is exercised.
+curl -s -X PATCH "${BASE}/users/${D_UID}" \
+  -H "Authorization: Bearer ${D_TOKEN}" -H "Content-Type: application/json" \
+  -d "{\"fields\":{\"email\":{\"stringValue\":\"$D_EMAIL\"},\"role\":{\"stringValue\":\"coach\"}}}" \
+  > /dev/null
+
+# Create an athlete pointing at D as its coach.
+DC_SIGNUP=$(curl -s "${AUTH}:signUp?key=${API_KEY}" \
+  -H "Content-Type: application/json" \
+  -d "{\"email\":\"$DC_EMAIL\",\"password\":\"$PASS\",\"returnSecureToken\":true}")
+DC_TOKEN=$(python3 -c "import sys,json;print(json.load(sys.stdin)['idToken'])" <<<"$DC_SIGNUP")
+DC_UID=$(python3 -c "import sys,json;print(json.load(sys.stdin)['localId'])" <<<"$DC_SIGNUP")
+curl -s -X PATCH "${BASE}/users/${DC_UID}" \
+  -H "Authorization: Bearer ${DC_TOKEN}" -H "Content-Type: application/json" \
+  -d "{\"fields\":{\"email\":{\"stringValue\":\"$DC_EMAIL\"},\"role\":{\"stringValue\":\"athlete\"},\"coachId\":{\"stringValue\":\"$D_UID\"}}}" \
+  > /dev/null
+
+# As D, write a ski + wax log + test log to populate subcollections.
+D_SKI=$(curl -s -X POST "${BASE}/users/${D_UID}/skis" \
+  -H "Authorization: Bearer ${D_TOKEN}" -H "Content-Type: application/json" \
+  -d '{"fields":{"name":{"stringValue":"DelMe"}}}')
+D_SKI_PATH=$(python3 -c "import sys,json;print(json.load(sys.stdin)['name'])" <<<"$D_SKI")
+D_SKI_ID=$(basename "$D_SKI_PATH")
+curl -s -X POST "${BASE}/users/${D_UID}/waxLogs" \
+  -H "Authorization: Bearer ${D_TOKEN}" -H "Content-Type: application/json" \
+  -d "{\"fields\":{\"skiId\":{\"stringValue\":\"$D_SKI_ID\"}}}" > /dev/null
+curl -s -X POST "${BASE}/users/${D_UID}/testLogs" \
+  -H "Authorization: Bearer ${D_TOKEN}" -H "Content-Type: application/json" \
+  -d "{\"fields\":{\"skiId\":{\"stringValue\":\"$D_SKI_ID\"}}}" > /dev/null
+
+# As D, mimic deleteAccount: unlink dependent athletes, delete
+# subcollections, delete user doc, then delete the auth user.
+# Step 1: find dependent athletes and clear their coachId.
+DEP_BODY=$(cat <<EOF
+{"structuredQuery":{"from":[{"collectionId":"users"}],"where":{"fieldFilter":{"field":{"fieldPath":"coachId"},"op":"EQUAL","value":{"stringValue":"$D_UID"}}}}}
+EOF
+)
+DEPS=$(curl -s -X POST "${BASE}:runQuery" \
+  -H "Authorization: Bearer ${D_TOKEN}" -H "Content-Type: application/json" \
+  -d "$DEP_BODY")
+DEP_UIDS=$(python3 -c "
+import sys, json
+d = json.load(sys.stdin)
+out = []
+for r in d:
+    doc = r.get('document')
+    if doc:
+        out.append(doc['name'].split('/')[-1])
+print(' '.join(out))
+" <<<"$DEPS")
+# Step 1a: confirm the rules block a coach from writing to an athlete's
+# doc. The JS deleteAccount() attempts this cascade best-effort; we
+# verify here that it does fail (so we can document the orphan-ref
+# limitation honestly in NOTES.md).
+COACH_CASCADE=$(http_status PATCH "${BASE}/users/${DC_UID}?updateMask.fieldPaths=coachId" \
+  "$D_TOKEN" '{"fields":{"coachId":{"nullValue":null}}}')
+check "coach cannot write athlete's coachId (rules block cascade, by design)" "403" "$COACH_CASCADE"
+
+# Step 2-3: delete subcollection docs + user doc as D.
+for sub in skis waxLogs testLogs; do
+  LIST=$(curl -s "${BASE}/users/${D_UID}/${sub}" -H "Authorization: Bearer ${D_TOKEN}")
+  python3 <<EOF >/tmp/del-ids.txt
+import sys, json
+d = json.loads('''$LIST''')
+for doc in d.get('documents', []):
+    print(doc['name'])
+EOF
+  while IFS= read -r path; do
+    [ -z "$path" ] && continue
+    # path is the full Firestore resource name; strip the prefix.
+    rel=$(echo "$path" | sed "s|projects/${PROJECT}/databases/(default)/documents/||")
+    curl -s -X DELETE "${BASE}/${rel}" \
+      -H "Authorization: Bearer ${D_TOKEN}" > /dev/null
+  done < /tmp/del-ids.txt
+done
+
+DEL_USER=$(http_status DELETE "${BASE}/users/${D_UID}" "$D_TOKEN")
+check "user doc DELETE returns 200" "200" "$DEL_USER"
+
+# Step 4: delete the auth user.
+DEL_AUTH=$(curl -s -o /dev/null -w "%{http_code}" -X POST \
+  "${AUTH}:delete?key=${API_KEY}" \
+  -H "Content-Type: application/json" \
+  -d "{\"idToken\":\"$D_TOKEN\"}")
+check "auth user DELETE returns 200" "200" "$DEL_AUTH"
+
+# The dependent athlete's coachId is still set (cascade failed by
+# design — see NOTES.md "Coach-side cascade"). We verify the orphan
+# state: the athlete's coachId still points at the dead uid, but the
+# coach doc is gone so the Profile screen will show "Coach" with no
+# fetched profile.
+DC_AFTER=$(curl -s "${BASE}/users/${DC_UID}" -H "Authorization: Bearer ${DC_TOKEN}")
+DC_COACH_VAL=$(python3 -c "import sys,json;f=json.load(sys.stdin)['fields'].get('coachId',{});print(f.get('stringValue','MISSING'))" <<<"$DC_AFTER")
+check "athlete's coachId still points at dead uid (cascade limitation documented)" "$D_UID" "$DC_COACH_VAL"
+
+# The athlete can clear the orphan reference themselves (the existing
+# "Remove coach" UI). Verify that flow works.
+curl -s -X PATCH "${BASE}/users/${DC_UID}?updateMask.fieldPaths=coachId" \
+  -H "Authorization: Bearer ${DC_TOKEN}" -H "Content-Type: application/json" \
+  -d '{"fields":{"coachId":{"nullValue":null}}}' > /dev/null
+DC_CLEAN=$(curl -s "${BASE}/users/${DC_UID}" -H "Authorization: Bearer ${DC_TOKEN}")
+DC_NULL=$(python3 -c "import sys,json;f=json.load(sys.stdin)['fields'].get('coachId',{});print('NULL' if 'nullValue' in f else 'NOT_NULL')" <<<"$DC_CLEAN")
+check "athlete can clear the orphan coachId reference themselves" "NULL" "$DC_NULL"
+
+# Verify the user doc is actually gone.
+USER_GONE=$(curl -s -o /dev/null -w "%{http_code}" "${BASE}/users/${D_UID}" -H "Authorization: Bearer ${DC_TOKEN}")
+# Should be 403 (unauth read of nonexistent) or 404. Either is "gone".
+if [ "$USER_GONE" = "403" ] || [ "$USER_GONE" = "404" ]; then
+  echo "  ✓ deleted user doc is no longer readable ($USER_GONE)"
+  PASS_COUNT=$((PASS_COUNT + 1))
+else
+  echo "  ✗ deleted user doc unexpectedly readable: $USER_GONE"
+  FAIL_COUNT=$((FAIL_COUNT + 1))
+fi
+
+# Verify the auth account can no longer sign in.
+RE_SIGNIN=$(curl -s "${AUTH}:signInWithPassword?key=${API_KEY}" \
+  -H "Content-Type: application/json" \
+  -d "{\"email\":\"$D_EMAIL\",\"password\":\"$PASS\",\"returnSecureToken\":true}")
+HAS_TOKEN=$(python3 -c "import sys,json;d=json.load(sys.stdin);print('YES' if 'idToken' in d else 'NO')" <<<"$RE_SIGNIN")
+check "deleted email cannot sign in" "NO" "$HAS_TOKEN"
+echo
+
+# ─── 7. Offline persistence config (code-level) ──────────────────────
+echo "[7/7] OFFLINE persistence (code-level — verified via grep)"
 if grep -q "persistence: true" src/services/firebase.js && \
    grep -q "CACHE_SIZE_UNLIMITED" src/services/firebase.js; then
   echo "  ✓ src/services/firebase.js enables persistence with CACHE_SIZE_UNLIMITED"

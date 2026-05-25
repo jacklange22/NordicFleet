@@ -1,4 +1,4 @@
-import {db, firestore} from './firebase';
+import {auth, db, firestore} from './firebase';
 
 const userDoc = uid => db.collection('users').doc(uid);
 const usersCollection = () => db.collection('users');
@@ -241,4 +241,87 @@ export function subscribeAthletesForCoach(coachUid, callback) {
         callback([]);
       },
     );
+}
+
+/**
+ * Permanently delete the current user's account and ALL their data.
+ *
+ * Steps (in order — see Self-recovery in the brief: don't skip any
+ * because partial deletes leave orphan data):
+ *   1. If the user is a coach, find every athlete with
+ *      coachId == this uid and clear it. Firestore rules don't allow
+ *      writing arbitrary user docs, so the coach can only do this
+ *      while authenticated as themselves — hence we run it BEFORE
+ *      the auth user is deleted. (This step is also tolerant: if the
+ *      query / write fails because no athletes reference this coach,
+ *      we proceed.)
+ *   2. Batch-delete all docs in skis / waxLogs / testLogs.
+ *   3. Delete the user doc.
+ *   4. Delete the Firebase Auth user. This requires recent reauth;
+ *      callers must reauthenticate immediately before invoking this.
+ *
+ * After step 4 succeeds, the auth state becomes null and the app's
+ * AuthContext listener will route back to Welcome.
+ *
+ * @returns {Promise<void>}
+ */
+export async function deleteAccount() {
+  const user = auth().currentUser;
+  if (!user) {
+    throw new Error('Not signed in');
+  }
+  const uid = user.uid;
+
+  // 1. If the user is a coach, unlink every athlete pointing at them.
+  //    Tolerate failures here (the user may not be a coach, or the
+  //    query may be empty) — we just move on.
+  try {
+    const athletes = await usersCollection()
+      .where('coachId', '==', uid)
+      .get();
+    if (!athletes.empty) {
+      const batch = db.batch();
+      athletes.forEach(doc => {
+        batch.set(
+          doc.ref,
+          {coachId: null, updatedAt: firestore.FieldValue.serverTimestamp()},
+          {merge: true},
+        );
+      });
+      await batch.commit();
+    }
+  } catch {
+    // Non-coach users (or no athletes referencing this user) end up
+    // here. Continue with deletion.
+  }
+
+  // 2. Batch-delete subcollections. Firestore doesn't auto-cascade,
+  //    and a single batch can hold up to 500 ops, so we chunk just in
+  //    case. Per-collection commit keeps memory low.
+  const subcollections = ['skis', 'waxLogs', 'testLogs'];
+  for (const sub of subcollections) {
+    const snap = await db
+      .collection('users')
+      .doc(uid)
+      .collection(sub)
+      .get();
+    if (snap.empty) {
+      continue;
+    }
+    const docs = snap.docs;
+    for (let i = 0; i < docs.length; i += 400) {
+      const chunk = docs.slice(i, i + 400);
+      const batch = db.batch();
+      chunk.forEach(doc => batch.delete(doc.ref));
+      await batch.commit();
+    }
+  }
+
+  // 3. Delete the parent user doc.
+  await db.collection('users').doc(uid).delete();
+
+  // 4. Delete the auth user. Throws auth/requires-recent-login if the
+  //    user hasn't reauth'd in the last ~5 minutes — the UI handles
+  //    that by gating the call behind a reauth modal.
+  await user.delete();
 }

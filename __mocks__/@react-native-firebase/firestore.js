@@ -268,9 +268,53 @@ function collectionRef(path) {
   return api;
 }
 
+function batchRef() {
+  const ops = [];
+  return {
+    set(ref, data, options = {}) {
+      ops.push({type: 'set', ref, data, options});
+      return this;
+    },
+    update(ref, data) {
+      ops.push({type: 'update', ref, data});
+      return this;
+    },
+    delete(ref) {
+      ops.push({type: 'delete', ref});
+      return this;
+    },
+    commit() {
+      const inj = firestore.__shouldInjectError();
+      if (inj) {
+        return Promise.reject(inj);
+      }
+      for (const op of ops) {
+        if (op.type === 'delete') {
+          store.delete(op.ref.path);
+          notify(op.ref.path);
+        } else if (op.type === 'set') {
+          const existing = store.get(op.ref.path);
+          if (op.options.merge) {
+            store.set(op.ref.path, applyFieldValues(existing || {}, op.data));
+          } else {
+            store.set(op.ref.path, applyFieldValues({}, op.data));
+          }
+          notify(op.ref.path);
+        } else if (op.type === 'update') {
+          const existing = store.get(op.ref.path) || {};
+          store.set(op.ref.path, applyFieldValues(existing, op.data));
+          notify(op.ref.path);
+        }
+      }
+      return Promise.resolve();
+    },
+  };
+}
+
 const firestore = jest.fn(() => ({
   collection: name => collectionRef(name),
   settings: jest.fn(),
+  batch: () => batchRef(),
 }));
 
 // Static fields on the firestore namespace.

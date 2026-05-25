@@ -2,6 +2,48 @@
 
 Decisions made during autonomous overnight rewrite — see commit log for context.
 
+## Bug-fix + sharing session decisions
+
+### Coach-side cascade on `deleteAccount`
+
+The brief asked `deleteAccount` to clear `coachId` on every athlete who
+had this user as their coach, before deleting the user. This is the
+right shape — but the deployed Firestore rules (`firestore.rules`)
+only allow `isOwner(uid)` to write to `users/{uid}`. So a coach
+client-side **cannot** patch their athletes' docs.
+
+**What the code does:** `userService.deleteAccount` still attempts the
+cascade (best-effort), wrapped in try/catch so the failure doesn't
+block the rest of the deletion. The cascade query/write succeed in
+the in-memory mock (jest specs cover it) but fail with
+PERMISSION_DENIED against live Firestore. The rest of the deletion
+(subcollections, user doc, auth user) succeeds normally.
+
+**User-visible consequence:** when a coach deletes their account,
+their former athletes still have `coachId` pointing at the now-dead
+uid. The athlete's Profile screen handles this gracefully:
+`getProfile(coachId)` returns null after the coach doc is gone, so
+the "linked coach" tile shows a generic Avatar with title "Coach"
+plus the "Change" / "Remove" actions. The athlete can clear the
+orphan reference at any time via "Remove coach."
+
+**Real fix, deferred:** a Cloud Function listening for `users/{uid}`
+deletion can clear dependent `coachId` references with Admin SDK
+privileges. Cheap to add later. The orphan state is harmless meanwhile.
+
+### Sharing approach
+
+Picked Option 2 (native iOS share sheet with image export) per the
+brief's recommendation. Uses `react-native-view-shot` to capture a
+styled card View as PNG, then invokes the iOS Share API. No backend,
+no Universal Links, no public Firestore docs.
+
+### Toast during account deletion
+
+`Toast.show()` lives at the App root. When `navigation.reset` swaps
+the navigator to `Welcome`, the toast remains visible because it's
+not inside the navigator's view tree. That's the desired UX.
+
 ## Environment
 
 - `node` / `npm` are NOT installed in this autonomous environment. The brief said I could run `npm install`, `npm test`, and `npm run lint`, but I cannot. **Every change in this rewrite is static** — written, type-checked by hand, and reviewed for symmetry against the rest of the codebase, but not executed. This is logged in `BLOCKERS.md` so the user runs `npm install` first thing in the morning.

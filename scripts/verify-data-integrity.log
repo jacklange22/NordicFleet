@@ -1,10 +1,10 @@
 === NordicFleet data integrity verification ===
-User A: data-a-1779671439@nordicfleet.test
-User B: data-b-1779671439@nordicfleet.test
+User A: data-a-1779683072@nordicfleet.test
+User B: data-b-1779683072@nordicfleet.test
 
 [setup] Creating two test users…
-  A uid=xiG0FAZ2LOS3l5qlA3QANGyFCQx1
-  B uid=n10Sqtn96FU4F2rfz1vTegCeEzg2
+  A uid=8JIRVWblnuPkLGrvraHvtNUiztr1
+  B uid=DvT0bOcoIrW59mkbGTHiQuz3MOm1
 
 [1/5] CREATE operations
   ✓ profile doc created with email
@@ -23,7 +23,7 @@ User B: data-b-1779671439@nordicfleet.test
 [3/5] UPDATE operations
   ✓ PATCH weight=72 succeeded
   ✓ PATCH preserved role
-  ✓ ski update bumped updateTime (2026-05-25T01:10:41.419990Z → 2026-05-25T01:10:44.323185Z)
+  ✓ ski update bumped updateTime (2026-05-25T04:24:33.982580Z → 2026-05-25T04:24:37.162072Z)
 
 [4/5] DELETE operations
   ✓ soft delete: retired flag set true, doc still exists
@@ -37,9 +37,18 @@ User B: data-b-1779671439@nordicfleet.test
   ✓ User B cannot write to User A's skis
   ✓ coach lookup by email returns the coach doc
 
-[6/6] OFFLINE persistence (code-level — verified via grep)
+[6/7] DELETE ACCOUNT — destructive end-to-end
+  ✓ coach cannot write athlete's coachId (rules block cascade, by design)
+  ✓ user doc DELETE returns 200
+  ✓ auth user DELETE returns 200
+  ✓ athlete's coachId still points at dead uid (cascade limitation documented)
+  ✓ athlete can clear the orphan coachId reference themselves
+  ✓ deleted user doc is no longer readable (403)
+  ✓ deleted email cannot sign in
+
+[7/7] OFFLINE persistence (code-level — verified via grep)
   ✓ src/services/firebase.js enables persistence with CACHE_SIZE_UNLIMITED
 
 ==============================
-Passed: 22, Failed: 0
+Passed: 29, Failed: 0
 ==============================

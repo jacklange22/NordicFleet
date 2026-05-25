@@ -26,6 +26,7 @@ import {
   setCoachByEmail,
   removeCoach,
   getProfile,
+  deleteAccount,
 } from '../services/userService';
 import {seedCurrentUser} from '../services/seed';
 import {auth} from '../services/firebase';
@@ -92,6 +93,12 @@ const ProfileScreen = () => {
   const [coachError, setCoachError] = useState('');
   const [coachSubmitting, setCoachSubmitting] = useState(false);
   const [coachProfile, setCoachProfile] = useState(null);
+
+  // Delete account flow (App Store guideline 5.1.1(v)).
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deletePw, setDeletePw] = useState('');
+  const [deleteError, setDeleteError] = useState('');
+  const [deleteSubmitting, setDeleteSubmitting] = useState(false);
 
   // When the athlete profile has a coachId, fetch the coach's profile
   // (rules allow any auth'd user to read role=='coach' docs).
@@ -221,6 +228,82 @@ const ProfileScreen = () => {
       ],
     );
   }, [uid]);
+
+  const handleDeleteAccountTap = useCallback(() => {
+    // Two-step confirmation: first alert, then reauth modal.
+    Alert.alert(
+      'Delete your account?',
+      'This permanently removes all your skis, wax logs, test logs, and profile data. This cannot be undone.',
+      [
+        {text: 'Cancel', style: 'cancel'},
+        {
+          text: 'I want to delete',
+          style: 'destructive',
+          onPress: () => {
+            setDeletePw('');
+            setDeleteError('');
+            setDeleteModalOpen(true);
+          },
+        },
+      ],
+    );
+  }, []);
+
+  const closeDeleteModal = useCallback(() => {
+    setDeleteModalOpen(false);
+    setDeletePw('');
+    setDeleteError('');
+  }, []);
+
+  const submitDeleteAccount = useCallback(async () => {
+    setDeleteError('');
+    const currentUser = auth().currentUser;
+    if (!currentUser || !currentUser.email) {
+      setDeleteError('Not signed in');
+      return;
+    }
+    if (deletePw.length < 6) {
+      setDeleteError('Enter your password to confirm');
+      return;
+    }
+    setDeleteSubmitting(true);
+    try {
+      const cred = auth.EmailAuthProvider.credential(
+        currentUser.email,
+        deletePw,
+      );
+      await currentUser.reauthenticateWithCredential(cred);
+      await deleteAccount();
+      // After deleteAccount succeeds, auth state is null. Show the toast
+      // before navigating because Toast lives at the App root and
+      // unmounting the navigator wipes the screen anyway.
+      Toast.show({
+        type: 'success',
+        text1: 'Account deleted',
+        position: 'top',
+        visibilityTime: 2200,
+      });
+      setDeleteModalOpen(false);
+      setDeletePw('');
+      navigation.reset({index: 0, routes: [{name: 'Welcome'}]});
+    } catch (err) {
+      const code = err && err.code;
+      if (
+        code === 'auth/wrong-password' ||
+        code === 'auth/invalid-credential'
+      ) {
+        setDeleteError('Wrong password');
+      } else if (code === 'auth/network-request-failed') {
+        setDeleteError('No connection — please try again');
+      } else if (code === 'auth/requires-recent-login') {
+        setDeleteError('Please sign out, sign back in, and try again');
+      } else {
+        setDeleteError("Couldn't delete account, please try again");
+      }
+    } finally {
+      setDeleteSubmitting(false);
+    }
+  }, [deletePw, navigation]);
 
   const handleSignOut = useCallback(() => {
     Alert.alert('Sign out?', 'You will need to log in again next time.', [
@@ -481,6 +564,23 @@ const ProfileScreen = () => {
           </View>
         </Card>
 
+        {/* Danger zone — App Store guideline 5.1.1(v): account deletion */}
+        <SectionHeader title="Danger zone" />
+        <Card padding={0}>
+          <View style={styles.rowOuter}>
+            <ListItem
+              icon="trash-outline"
+              iconColor={colors.red}
+              title="Delete account"
+              subtitle="Permanently removes all your data"
+              destructive
+              onPress={handleDeleteAccountTap}
+              accessibilityLabel="Delete account"
+              chevron={false}
+            />
+          </View>
+        </Card>
+
         {__DEV__ && (
           <View style={styles.devRow}>
             <Button
@@ -608,6 +708,63 @@ const ProfileScreen = () => {
                   loading={pwSubmitting}
                   onPress={handlePasswordSubmit}>
                   Update
+                </Button>
+              </View>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* Delete-account reauth modal */}
+      <Modal
+        animationType="fade"
+        transparent
+        visible={deleteModalOpen}
+        onRequestClose={closeDeleteModal}>
+        <KeyboardAvoidingView
+          style={styles.modalBackdrop}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Confirm deletion</Text>
+            <Text style={styles.modalSubtitle}>
+              For security, please enter your password. After deletion your
+              data cannot be recovered.
+            </Text>
+            <View style={styles.modalFieldSpacer} />
+            <Input
+              label="Password"
+              icon="lock-closed-outline"
+              value={deletePw}
+              onChangeText={setDeletePw}
+              secureTextEntry
+              autoCapitalize="none"
+              autoComplete="current-password"
+              textContentType="password"
+              autoCorrect={false}
+              error={deleteError || undefined}
+              editable={!deleteSubmitting}
+            />
+            <View style={styles.modalActions}>
+              <View style={styles.modalActionCell}>
+                <Button
+                  variant="ghost"
+                  size="md"
+                  fullWidth
+                  disabled={deleteSubmitting}
+                  onPress={closeDeleteModal}>
+                  Cancel
+                </Button>
+              </View>
+              <View style={styles.modalActionCell}>
+                <Button
+                  variant="danger"
+                  size="md"
+                  fullWidth
+                  icon="trash-outline"
+                  loading={deleteSubmitting}
+                  onPress={submitDeleteAccount}
+                  accessibilityLabel="Confirm delete account">
+                  Delete
                 </Button>
               </View>
             </View>
