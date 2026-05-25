@@ -88,8 +88,11 @@ const SignupScreen = ({navigation}) => {
               onChangeText={setEmail}
               keyboardType="email-address"
               autoCapitalize="none"
+              autoComplete="email"
+              textContentType="username"
+              autoCorrect={false}
             />
-            <View style={{height: spacing.lg}} />
+            <View style={styles.fieldSpacer} />
             <Input
               label="Password"
               icon="lock-closed-outline"
@@ -97,8 +100,12 @@ const SignupScreen = ({navigation}) => {
               onChangeText={setPassword}
               secureTextEntry
               autoCapitalize="none"
+              autoComplete="new-password"
+              textContentType="newPassword"
+              passwordRules="minlength: 8; required: lower; required: upper; required: digit;"
+              autoCorrect={false}
             />
-            <View style={{height: spacing.lg}} />
+            <View style={styles.fieldSpacer} />
             <Input
               label="Confirm Password"
               icon="lock-closed-outline"
@@ -106,6 +113,9 @@ const SignupScreen = ({navigation}) => {
               onChangeText={setConfirmPassword}
               secureTextEntry
               autoCapitalize="none"
+              autoComplete="new-password"
+              textContentType="newPassword"
+              autoCorrect={false}
             />
 
             {!!error && <Text style={styles.error}>{error}</Text>}
@@ -159,6 +169,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.lg,
     textAlign: 'center',
   },
+  fieldSpacer: {height: spacing.lg},
 });
 
 export default SignupScreen;

@@ -431,8 +431,11 @@ const ProfileScreen = () => {
               onChangeText={setCurrentPw}
               secureTextEntry
               autoCapitalize="none"
+              autoComplete="current-password"
+              textContentType="password"
+              autoCorrect={false}
             />
-            <View style={{height: spacing.md}} />
+            <View style={styles.modalFieldSpacer} />
             <Input
               label="New password"
               icon="key-outline"
@@ -440,6 +443,10 @@ const ProfileScreen = () => {
               onChangeText={setNewPw}
               secureTextEntry
               autoCapitalize="none"
+              autoComplete="new-password"
+              textContentType="newPassword"
+              passwordRules="minlength: 8; required: lower; required: upper; required: digit;"
+              autoCorrect={false}
               error={pwError || undefined}
             />
             <View style={styles.modalActions}>
@@ -543,6 +550,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.xl,
   },
   modalActionCell: {flex: 1, marginHorizontal: spacing.xs},
+  modalFieldSpacer: {height: spacing.md},
 });
 
 export default ProfileScreen;

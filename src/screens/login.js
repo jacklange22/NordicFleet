@@ -81,8 +81,11 @@ const LoginScreen = ({navigation}) => {
               onChangeText={setEmail}
               keyboardType="email-address"
               autoCapitalize="none"
+              autoComplete="email"
+              textContentType="username"
+              autoCorrect={false}
             />
-            <View style={{height: spacing.lg}} />
+            <View style={styles.fieldSpacerLg} />
             <Input
               label="Password"
               icon="lock-closed-outline"
@@ -90,11 +93,24 @@ const LoginScreen = ({navigation}) => {
               onChangeText={setPassword}
               secureTextEntry
               autoCapitalize="none"
+              autoComplete="password"
+              textContentType="password"
+              autoCorrect={false}
             />
+
+            <View style={styles.forgotRow}>
+              <Button
+                variant="ghost"
+                size="sm"
+                onPress={() => navigation.navigate('ForgotPassword')}
+                accessibilityLabel="Forgot password">
+                Forgot password?
+              </Button>
+            </View>
 
             {!!error && <Text style={styles.error}>{error}</Text>}
 
-            <View style={{height: spacing.xl}} />
+            <View style={styles.fieldSpacerXl} />
             <Button
               variant="primary"
               size="lg"
@@ -104,7 +120,7 @@ const LoginScreen = ({navigation}) => {
               onPress={handleLogin}>
               Sign in
             </Button>
-            <View style={{height: spacing.sm}} />
+            <View style={styles.fieldSpacerSm} />
             <Button
               variant="ghost"
               size="md"
@@ -143,6 +159,14 @@ const styles = StyleSheet.create({
     marginTop: spacing.lg,
     textAlign: 'center',
   },
+  forgotRow: {
+    alignSelf: 'flex-end',
+    marginTop: spacing.sm,
+    marginRight: -spacing.md,
+  },
+  fieldSpacerLg: {height: spacing.lg},
+  fieldSpacerXl: {height: spacing.xl},
+  fieldSpacerSm: {height: spacing.sm},
 });
 
 export default LoginScreen;

@@ -66,6 +66,14 @@ const authApi = {
     notify();
     return Promise.resolve();
   }),
+  sendPasswordResetEmail: jest.fn(email => {
+    if (!usersByEmail.has(email)) {
+      const err = new Error('No user with that email');
+      err.code = 'auth/user-not-found';
+      return Promise.reject(err);
+    }
+    return Promise.resolve();
+  }),
 };
 
 const auth = jest.fn(() => authApi);
@@ -87,6 +95,7 @@ auth.__resetAuthMock = () => {
   authApi.signInWithEmailAndPassword.mockClear();
   authApi.createUserWithEmailAndPassword.mockClear();
   authApi.signOut.mockClear();
+  authApi.sendPasswordResetEmail.mockClear();
 };
 
 auth.__setCurrentUser = user => {

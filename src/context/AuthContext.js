@@ -15,6 +15,7 @@ const AuthContext = createContext({
   signIn: async () => {},
   signUp: async () => {},
   signOut: async () => {},
+  sendPasswordResetEmail: async () => {},
 });
 
 export const AuthProvider = ({children}) => {
@@ -48,9 +49,20 @@ export const AuthProvider = ({children}) => {
     await auth().signOut();
   }, []);
 
+  const sendPasswordResetEmail = useCallback(async email => {
+    await auth().sendPasswordResetEmail(email);
+  }, []);
+
   const value = useMemo(
-    () => ({user, loading, signIn, signUp, signOut: signOutFn}),
-    [user, loading, signIn, signUp, signOutFn],
+    () => ({
+      user,
+      loading,
+      signIn,
+      signUp,
+      signOut: signOutFn,
+      sendPasswordResetEmail,
+    }),
+    [user, loading, signIn, signUp, signOutFn, sendPasswordResetEmail],
   );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

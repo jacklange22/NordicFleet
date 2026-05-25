@@ -7,6 +7,7 @@ import {SafeAreaProvider} from 'react-native-safe-area-context';
 import WelcomeScreen from './src/screens/welcome.js';
 import SignupScreen from './src/screens/signup.js';
 import LoginScreen from './src/screens/login.js';
+import ForgotPasswordScreen from './src/screens/forgotPassword.js';
 import AuthLoadingScreen from './src/screens/AuthLoadingScreen';
 import HomeScreen from './src/screens/homescreen.js';
 import ProfileScreen from './src/screens/profile.js';
@@ -55,6 +56,10 @@ const App = () => {
               <Stack.Screen name="Welcome" component={WelcomeScreen} />
               <Stack.Screen name="Signup" component={SignupScreen} />
               <Stack.Screen name="Login" component={LoginScreen} />
+              <Stack.Screen
+                name="ForgotPassword"
+                component={ForgotPasswordScreen}
+              />
               <Stack.Screen name="Home" component={HomeScreen} />
               <Stack.Screen name="Profile" component={ProfileScreen} />
               <Stack.Screen name="TestingLog" component={TestingLogScreen} />

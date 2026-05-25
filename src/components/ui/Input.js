@@ -29,6 +29,10 @@ import {colors, radius, spacing, typography} from '../../theme';
  *   testID
  *   suffix             trailing static text (e.g. "cm", "kg")
  *   multiline          taller field, auto-grows, no fixed height
+ *   autoComplete       passthrough (Android autofill hint, also iOS)
+ *   textContentType    passthrough (iOS keychain hint)
+ *   passwordRules      passthrough (iOS strong-password rules)
+ *   autoCorrect        passthrough
  */
 const Input = ({
   label,
@@ -46,6 +50,10 @@ const Input = ({
   testID,
   suffix,
   multiline = false,
+  autoComplete,
+  textContentType,
+  passwordRules,
+  autoCorrect,
 }) => {
   const [focused, setFocused] = useState(false);
   const [showSecure, setShowSecure] = useState(false);
@@ -115,6 +123,10 @@ const Input = ({
           keyboardType={keyboardType}
           secureTextEntry={secureTextEntry && !showSecure}
           autoCapitalize={autoCapitalize}
+          autoComplete={autoComplete}
+          textContentType={textContentType}
+          passwordRules={passwordRules}
+          autoCorrect={autoCorrect}
           editable={editable}
           multiline={multiline}
           textAlignVertical={multiline ? 'top' : 'center'}
