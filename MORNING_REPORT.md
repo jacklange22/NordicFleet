@@ -1,5 +1,75 @@
 # Morning report — autonomous NordicFleet rewrite
 
+## Design overhaul session — Whoop × Strava red on black
+
+The app works end-to-end and now looks like a real product. Every screen
+was rebuilt against a shared design system; navigation, data flow, and
+Firestore schema are unchanged.
+
+### What changed
+
+**Foundation (Phase A)**
+- Installed `react-native-vector-icons` (Ionicons set primary, Feather +
+  MaterialCommunityIcons available). Fonts registered in `Info.plist`.
+- New design-token module at `src/theme/index.js` — colors (red #E53935
+  on near-black surfaces), spacing on a 4/8/12/16/20/24/32/48/64 scale,
+  radii, and typography presets including a `displayXl` for big stats.
+- Eleven atom components in `src/components/ui/`: `Card`, `StatCard`,
+  `Button`, `Input` (floating label, secure-toggle, suffix, multiline),
+  `Pill`, `Header`, `TabBar`, `EmptyState`, `ListItem`, `SectionHeader`,
+  `Avatar`. All draw from the theme module.
+- `App.tsx` wrapped in `SafeAreaProvider`, status bar set to
+  `light-content`, NavigationContainer given a dark theme.
+
+**Screens rebuilt (Phase B)**
+
+| Screen | One-line change |
+|---|---|
+| Welcome | Logo + display title + three Ionicon feature bullets + primary "Get started" CTA |
+| Login / Signup | Floating-label Inputs (icon + eye toggle), inline red error text, ghost cross-link button |
+| RoleSelect | Two big tappable RoleCards with red-border selection + conditional coach-email Input |
+| Home | Whoop dashboard: greeting + Avatar header, 3-up StatCards, search Input, filter chip toggle, accent-bar ski cards, EmptyState, TabBar |
+| AddSki (newSki) | Sectioned form (Identity / Specs / Setup / Notes), pill selectors for brand / technique / type, length & flex with unit suffixes |
+| SkiInfo | Hero card with display name + pills + mini-stat row (Flex / Length / Grind), 2-up StatCards, log lists with ListItem rows + color dots / rating badges |
+| WaxLog | Pill chip ski selector + per-ski Card with binder Pill row, kick + glide layer Steppers, per-layer Inputs |
+| TestingLog | Conditions Card (temp / humidity / snow / surface), pill ski selector, per-ski 1-10 numbered Pill rating picker |
+| Profile | Hero avatar + 3-up StatCards (athletes only), Personal info Card with ListItems, Coach Card, Account Card (change password + destructive Sign out), themed modals for edit + reauth |
+| CoachDashboard | StatCards + search Input + athlete Cards with Avatars |
+| AthleteDetail | Identity row + StatCards + accent-bar ski cards, coach-mode (no TabBar) |
+| LoadingScreen / ErrorBoundary | Branded logo + spinner; error fallback with warning badge and Restart Button |
+
+**Polish (Phase C)**
+- `react-native-toast-message` installed and wired through a themed
+  config (`src/components/ui/toastConfig.js`) — success toasts fire on
+  ski add, wax save, test save, and profile edit.
+- Pressable scale-0.98 + opacity feedback on Buttons and Cards.
+- Status bar, KeyboardAvoidingView, and EmptyStates audited across
+  every screen.
+- A new `useDashboardStats` hook (refetches on `useFocusEffect`) powers
+  the Home and Profile stat rows.
+- TabBar and Header defensively handle missing NavigationContainer /
+  Screen / SafeAreaProvider, so tests can render screens standalone.
+
+### Verification
+
+```
+npm run lint   →  0 errors, 6 warnings (all pre-existing inline-style nits)
+npm test       →  32 suites pass, 159 tests pass, 1 skipped (App.test.tsx)
+```
+
+Tests that needed updating because of renamed labels / new components
+(login, signup, homescreen, newSki, skiInfo, waxinglog, testinglog,
+profile, ErrorBoundary) were updated to drive the new UI (label-based
+selectors instead of placeholder, SafeAreaProvider wrapper, etc.) —
+none were deleted or skipped.
+
+### Constraints honored
+
+- ✓ Data flows untouched — service layer, AuthContext, Firestore
+  schema unchanged.
+- ✓ Navigation routes & param shapes unchanged.
+- ✓ No `--force`, no `--legacy-peer-deps`, no disabled tests.
+
 ## Verification + coach feature session
 
 **Two new things landed:**
