@@ -1,5 +1,6 @@
 import React from 'react';
 import {render, fireEvent, act, waitFor} from '@testing-library/react-native';
+import {SafeAreaProvider} from 'react-native-safe-area-context';
 import authMock from '@react-native-firebase/auth';
 import firestoreMock from '@react-native-firebase/firestore';
 
@@ -11,11 +12,18 @@ jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({navigate: mockNavigate}),
 }));
 
+const SA_METRICS = {
+  frame: {x: 0, y: 0, width: 320, height: 640},
+  insets: {top: 0, left: 0, right: 0, bottom: 0},
+};
+
 const renderScreen = () =>
   render(
-    <AuthProvider>
-      <WaxLogScreen />
-    </AuthProvider>,
+    <SafeAreaProvider initialMetrics={SA_METRICS}>
+      <AuthProvider>
+        <WaxLogScreen />
+      </AuthProvider>
+    </SafeAreaProvider>,
   );
 
 beforeEach(() => {
@@ -27,6 +35,7 @@ beforeEach(() => {
 describe('WaxLogScreen', () => {
   it('refuses to save when not signed in', async () => {
     const tree = renderScreen();
+    await act(async () => {});
     fireEvent.press(tree.getByLabelText('Save'));
     await act(async () => {});
     expect(mockNavigate).not.toHaveBeenCalled();
@@ -39,7 +48,8 @@ describe('WaxLogScreen', () => {
       technique: 'Classic',
     });
     const tree = renderScreen();
-    await waitFor(() => tree.getByLabelText('Select Skis Waxed'));
+    // Wait for the ski to render as a pill.
+    await waitFor(() => tree.getByLabelText('Speedmax'));
     fireEvent.press(tree.getByLabelText('Save'));
     await act(async () => {});
     expect(mockNavigate).not.toHaveBeenCalled();
@@ -52,15 +62,13 @@ describe('WaxLogScreen', () => {
       technique: 'Classic',
     });
     const tree = renderScreen();
-    await waitFor(() => tree.getByLabelText('Select Skis Waxed'));
-    fireEvent.press(tree.getByLabelText('Select Skis Waxed'));
+    await waitFor(() => tree.getByLabelText('Speedmax'));
+    // Tap the ski pill to select it.
     fireEvent.press(tree.getByLabelText('Speedmax'));
-    fireEvent.press(tree.getByLabelText('Done'));
     await act(async () => {});
     fireEvent.press(tree.getByLabelText('Save'));
     await act(async () => {});
     expect(mockNavigate).toHaveBeenCalledWith('Home');
-    // A waxLog doc was written.
     const waxLogs = [...firestoreMock.__getStore().keys()].filter(k =>
       k.startsWith('users/u1/waxLogs/'),
     );
@@ -77,10 +85,8 @@ describe('WaxLogScreen', () => {
     err.code = 'unavailable';
     firestoreMock.__injectError(err);
     const tree = renderScreen();
-    await waitFor(() => tree.getByLabelText('Select Skis Waxed'));
-    fireEvent.press(tree.getByLabelText('Select Skis Waxed'));
+    await waitFor(() => tree.getByLabelText('Speedmax'));
     fireEvent.press(tree.getByLabelText('Speedmax'));
-    fireEvent.press(tree.getByLabelText('Done'));
     await act(async () => {});
     fireEvent.press(tree.getByLabelText('Save'));
     await act(async () => {});

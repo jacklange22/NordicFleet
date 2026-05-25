@@ -4,20 +4,44 @@ import {
   Text,
   View,
   ScrollView,
-  SafeAreaView,
-  Alert,
+  KeyboardAvoidingView,
+  Platform,
   ActivityIndicator,
+  Pressable,
+  StatusBar,
 } from 'react-native';
-import ProfileButton from '../components/profilebutton';
-import Footer from '../components/footer';
-import MultiSelectDropdown from '../components/checkboxDropdown';
-import WaxInputComponent from '../components/waxinput.js';
-import SkiSaveButton from '../components/skisaveButton';
+import {SafeAreaView} from 'react-native-safe-area-context';
 import {useNavigation} from '@react-navigation/native';
+import Ionicons from 'react-native-vector-icons/Ionicons';
+
 import {useAuth} from '../context/AuthContext';
 import useSkis from '../hooks/useSkis';
 import {createWaxLog} from '../services/waxLogService';
 import {firestore} from '../services/firebase';
+import {
+  Header,
+  Card,
+  Input,
+  Button,
+  Pill,
+  SectionHeader,
+  EmptyState,
+} from '../components/ui';
+import {colors, radius, spacing, typography} from '../theme';
+
+const BINDER_OPTIONS = [
+  'None',
+  'VG Swix',
+  'Toko Base',
+  'GS Base AT',
+  'GS Base Super',
+  'Chola',
+  'K-base',
+  'Rode Blackbase',
+  'KS base',
+];
+
+const MAX_LAYERS = 6;
 
 const emptyWaxEntry = () => ({
   binder: '',
@@ -28,6 +52,154 @@ const emptyWaxEntry = () => ({
   notes: '',
 });
 
+const Stepper = ({value, onChange, min = 0, max = MAX_LAYERS, label}) => (
+  <View style={styles.stepperRow}>
+    <Text style={styles.stepperLabel}>{label}</Text>
+    <View style={styles.stepperControls}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`Decrease ${label}`}
+        disabled={value <= min}
+        onPress={() => onChange(Math.max(min, value - 1))}
+        style={({pressed}) => [
+          styles.stepperBtn,
+          value <= min && {opacity: 0.4},
+          pressed && {opacity: 0.6},
+        ]}>
+        <Ionicons name="remove" size={18} color={colors.textPrimary} />
+      </Pressable>
+      <Text style={styles.stepperValue}>{value}</Text>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`Increase ${label}`}
+        disabled={value >= max}
+        onPress={() => onChange(Math.min(max, value + 1))}
+        style={({pressed}) => [
+          styles.stepperBtn,
+          value >= max && {opacity: 0.4},
+          pressed && {opacity: 0.6},
+        ]}>
+        <Ionicons name="add" size={18} color={colors.textPrimary} />
+      </Pressable>
+    </View>
+  </View>
+);
+
+// Keep the glideWaxes array sized to glideLayers count.
+const resizeArr = (arr, n, fill = '') => {
+  const out = arr.slice(0, n);
+  while (out.length < n) {
+    out.push(fill);
+  }
+  return out;
+};
+
+const WaxEntryCard = ({ski, entry, onChange}) => {
+  const isClassic = (ski.technique || '').toLowerCase() === 'classic';
+
+  const setBinder = b => onChange({binder: entry.binder === b ? '' : b});
+  const setKickLayers = n => onChange({kickLayers: n});
+  const setGlideLayers = n =>
+    onChange({
+      glideLayers: n,
+      glideWaxes: resizeArr(entry.glideWaxes || [], n),
+    });
+  const setGlideAt = (i, v) => {
+    const next = resizeArr(entry.glideWaxes || [], entry.glideLayers);
+    next[i] = v;
+    onChange({glideWaxes: next});
+  };
+
+  return (
+    <Card style={styles.entryCard}>
+      <Text style={styles.entryTitle}>{ski.name || ski.id}</Text>
+      <View style={styles.entryPillRow}>
+        {!!ski.technique && (
+          <View style={styles.entryPillWrap}>
+            <Pill variant="outline" color="red">
+              {ski.technique}
+            </Pill>
+          </View>
+        )}
+        {!!ski.type && (
+          <View style={styles.entryPillWrap}>
+            <Pill variant="ghost" color="neutral">
+              {ski.type}
+            </Pill>
+          </View>
+        )}
+      </View>
+
+      <Text style={styles.miniLabel}>Binder</Text>
+      <View style={styles.chipRow}>
+        {BINDER_OPTIONS.map(b => {
+          const selected = entry.binder === b;
+          return (
+            <View key={b} style={styles.chipWrap}>
+              <Pill
+                variant={selected ? 'solid' : 'outline'}
+                color="red"
+                onPress={() => setBinder(b)}>
+                {b}
+              </Pill>
+            </View>
+          );
+        })}
+      </View>
+
+      {isClassic && (
+        <>
+          <View style={styles.fieldSpacer} />
+          <Stepper
+            label="Kick layers"
+            value={entry.kickLayers ?? 0}
+            onChange={setKickLayers}
+          />
+          {entry.kickLayers > 0 && (
+            <>
+              <View style={styles.fieldSpacer} />
+              <Input
+                label="Kick wax"
+                icon="thermometer-outline"
+                value={entry.kickWax}
+                onChangeText={t => onChange({kickWax: t})}
+              />
+            </>
+          )}
+        </>
+      )}
+
+      <View style={styles.fieldSpacer} />
+      <Stepper
+        label="Glide layers"
+        value={entry.glideLayers ?? 1}
+        onChange={setGlideLayers}
+        min={1}
+      />
+      <View style={styles.fieldSpacer} />
+      {resizeArr(entry.glideWaxes || [], entry.glideLayers).map((g, i) => (
+        <View key={i} style={i > 0 ? styles.fieldSpacerSm : undefined}>
+          <Input
+            label={`Glide layer ${i + 1}`}
+            icon="water-outline"
+            value={g}
+            onChangeText={t => setGlideAt(i, t)}
+          />
+        </View>
+      ))}
+
+      <View style={styles.fieldSpacer} />
+      <Input
+        label="Notes"
+        icon="create-outline"
+        value={entry.notes}
+        onChangeText={t => onChange({notes: t})}
+        multiline
+      />
+    </Card>
+  );
+};
+
 const WaxLogScreen = () => {
   const navigation = useNavigation();
   const {user} = useAuth();
@@ -35,20 +207,10 @@ const WaxLogScreen = () => {
 
   const {skis: skisForUser, loading: loadingSkis} = useSkis(uid);
   const [submitting, setSubmitting] = useState(false);
-
-  const dropdownItems = useMemo(
-    () => skisForUser.map(ski => ({id: ski.id, label: ski.name || ski.id})),
-    [skisForUser],
-  );
+  const [error, setError] = useState('');
 
   const [selectedSkis, setSelectedSkis] = useState([]);
   const [waxLog, setWaxLog] = useState({});
-  const [skiWaxEntries, setSkiWaxEntries] = useState([]);
-
-  const getTechniqueBySkiId = skiId => {
-    const ski = skisForUser.find(s => s.id === skiId);
-    return ski ? ski.technique : null;
-  };
 
   useEffect(() => {
     setWaxLog(prev => {
@@ -58,10 +220,21 @@ const WaxLogScreen = () => {
       }
       return next;
     });
-    setSkiWaxEntries(selectedSkis);
   }, [selectedSkis]);
 
-  const handleSelectionDone = items => setSelectedSkis(items);
+  const skiById = useMemo(() => {
+    const map = {};
+    skisForUser.forEach(s => {
+      map[s.id] = s;
+    });
+    return map;
+  }, [skisForUser]);
+
+  const toggleSki = skiId => {
+    setSelectedSkis(prev =>
+      prev.includes(skiId) ? prev.filter(s => s !== skiId) : [...prev, skiId],
+    );
+  };
 
   const handleEntryChange = (skiId, partial) => {
     setWaxLog(prev => ({
@@ -70,26 +243,30 @@ const WaxLogScreen = () => {
     }));
   };
 
-  const handleSavePress = async () => {
+  const canSave = !!uid && selectedSkis.length > 0;
+
+  const handleSave = async () => {
+    setError('');
     if (!uid) {
-      Alert.alert('Please sign in to save');
+      setError('Sign in to save');
       return;
     }
     if (selectedSkis.length === 0) {
-      Alert.alert('Please pick at least one ski');
+      setError('Pick at least one ski');
       return;
     }
     setSubmitting(true);
     const date = firestore.FieldValue.serverTimestamp();
     const writes = selectedSkis.map(skiId => {
-      const entry = waxLog[skiId] || {};
-      const technique = (getTechniqueBySkiId(skiId) || '').toLowerCase();
+      const entry = waxLog[skiId] || emptyWaxEntry();
+      const ski = skiById[skiId] || {};
+      const technique = (ski.technique || '').toLowerCase();
       const payload = {
         skiId,
         date,
         ...entry,
+        binder: entry.binder && entry.binder !== 'None' ? entry.binder : null,
       };
-      // Skate skis have no kick wax.
       if (technique === 'skate') {
         payload.kickLayers = 0;
         payload.kickWax = null;
@@ -99,11 +276,9 @@ const WaxLogScreen = () => {
     try {
       await Promise.all(writes);
     } catch (err) {
-      // Offline-first: Firestore queues failed writes locally. Only show an
-      // error for non-network failures.
       const code = err && err.code;
       if (code && !String(code).includes('unavailable')) {
-        Alert.alert('Save failed', String(err.message || err));
+        setError(String(err.message || err));
         setSubmitting(false);
         return;
       }
@@ -113,86 +288,209 @@ const WaxLogScreen = () => {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.headerText}>Waxing Log</Text>
-          <ProfileButton />
-        </View>
-      </View>
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContentContainer}>
-        <View style={styles.dropdownContainer}>
-          <Text style={styles.dropdownLabel}>Skis:</Text>
+    <SafeAreaView style={styles.safe} edges={['top']}>
+      <StatusBar barStyle="light-content" />
+      <Header
+        title="Log wax"
+        right={
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Save"
+            disabled={!canSave || submitting}
+            onPress={handleSave}
+            hitSlop={8}
+            style={({pressed}) => [
+              styles.headerSave,
+              (!canSave || submitting) && {opacity: 0.4},
+              pressed && {opacity: 0.6},
+            ]}>
+            <Text style={styles.headerSaveText}>Save</Text>
+          </Pressable>
+        }
+      />
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView
+          contentContainerStyle={styles.scroll}
+          keyboardShouldPersistTaps="handled">
           {loadingSkis ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <MultiSelectDropdown
-              items={dropdownItems}
-              onSelectionDone={handleSelectionDone}
-              label={'Select Skis Waxed'}
+            <View style={styles.loadingWrap}>
+              <ActivityIndicator color={colors.red} />
+            </View>
+          ) : skisForUser.length === 0 ? (
+            <EmptyState
+              icon="snow-outline"
+              title="No skis in your fleet yet"
+              description="Add a ski first so you can log a wax for it."
+              cta={{
+                label: 'Add a ski',
+                icon: 'add',
+                onPress: () => navigation.navigate('newSki'),
+              }}
             />
-          )}
+          ) : (
+            <>
+              <SectionHeader title="Step 1 · Select skis" />
+              <Card style={styles.selectorCard}>
+                <View style={styles.chipRow}>
+                  {skisForUser.map(ski => {
+                    const selected = selectedSkis.includes(ski.id);
+                    return (
+                      <View key={ski.id} style={styles.chipWrap}>
+                        <Pill
+                          variant={selected ? 'solid' : 'outline'}
+                          color="red"
+                          onPress={() => toggleSki(ski.id)}
+                          accessibilityLabel={ski.name || ski.id}>
+                          {ski.name || ski.id}
+                        </Pill>
+                      </View>
+                    );
+                  })}
+                </View>
+                {selectedSkis.length === 0 && (
+                  <Text style={styles.hint}>
+                    Tap one or more skis to log a wax for.
+                  </Text>
+                )}
+              </Card>
 
-          <Text style={styles.dropdownLabel}>Wax:</Text>
-          {skiWaxEntries.map(skiId => {
-            const technique = getTechniqueBySkiId(skiId);
-            const ski = skisForUser.find(s => s.id === skiId);
-            return (
-              <WaxInputComponent
-                key={skiId}
-                ski={ski ? ski.name : skiId}
-                technique={technique}
-                value={waxLog[skiId] || emptyWaxEntry()}
-                onChange={partial => handleEntryChange(skiId, partial)}
-              />
-            );
-          })}
-        </View>
-        <SkiSaveButton onPress={handleSavePress} submitting={submitting} />
-      </ScrollView>
-      <Footer />
+              {selectedSkis.length > 0 && (
+                <>
+                  <SectionHeader title="Step 2 · Wax details" />
+                  {selectedSkis.map(skiId => {
+                    const ski = skiById[skiId];
+                    if (!ski) {
+                      return null;
+                    }
+                    return (
+                      <WaxEntryCard
+                        key={skiId}
+                        ski={ski}
+                        entry={waxLog[skiId] || emptyWaxEntry()}
+                        onChange={partial => handleEntryChange(skiId, partial)}
+                      />
+                    );
+                  })}
+                </>
+              )}
+
+              {!!error && <Text style={styles.error}>{error}</Text>}
+
+              <View style={styles.fieldSpacer} />
+              <Button
+                variant="primary"
+                size="lg"
+                fullWidth
+                icon="checkmark"
+                loading={submitting}
+                disabled={!canSave}
+                onPress={handleSave}>
+                Save wax log
+              </Button>
+            </>
+          )}
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#000',
+  safe: {flex: 1, backgroundColor: colors.bg},
+  flex: {flex: 1},
+  scroll: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing['4xl'],
   },
-  container: {
-    paddingHorizontal: 0,
+  headerSave: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  headerSaveText: {
+    ...typography.headingMd,
+    color: colors.red,
+  },
+  loadingWrap: {
+    paddingVertical: spacing['4xl'],
     alignItems: 'center',
-    paddingHorizontal: 16,
-    backgroundColor: '#282828',
-    height: 50,
   },
-  headerText: {
-    fontSize: 24,
-    color: '#fff',
+  selectorCard: {
+    marginBottom: spacing.lg,
   },
-  dropdownContainer: {
-    paddingHorizontal: 10,
-    paddingVertical: 20,
-    textAlignVertical: 'center',
+  hint: {
+    ...typography.bodySm,
+    color: colors.textTertiary,
+    marginTop: spacing.md,
   },
-  dropdownLabel: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#fff',
+  entryCard: {
+    marginBottom: spacing.lg,
   },
-  scrollView: {
-    flex: 1,
+  entryTitle: {
+    ...typography.headingLg,
+    color: colors.textPrimary,
+    marginBottom: spacing.sm,
   },
-  scrollContentContainer: {
-    paddingBottom: 20,
-    paddingTop: 0,
+  entryPillRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: spacing.lg,
+  },
+  entryPillWrap: {
+    marginRight: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  miniLabel: {
+    ...typography.caption,
+    color: colors.textTertiary,
+    marginBottom: spacing.sm,
+  },
+  chipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  chipWrap: {
+    marginRight: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  fieldSpacer: {height: spacing.lg},
+  fieldSpacerSm: {marginTop: spacing.md},
+  stepperRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  stepperLabel: {
+    ...typography.bodyLg,
+    color: colors.textPrimary,
+  },
+  stepperControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.bg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.xs,
+  },
+  stepperBtn: {
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepperValue: {
+    ...typography.headingMd,
+    color: colors.textPrimary,
+    minWidth: 24,
+    textAlign: 'center',
+  },
+  error: {
+    ...typography.body,
+    color: colors.red,
+    textAlign: 'center',
+    marginTop: spacing.lg,
   },
 });
 
