@@ -1,5 +1,64 @@
 # Morning report — autonomous NordicFleet rewrite
 
+## Polish + verification session — launch readiness
+
+The primary deliverable from this session is `LAUNCH_READINESS.md`,
+which is what to read first if you're deciding whether to ship.
+
+### Phase A — user-reported polish
+
+- **Forgot password flow.** Added `sendPasswordResetEmail` to
+  `AuthContext`, a "Forgot password?" ghost link below the Login
+  password field, and `ForgotPasswordScreen` with email Input, primary
+  Send-reset-link Button, and a green confirmation state. Firebase
+  errors map to clear inline messages (user-not-found, invalid-email,
+  network-request-failed). New jest specs cover invalid format,
+  success → confirmation, and the user-not-found error path.
+- **iOS keychain autofill.** The `Input` atom now forwards
+  `autoComplete`, `textContentType`, `passwordRules`, and
+  `autoCorrect`. Every email/password field across Login, Signup,
+  ForgotPassword, and the Profile reauth modal is tagged with the
+  right combination (`autoComplete=email + textContentType=username`
+  on email; `autoComplete=new-password + textContentType=newPassword
+  + passwordRules=...` on new-password fields;
+  `autoComplete=current-password + textContentType=password` on
+  reauth).
+- **Icon-text alignment audit.** Walked every `flexDirection:'row'`
+  container that hosts an icon next to text. All such rows
+  (Button.row, ListItem.row, Welcome featureRow, Header.container,
+  toastConfig.toast, Stepper) already use explicit
+  `alignItems:'center'`. The remaining row-flex containers without
+  alignItems only contain equal-height siblings (StatCard, Pill,
+  Button) where vertical centering is the natural behavior.
+
+### Phase B — verification
+
+Three artifacts, every one of them produced by running an actual
+command against the live `nordicfleet-11e67` Firestore:
+
+| Script | Checks | Result |
+|---|---|---|
+| `scripts/verify-data-integrity.sh` | CRUD edge cases + every security-rule positive & negative path | **22 / 22 pass** (`scripts/verify-data-integrity.log`) |
+| `scripts/verify-coach-pairing.sh` | 13-step coach pair / unlink lifecycle + non-existent / non-coach email error paths | **14 / 14 pass** (`scripts/verify-coach-pairing.log`) |
+| `MANUAL_VERIFICATION.md` | Rewritten 8-flow UI walkthrough matching the redesigned screens (the old version still described dropdowns + footer icons) | Manual — user runs through simulator |
+
+### Phase C — launch readiness
+
+`LAUNCH_READINESS.md` is the user-facing assessment. TL;DR:
+**ship for personal use after one manual walkthrough; defer App
+Store**. The data layer is solid, the UI compiles + renders in tests,
+the remaining gaps are visual confirmation of a few specific flows
+and one live `sendPasswordResetEmail` test.
+
+### Verification snapshot
+
+```
+npm test       →  162 / 163 pass, 1 skipped (App.test.tsx pre-existing)
+npm run lint   →  0 errors, 7 warnings (5 inline-style nits, 1 disabled-test, 1 var-require)
+JS bundle      →  clean
+Live Firestore →  22 / 22 data-integrity, 14 / 14 coach-pairing
+```
+
 ## Design overhaul session — Whoop × Strava red on black
 
 The app works end-to-end and now looks like a real product. Every screen
