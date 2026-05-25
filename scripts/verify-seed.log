@@ -1,0 +1,27 @@
+=== Seed bug regression verification ===
+User: seed-verify-1779682474@nordicfleet.test
+
+[setup] Sign up + write real profile (weight=70, role=coach)
+  uid=veB5tZBbmCN0ovVqDpjzPwDHIbC2, role=coach, weight=70, team=Real Team
+[setup] Add a real (non-seed) ski
+  real ski id=LeDDEyatCsZHoSYliARN
+
+[run 1] Seed first time
+  ✓ first run created 2 seed skis
+  ✓ first run skipped 0 skis
+  ✓ profile.weight intact after seed (70)
+  ✓ profile.role intact after seed (coach)
+  ✓ profile.team intact after seed (Real Team)
+  ✓ real (non-seed) ski still exists after first run
+  ✓ total ski count after first run is 3 (1 real + 2 seed)
+
+[run 2] Seed a second time (idempotency)
+  ✓ second run creates 0 new skis
+  ✓ second run skips 2 already-seeded skis
+  ✓ total ski count after second run still 3 (not doubled)
+  ✓ profile.weight still intact after second run (70)
+  ✓ profile.role still intact after second run (coach)
+
+==============================
+Passed: 12, Failed: 0
+==============================

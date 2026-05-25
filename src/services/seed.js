@@ -5,10 +5,23 @@
 
 import seedData from '../seedData.json';
 import {listSkis, createSki} from './skiService';
-import {createProfile} from './userService';
 
 /**
- * Seed the current authenticated user with the sample skis.
+ * Seed the current authenticated user with sample skis.
+ *
+ * STRICTLY ADDITIVE: this function only writes to the user's `skis`
+ * subcollection. It never touches the profile document (no weight /
+ * height / team / location / role / coachId rewrites), and it never
+ * touches the wax/test log subcollections.
+ *
+ * Idempotent: each sample ski carries a `seedId` matching its source
+ * JSON id. A pre-flight read of the user's existing skis collects the
+ * seedIds already present, and we skip those on re-run.
+ *
+ * (Previous versions of this function called `createProfile`, which
+ * `set`-with-merge'd null defaults from the seed user. That clobbered
+ * the real user's weight/height/team/location/role/coachId on every
+ * call. See `scripts/verify-seed.sh` for the regression test.)
  *
  * @param {string} uid
  * @returns {Promise<{created: number, skipped: number}>}
@@ -21,16 +34,6 @@ export async function seedCurrentUser(uid) {
   if (!source) {
     return {created: 0, skipped: 0};
   }
-
-  // Make sure the profile doc exists with the seed fields.
-  await createProfile(uid, {
-    email: source.email,
-    displayName: source.displayName || source.email,
-    weight: source.weight ?? null,
-    height: source.height ?? null,
-    team: source.team || null,
-    location: source.location || null,
-  });
 
   const existing = await listSkis(uid);
   const existingSeedIds = new Set(existing.map(s => s.seedId).filter(Boolean));
