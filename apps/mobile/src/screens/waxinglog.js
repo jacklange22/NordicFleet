@@ -27,6 +27,7 @@ import {
   Pill,
   SectionHeader,
   EmptyState,
+  WaxPicker,
 } from '../components/ui';
 import {colors, radius, spacing, typography} from '../theme';
 
@@ -159,11 +160,14 @@ const WaxEntryCard = ({ski, entry, onChange}) => {
           {entry.kickLayers > 0 && (
             <>
               <View style={styles.fieldSpacer} />
-              <Input
+              <WaxPicker
                 label="Kick wax"
                 icon="thermometer-outline"
-                value={entry.kickWax}
-                onChangeText={t => onChange({kickWax: t})}
+                type="kick"
+                value={{id: entry.kickWaxId, name: entry.kickWax}}
+                onChange={picked =>
+                  onChange({kickWax: picked.name, kickWaxId: picked.id})
+                }
               />
             </>
           )}
@@ -178,16 +182,32 @@ const WaxEntryCard = ({ski, entry, onChange}) => {
         min={1}
       />
       <View style={styles.fieldSpacer} />
-      {resizeArr(entry.glideWaxes || [], entry.glideLayers).map((g, i) => (
-        <View key={i} style={i > 0 ? styles.fieldSpacerSm : undefined}>
-          <Input
-            label={`Glide layer ${i + 1}`}
-            icon="water-outline"
-            value={g}
-            onChangeText={t => setGlideAt(i, t)}
-          />
-        </View>
-      ))}
+      {resizeArr(entry.glideWaxes || [], entry.glideLayers).map((g, i) => {
+        const glideIds = entry.glideWaxIds || [];
+        const id = glideIds[i] || null;
+        return (
+          <View key={i} style={i > 0 ? styles.fieldSpacerSm : undefined}>
+            <WaxPicker
+              label={`Glide layer ${i + 1}`}
+              icon="water-outline"
+              type="glide"
+              value={{id, name: g}}
+              onChange={picked => {
+                setGlideAt(i, picked.name);
+                const nextIds = (entry.glideWaxIds || []).slice(
+                  0,
+                  entry.glideLayers,
+                );
+                while (nextIds.length < entry.glideLayers) {
+                  nextIds.push(null);
+                }
+                nextIds[i] = picked.id;
+                onChange({glideWaxIds: nextIds});
+              }}
+            />
+          </View>
+        );
+      })}
 
       <View style={styles.fieldSpacer} />
       <Input
