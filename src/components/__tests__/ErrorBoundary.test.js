@@ -26,7 +26,11 @@ describe('ErrorBoundary', () => {
       </ErrorBoundary>,
     );
     expect(tree.getByText('Something went wrong')).toBeTruthy();
-    expect(tree.getByText('Please restart the app.')).toBeTruthy();
+    expect(
+      tree.getByText('We hit an unexpected error. Try restarting the app.'),
+    ).toBeTruthy();
+    // A restart action button is rendered.
+    expect(tree.getByLabelText('Restart app')).toBeTruthy();
     spy.mockRestore();
   });
 });
