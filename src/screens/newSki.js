@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useNavigation} from '@react-navigation/native';
+import Toast from 'react-native-toast-message';
 import {useAuth} from '../context/AuthContext';
 import {createSki} from '../services/skiService';
 import {
@@ -106,6 +107,13 @@ const AddSkiForm = () => {
         build: build.trim(),
         grind: grind.trim(),
         notes: notes.trim(),
+      });
+      Toast.show({
+        type: 'success',
+        text1: 'Ski added',
+        text2: name.trim(),
+        position: 'top',
+        visibilityTime: 2200,
       });
       navigation.replace('SkiInfo', {skiId: newId});
     } catch (err) {

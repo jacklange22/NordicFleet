@@ -13,6 +13,7 @@ import {
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useNavigation} from '@react-navigation/native';
 
+import Toast from 'react-native-toast-message';
 import {useAuth} from '../context/AuthContext';
 import useSkis from '../hooks/useSkis';
 import {createTestLog} from '../services/testLogService';
@@ -237,6 +238,13 @@ const TestingLogScreen = () => {
       }
     }
     setSubmitting(false);
+    Toast.show({
+      type: 'success',
+      text1: 'Test logged',
+      text2: `${selectedSkis.length} ski${selectedSkis.length === 1 ? '' : 's'}`,
+      position: 'top',
+      visibilityTime: 2200,
+    });
     navigation.navigate('Home');
   };
 

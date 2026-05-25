@@ -19,6 +19,8 @@ import CoachDashboardScreen from './src/screens/coachDashboard.js';
 import AthleteDetailScreen from './src/screens/athleteDetail.js';
 import {AuthProvider} from './src/context/AuthContext';
 import ErrorBoundary from './src/components/ErrorBoundary';
+import Toast from 'react-native-toast-message';
+import {toastConfig} from './src/components/ui/toastConfig';
 import {colors} from './src/theme';
 
 const navTheme = {
@@ -71,6 +73,7 @@ const App = () => {
             </Stack.Navigator>
           </NavigationContainer>
         </AuthProvider>
+        <Toast config={toastConfig} />
       </SafeAreaProvider>
     </ErrorBoundary>
   );

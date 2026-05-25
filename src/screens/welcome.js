@@ -12,7 +12,7 @@ const FEATURES = [
   },
   {
     icon: 'people-outline',
-    text: "Share your fleet with your coach",
+    text: 'Share your fleet with your coach',
   },
   {
     icon: 'cloud-offline-outline',

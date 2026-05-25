@@ -15,6 +15,7 @@ import {SafeAreaView} from 'react-native-safe-area-context';
 import {useNavigation} from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
+import Toast from 'react-native-toast-message';
 import LoadingScreen from '../components/LoadingScreen';
 import {useAuth} from '../context/AuthContext';
 import useProfile from '../hooks/useProfile';
@@ -98,6 +99,13 @@ const ProfileScreen = () => {
       : tempValue;
     try {
       await updateProfile(uid, {[editField.key]: next});
+      Toast.show({
+        type: 'success',
+        text1: 'Profile updated',
+        text2: editField.label,
+        position: 'top',
+        visibilityTime: 1800,
+      });
     } catch (err) {
       Alert.alert('Save failed', String(err.message || err));
     } finally {
