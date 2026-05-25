@@ -1,27 +1,30 @@
 # NordicFleet — Launch Readiness Assessment
 
-**Generated:** 2026-05-25
+**Generated:** 2026-05-25 (updated after the bug-fix + sharing session)
 **Stack:** React Native 0.76.x · @react-native-firebase 21.x · Firebase iOS 11.x · Xcode 26.5 · Node 20.20 LTS
 **Branch:** `claude-rewrite`
-**Last commit before report:** `6f15c26 Verify B3: refreshed UI verification checklist for the redesigned app`
+**Last commit before report:** `a523380 Docs F1: device install guide for free Apple ID path`
 
 ---
 
 ## TL;DR
 
-**Ship for personal use now. Ship for small-group beta after the user
-completes one manual UI walkthrough.** Every data path is verified
-end-to-end against the live `nordicfleet-11e67` Firestore — 22 / 22
-data-integrity checks pass, 14 / 14 coach-pairing checks pass, every
-security rule enforced both ways. The redesigned UI builds clean, the
-jest suite is 162 / 162 green, and the JS bundle ships without
-warnings. The remaining gaps are *visual confirmation* (only the
-Welcome screen was screenshotted this session) and one *unverified
-live call* (`sendPasswordResetEmail` is mock-verified — the real
-Firebase email send needs a single manual test).
+**Install on your iPhone via `DEVICE_INSTALL.md` now.** Every data
+path is verified against the live `nordicfleet-11e67` Firestore —
+29 / 29 data-integrity checks, 14 / 14 coach-pairing checks, 12 / 12
+seed-regression checks, 6 / 6 happy-path checks. The two user-reported
+bugs from last sync are fixed and regression-tested. Apple guideline
+5.1.1(v) compliance is in (delete account). The iOS app builds clean
+with the two new native modules (`react-native-share`,
+`react-native-view-shot`) on Xcode 26.5.
 
-App Store submission should wait. The product is good enough to use,
-not yet packaged enough to publish.
+Remaining gap before sharing with anyone else: 5 minutes of tapping
+through `MANUAL_VERIFICATION.md` Flows 9–12 on the real device to
+confirm the share sheet renders correctly and the delete-account
+reauth flow works end to end. Otherwise the product is solid.
+
+App Store submission still recommended to wait — 2 weeks of personal
+use first, then enroll in Developer Program if you decide to publish.
 
 ---
 
@@ -105,15 +108,24 @@ were not exercised against live Firebase in this session.
   WaxLog, TestingLog, and Profile-edit. Tested via mock; visual
   appearance unverified this session.
 
-## What's broken or missing
+## Bugs reported by the user — status
+
+| Severity | Bug | Fix status |
+|---|---|---|
+| Critical | "Seed sample data" overwrote profile fields + reset role | **Fixed** in commit `b1a7421 Fix A1`. Verified by `scripts/verify-seed.sh` (12/12 against live Firestore — profile + custom ski preserved across two seed runs). |
+| Critical | "Add a coach" button did nothing | **Fixed** in commit `0ecf78f Fix B1`. Three bugs (no-op onPress, wrong field name `coachUid` vs `coachId`, missing modal). 5 jest specs + the existing live coach-pairing script (14/14) cover it. |
+| App Store blocker | No way to delete account (guideline 5.1.1(v)) | **Implemented** in commit `88318f3 Feature C1`. Full reauth-then-delete flow with cascading subcollection cleanup. Live-verified by the new DELETE ACCOUNT section in `verify-data-integrity.sh` (29/29). |
+| Feature ask | Lighter-weight sharing than the coach relationship | **Implemented** in commit `25e4d26 Feature D1`. Native iOS share sheet of styled PNG snapshots of single-ski or full-fleet cards. |
+
+## Other gaps
 
 | Severity | Item | Why |
 |---|---|---|
-| Minor | Coach Dashboard "Total skis" and "Tests / wk" StatCards are placeholders ("—") | Would require fanning out per-athlete subscriptions; deferred. Documented in commit `Design B10`. |
-| Minor | Visual icon-text alignment audit was a code-level pass | The code is correct (every icon-text row has `alignItems:'center'`). Visual verification beyond the Welcome screen wasn't captured this session — the user originally reported a specific issue I couldn't reproduce in the code review. If anything still looks misaligned visually, that's the one item I'd want a screenshot for. |
-| Minor | One screenshot captured this session | Only `verification-screenshots/01-initial-state.png` (Welcome screen). The manual checklist in `MANUAL_VERIFICATION.md` covers the rest. |
+| Minor | Coach Dashboard "Total skis" / "Tests / wk" StatCards still show "—" | Would require fanning out per-athlete subscriptions; not blocking. |
+| Minor | Coach-side cascade on `deleteAccount` is best-effort only | Firestore rules block a coach from writing to athlete docs — when a coach deletes their account, dependent athletes keep an orphan `coachId` until they clear it via the existing Remove-coach UI. Documented in `NOTES.md`. |
+| Minor | Share-card visuals on real iPhone hardware are unverified this session | The cards render in tests (10 share-related specs pass) and the iOS build compiles, but I can't programmatically tap to capture an actual share preview. Manual Flow 11 / 12 in `MANUAL_VERIFICATION.md` covers it. |
 
-Nothing critical identified.
+Nothing critical unresolved.
 
 ## Known limitations
 
@@ -218,36 +230,39 @@ Nothing critical identified.
 ## Test coverage snapshot
 
 ```
-Unit tests       : 162 / 163 passing  (1 skipped — App.test.tsx)
-Lint             : 0 errors, 7 warnings  (5 inline-style nits, 1 disabled-test, 1 var-require)
-JS bundle build  : clean (npx react-native bundle --platform ios)
-verify-data-integrity.sh : 22 / 22 pass  (scripts/verify-data-integrity.log)
-verify-coach-pairing.sh  : 14 / 14 pass  (scripts/verify-coach-pairing.log)
-verify-flows.sh          : pre-existing happy-path (re-run before launch)
-UI screenshots           : 1 captured (Welcome screen) + 8-flow manual checklist
+Unit tests       : 187 / 188 pass  (1 skipped — App.test.tsx pre-existing)
+Lint             : 0 errors, 6 warnings  (pre-existing inline-style nits)
+JS bundle        : clean (npx react-native bundle)
+iOS build        : ** BUILD SUCCEEDED ** (Xcode 26.5 + new native modules)
+verify-flows.sh             :  6 /  6 pass  (happy path)
+verify-data-integrity.sh    : 29 / 29 pass  (incl. delete-account section)
+verify-coach-pairing.sh     : 14 / 14 pass
+verify-seed.sh              : 12 / 12 pass  (NEW — seed-clobber regression)
+UI screenshots              :  3 (Welcome / Home dashboard) + 12-flow manual checklist
 ```
 
 ## My recommendation
 
-**Ship for personal use after one manual walkthrough.**
+**Install on your iPhone via DEVICE_INSTALL.md now. Walk through
+the 4 new flows in MANUAL_VERIFICATION.md (~5 min). After that the
+app is solid for personal use and ready to share with a small
+group.**
 
-The data layer is solid — every CRUD path is exercised against live
-Firestore, every security rule is enforced both ways, the coach
-relationship works in both directions and unlinks cleanly. The redesigned
-UI compiles, renders in tests, and produces a clean JS bundle.
+What's stronger than the last assessment:
+- The two user-reported bugs (seed clobber, add-coach no-op) are
+  fixed with regression scripts.
+- App Store guideline 5.1.1(v) compliance is in (delete account).
+- Sharing without an account is implemented end to end.
+- The iOS app builds and installs cleanly on the simulator with
+  every new package. Pods + bundler + ruby toolchain worked
+  through end-to-end (the incantation is in DEVICE_INSTALL.md).
 
-The two open items are *visual confirmation* and *one live
-`sendPasswordResetEmail` call*. Both are 15-minute manual tests on the
-simulator after `npm run ios` — the checklist in
-`MANUAL_VERIFICATION.md` walks through them.
-
-**For small-group beta (5–10 people):** the same recommendation, plus
-test offline mode (the brief flagged this explicitly) by disabling wifi
-mid-add-ski and confirming the queued write drains on reconnect. If
-that works as designed, the app is beta-grade.
-
-**For App Store submission:** defer. The product needs 2–4 weeks of
-real personal use to validate that the design choices (chip selectors
-instead of dropdowns, 1–10 numbered rating pills, etc.) actually work
-for the use case before paying for Developer Program enrollment and
-investing in App Store assets.
+What's still owed before App Store submission:
+- 2–4 weeks of actual personal use to validate the redesigned
+  UI / data model in practice.
+- Apple Developer Program enrollment ($99/year) for TestFlight or
+  App Store distribution.
+- Privacy policy + ToS + App Store screenshots.
+- A Cloud Function to handle the coach-side cascade in
+  `deleteAccount` properly (the orphan-`coachId` state today is
+  harmless but not elegant).

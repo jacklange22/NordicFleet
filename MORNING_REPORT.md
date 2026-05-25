@@ -1,5 +1,87 @@
 # Morning report — autonomous NordicFleet rewrite
 
+## Bug fixes + sharing session — ready for device install
+
+Open `DEVICE_INSTALL.md` first. It walks you through getting the app
+on your iPhone via the free Apple ID path in ~15 minutes.
+
+### Issues fixed (your reports from last sync)
+
+1. **Seed sample data was overwriting the account.** Root cause:
+   `seedCurrentUser` called `createProfile`, which `set`-with-merge'd
+   null defaults from the seed user — clobbering weight, height,
+   team, location, role (resetting coaches to athletes), and
+   coachId (severing linked coach relationships). Fix removes the
+   profile call entirely; seed is now strictly additive to the
+   `skis` subcollection. Verified by `scripts/verify-seed.sh`
+   (12/12 against live Firestore — signs up a coach with weight=70 +
+   custom team, seeds twice, confirms every profile field intact +
+   no duplicate skis).
+2. **"Add a coach" button did nothing.** Three bugs in
+   `src/screens/profile.js`: both the Add-coach and Change-coach
+   ListItems used `onPress={() => {}}` (literal no-op); the render
+   condition read `profile?.coachUid` but the schema field is
+   `coachId`; and it tried to display `profile.coachName /
+   coachEmail` fields that don't exist on the athlete profile.
+   Fix wires the tap to a proper add-coach modal with floating-label
+   email Input, mapped error messages (`coach/not-found` →
+   friendly inline), and a Remove-coach destructive ListItem in
+   the linked state. The coach's display name/email now comes from
+   `getProfile(coachId)` against the coach's own user doc.
+
+### Features added
+
+3. **Delete account** (App Store guideline 5.1.1(v) compliance).
+   New `deleteAccount` service that batch-deletes every doc in
+   skis/waxLogs/testLogs, deletes the user doc, then deletes the
+   Firebase Auth user. Gated by a two-step confirmation (Alert
+   → reauth modal) in a new "Danger zone" section at the bottom
+   of Profile. Best-effort cascade attempt for coach-side cleanup
+   that fails silently due to Firestore rules (see NOTES.md
+   "Coach-side cascade" — orphan state is harmless and the athlete
+   can clear it themselves).
+4. **Share single ski + share fleet** via native iOS share sheet.
+   No backend, no public Firestore docs, no account required for
+   the recipient. Implementation: `react-native-view-shot` captures
+   a styled off-screen share-card View as PNG, then `react-native-
+   share` opens the iOS share sheet. SkiInfo gets a share-outline
+   icon in the Header; Profile gets a "Share my fleet" ListItem
+   in the Account section.
+
+### Live verification (against `nordicfleet-11e67`)
+
+| Script | Checks |
+|---|---|
+| `scripts/verify-flows.sh`            | 6 / 6 (happy path) |
+| `scripts/verify-data-integrity.sh`   | **29 / 29** (now includes a DELETE ACCOUNT section) |
+| `scripts/verify-coach-pairing.sh`    | 14 / 14 |
+| `scripts/verify-seed.sh`             | **12 / 12** (new this session) |
+
+iOS build also verified end to end:
+- `npm test` → 187 / 188 (1 skipped pre-existing)
+- `npm run lint` → 0 errors, 6 warnings (pre-existing nits)
+- `npx react-native bundle` → clean
+- `xcodebuild -workspace ios/NordicFleet.xcworkspace ...` →
+  ** BUILD SUCCEEDED ** (Pods reinstalled with the two new native
+  modules; the homebrew-ruby + LANG=UTF-8 incantation is documented
+  in DEVICE_INSTALL.md).
+
+### Outstanding manual verification
+
+The four new flows need a 5-minute tap-through on the simulator or
+device. The full checklist is in `MANUAL_VERIFICATION.md`:
+- Flow 9  — Add a coach (regression check for the fix above)
+- Flow 10 — Delete account (full reauth-then-delete path)
+- Flow 11 — Share a single ski
+- Flow 12 — Share my fleet
+
+Programmatic taps aren't reliable here, so the screenshots in
+`verification-screenshots/` are limited to the Welcome / Home
+screens. The user runs through the checklist on their iPhone after
+following `DEVICE_INSTALL.md`.
+
+---
+
 ## Polish + verification session — launch readiness
 
 The primary deliverable from this session is `LAUNCH_READINESS.md`,
