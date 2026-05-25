@@ -1,6 +1,7 @@
 import React from 'react';
 import {render, waitFor} from '@testing-library/react-native';
 import {NavigationContainer} from '@react-navigation/native';
+import {SafeAreaProvider} from 'react-native-safe-area-context';
 import authMock from '@react-native-firebase/auth';
 import firestoreMock from '@react-native-firebase/firestore';
 
@@ -15,20 +16,31 @@ beforeEach(() => {
   navProp.navigate.mockClear();
 });
 
+const SA_METRICS = {
+  frame: {x: 0, y: 0, width: 320, height: 640},
+  insets: {top: 0, left: 0, right: 0, bottom: 0},
+};
+
 const renderSkiInfo = skiId =>
   render(
-    <NavigationContainer>
-      <AuthProvider>
-        <SkiInfo route={{params: {skiId}}} navigation={navProp} />
-      </AuthProvider>
-    </NavigationContainer>,
+    <SafeAreaProvider initialMetrics={SA_METRICS}>
+      <NavigationContainer>
+        <AuthProvider>
+          <SkiInfo route={{params: {skiId}}} navigation={navProp} />
+        </AuthProvider>
+      </NavigationContainer>
+    </SafeAreaProvider>,
   );
 
 describe('SkiInfo', () => {
   it('shows "Ski not found" when ski is missing', async () => {
     authMock.__setCurrentUser({uid: 'u1'});
     const tree = renderSkiInfo('ghost');
-    await waitFor(() => tree.getByText('Ski not found'));
+    // "Ski not found" shows in both the Header title and the body — both
+    // are correct; just confirm at least one is present.
+    await waitFor(() => {
+      expect(tree.getAllByText('Ski not found').length).toBeGreaterThan(0);
+    });
   });
 
   it('renders ski fields when loaded', async () => {
@@ -47,7 +59,10 @@ describe('SkiInfo', () => {
       notes: 'Some notes',
     });
     const tree = renderSkiInfo('abc');
-    await waitFor(() => tree.getByText('Fischer Speedmax'));
+    // Name shows in the Header and in the hero card.
+    await waitFor(() => {
+      expect(tree.getAllByText('Fischer Speedmax').length).toBeGreaterThan(0);
+    });
     expect(tree.getByText('Fischer')).toBeTruthy();
     expect(tree.getByText('Universal')).toBeTruthy();
     expect(tree.getByText('Some notes')).toBeTruthy();
@@ -71,8 +86,10 @@ describe('SkiInfo', () => {
       kickWax: null,
     });
     const tree = renderSkiInfo('abc');
-    await waitFor(() => tree.getByText('Speedmax'));
-    // CH6 is displayed in history detail
-    expect(tree.getByText('CH6')).toBeTruthy();
+    await waitFor(() => {
+      expect(tree.getAllByText('Speedmax').length).toBeGreaterThan(0);
+    });
+    // CH6 is displayed in history detail (as part of the glide-wax list)
+    expect(tree.getByText(/CH6/)).toBeTruthy();
   });
 });

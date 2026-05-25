@@ -5,46 +5,118 @@ import {
   StyleSheet,
   ScrollView,
   ActivityIndicator,
-  TouchableOpacity,
+  StatusBar,
 } from 'react-native';
-import Footer from '../components/footer.js';
-import ProfileButton from '../components/profilebutton.js';
+import {SafeAreaView} from 'react-native-safe-area-context';
+
 import {useAuth} from '../context/AuthContext';
 import {subscribeSki} from '../services/skiService';
 import {subscribeWaxLogsForSki} from '../services/waxLogService';
 import {subscribeTestLogsForSki} from '../services/testLogService';
-
-const InfoRow = ({label, value}) => (
-  <View style={styles.infoRow}>
-    <Text style={styles.label}>{label}:</Text>
-    <Text style={styles.value}>
-      {value === undefined || value === null ? '—' : String(value)}
-    </Text>
-  </View>
-);
+import {
+  Header,
+  Card,
+  Pill,
+  StatCard,
+  SectionHeader,
+  ListItem,
+  TabBar,
+} from '../components/ui';
+import {colors, radius, spacing, typography} from '../theme';
 
 const formatDate = raw => {
   if (!raw) {
     return '—';
   }
-  // Firestore Timestamp has a toDate() method.
-  if (raw && typeof raw.toDate === 'function') {
-    return raw.toDate().toLocaleDateString();
+  let d = null;
+  if (typeof raw.toDate === 'function') {
+    d = raw.toDate();
+  } else if (raw instanceof Date) {
+    d = raw;
+  } else if (typeof raw === 'string' || typeof raw === 'number') {
+    d = new Date(raw);
+    if (isNaN(d.getTime())) {
+      d = null;
+    }
   }
-  if (raw instanceof Date) {
-    return raw.toLocaleDateString();
+  if (!d) {
+    return '—';
   }
-  if (typeof raw === 'string') {
-    return raw;
+  return d.toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+};
+
+const relativeDate = raw => {
+  if (!raw) {
+    return null;
   }
-  return '—';
+  let d = null;
+  if (typeof raw.toDate === 'function') {
+    d = raw.toDate();
+  } else if (raw instanceof Date) {
+    d = raw;
+  } else if (typeof raw === 'string' || typeof raw === 'number') {
+    const dd = new Date(raw);
+    if (!isNaN(dd.getTime())) {
+      d = dd;
+    }
+  }
+  if (!d) {
+    return null;
+  }
+  const diff = Math.max(0, Date.now() - d.getTime());
+  const days = Math.floor(diff / (24 * 60 * 60 * 1000));
+  if (days === 0) {
+    return 'today';
+  }
+  if (days === 1) {
+    return 'yesterday';
+  }
+  if (days < 30) {
+    return `${days}d ago`;
+  }
+  const months = Math.floor(days / 30);
+  if (months < 12) {
+    return `${months}mo ago`;
+  }
+  return `${Math.floor(months / 12)}y ago`;
+};
+
+const ratingDot = score => {
+  // 1-10 mapped to dim → bright red
+  if (score === null || score === undefined) {
+    return colors.borderStrong;
+  }
+  const n = Number(score);
+  if (!Number.isFinite(n)) {
+    return colors.borderStrong;
+  }
+  if (n >= 8) {
+    return colors.red;
+  }
+  if (n >= 5) {
+    return '#B71C1C';
+  }
+  return colors.redDim;
+};
+
+const RatingBadge = ({value}) => {
+  const bg = ratingDot(value);
+  return (
+    <View style={[styles.ratingBadge, {backgroundColor: bg}]}>
+      <Text style={styles.ratingBadgeText}>
+        {value === null || value === undefined || value === '' ? '—' : value}
+      </Text>
+    </View>
+  );
 };
 
 const SkiInfo = ({route, navigation}) => {
   const {user} = useAuth();
   const skiId = route?.params?.skiId;
-  // If `ownerUid` is in the route params, this is a coach viewing an
-  // athlete's ski. Otherwise it's the signed-in user's own ski.
   const ownerUid = route?.params?.ownerUid;
   const uid = ownerUid || user?.uid;
   const isCoachView = !!ownerUid && ownerUid !== user?.uid;
@@ -77,178 +149,355 @@ const SkiInfo = ({route, navigation}) => {
     };
   }, [uid, skiId]);
 
+  const techLower = (ski?.technique || '').toLowerCase();
+  const accentColor = techLower === 'skate' ? colors.redDim : colors.red;
+
+  const waxLogSubtitle = log => {
+    const parts = [];
+    if (log.glideWaxes && log.glideWaxes.length) {
+      parts.push(log.glideWaxes.filter(Boolean).join(', '));
+    }
+    if (log.kickWax) {
+      parts.push(`Kick: ${log.kickWax}`);
+    }
+    if (log.binder) {
+      parts.push(`Binder: ${log.binder}`);
+    }
+    if (parts.length === 0) {
+      parts.push('No wax recorded');
+    }
+    const rel = relativeDate(log.date);
+    return rel ? `${parts.join(' · ')} · ${rel}` : parts.join(' · ');
+  };
+
+  const testLogTitle = log => {
+    const bits = [];
+    if (log.snowType) {
+      bits.push(log.snowType);
+    }
+    if (log.surface) {
+      bits.push(log.surface);
+    }
+    return bits.length ? bits.join(', ') : 'Conditions';
+  };
+
+  const testLogSubtitle = log => {
+    const bits = [];
+    if (log.temperature !== null && log.temperature !== undefined) {
+      bits.push(`${log.temperature}°C`);
+    }
+    if (log.humidity !== null && log.humidity !== undefined) {
+      bits.push(`${log.humidity}% humidity`);
+    }
+    const rel = relativeDate(log.date);
+    if (rel) {
+      bits.push(rel);
+    }
+    return bits.length ? bits.join(' · ') : formatDate(log.date);
+  };
+
+  // Loading state.
   if (loading) {
     return (
-      <View style={styles.container}>
-        <ActivityIndicator color="#fff" style={styles.loading} />
-      </View>
+      <SafeAreaView style={styles.safe} edges={['top']}>
+        <StatusBar barStyle="light-content" />
+        <Header title="Ski" />
+        <View style={styles.loadingWrap}>
+          <ActivityIndicator color={colors.red} />
+        </View>
+        {!isCoachView && <TabBar role="athlete" />}
+      </SafeAreaView>
     );
   }
 
+  // Not found.
   if (!ski) {
     return (
-      <View style={styles.container}>
-        <View style={styles.headerContainer}>
-          <Text style={styles.header}>Ski not found</Text>
-          <ProfileButton />
+      <SafeAreaView style={styles.safe} edges={['top']}>
+        <StatusBar barStyle="light-content" />
+        <Header title="Ski not found" />
+        <View style={styles.notFoundWrap}>
+          <Text style={styles.notFound}>Ski not found</Text>
         </View>
-        <View style={styles.spacer} />
-        {!isCoachView && <Footer />}
-      </View>
+        {!isCoachView && <TabBar role="athlete" />}
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.headerContainer}>
-        <Text style={styles.header}>{ski.name}</Text>
-        <ProfileButton />
-      </View>
+    <SafeAreaView style={styles.safe} edges={['top']}>
+      <StatusBar barStyle="light-content" />
+      <Header title={ski.name || 'Ski'} />
       <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollViewContent}>
-        <View style={styles.infoContainer}>
-          <Text style={styles.header}>Ski Information</Text>
-          <InfoRow label="Flex" value={ski.flex} />
-          <InfoRow label="Grind" value={ski.grind} />
-          <InfoRow label="Brand" value={ski.brand} />
-          <InfoRow label="Model" value={ski.model} />
-          <InfoRow label="Base" value={ski.base} />
-          <InfoRow label="Build" value={ski.build} />
-          <InfoRow label="Technique" value={ski.technique} />
-          <InfoRow label="Type" value={ski.type} />
-          <InfoRow label="Length" value={ski.length} />
-        </View>
-
-        <View style={styles.historyContainer}>
-          <Text style={styles.header}>Wax History</Text>
-          {waxLogs.length === 0 ? (
-            <Text style={styles.placeholderText}>No wax logs yet</Text>
-          ) : (
-            waxLogs.map(log => (
-              <TouchableOpacity
-                key={log.id}
-                accessibilityRole="button"
-                accessibilityLabel={`Wax log from ${formatDate(log.date)}`}
-                style={styles.historyRow}
-                // Tap is a no-op until a detail screen exists.
-                onPress={() => navigation.navigate('SkiInfo', {skiId})}>
-                <Text style={styles.historyDate}>{formatDate(log.date)}</Text>
-                <Text style={styles.historyDetail}>
-                  {(log.glideWaxes && log.glideWaxes.join(', ')) || '—'}
-                  {log.kickWax ? ` + kick: ${log.kickWax}` : ''}
+        contentContainerStyle={styles.scroll}
+        showsVerticalScrollIndicator={false}>
+        {/* Hero card */}
+        <Card padding={0} style={styles.hero}>
+          <View style={[styles.heroAccent, {backgroundColor: accentColor}]} />
+          <View style={styles.heroBody}>
+            <Text style={styles.heroName} numberOfLines={2}>
+              {ski.name}
+            </Text>
+            <View style={styles.heroPillRow}>
+              {!!ski.technique && (
+                <View style={styles.heroPillWrap}>
+                  <Pill variant="outline" color="red">
+                    {ski.technique}
+                  </Pill>
+                </View>
+              )}
+              {!!ski.type && (
+                <View style={styles.heroPillWrap}>
+                  <Pill variant="outline" color="red">
+                    {ski.type}
+                  </Pill>
+                </View>
+              )}
+              {!!ski.brand && (
+                <View style={styles.heroPillWrap}>
+                  <Pill variant="ghost" color="neutral">
+                    {ski.brand}
+                  </Pill>
+                </View>
+              )}
+            </View>
+            <View style={styles.miniStatRow}>
+              <View style={styles.miniStat}>
+                <Text style={styles.miniStatLabel}>Flex</Text>
+                <Text style={styles.miniStatValue}>{ski.flex ?? '—'}</Text>
+              </View>
+              <View style={styles.miniStat}>
+                <Text style={styles.miniStatLabel}>Length</Text>
+                <Text style={styles.miniStatValue}>
+                  {ski.length ? `${ski.length}cm` : '—'}
                 </Text>
-              </TouchableOpacity>
-            ))
-          )}
-        </View>
-
-        <View style={styles.historyContainer}>
-          <Text style={styles.header}>Test History</Text>
-          {testLogs.length === 0 ? (
-            <Text style={styles.placeholderText}>No tests yet</Text>
-          ) : (
-            testLogs.map(log => (
-              <TouchableOpacity
-                key={log.id}
-                accessibilityRole="button"
-                accessibilityLabel={`Test log from ${formatDate(log.date)}`}
-                style={styles.historyRow}
-                onPress={() => navigation.navigate('SkiInfo', {skiId})}>
-                <Text style={styles.historyDate}>{formatDate(log.date)}</Text>
-                <Text style={styles.historyDetail}>
-                  Glide {log.glideRating ?? '—'} / Kick {log.kickRating ?? '—'}
-                  {log.temperature !== null && log.temperature !== undefined
-                    ? ` @ ${log.temperature}°C`
-                    : ''}
+              </View>
+              <View style={styles.miniStat}>
+                <Text style={styles.miniStatLabel}>Grind</Text>
+                <Text style={styles.miniStatValue} numberOfLines={1}>
+                  {ski.grind || '—'}
                 </Text>
-              </TouchableOpacity>
-            ))
-          )}
+              </View>
+            </View>
+            {!!(ski.base || ski.build || ski.model) && (
+              <View style={styles.metaRow}>
+                {!!ski.model && <Text style={styles.metaText}>{ski.model}</Text>}
+                {!!ski.base && (
+                  <Text style={styles.metaText}>Base: {ski.base}</Text>
+                )}
+                {!!ski.build && (
+                  <Text style={styles.metaText}>Build: {ski.build}</Text>
+                )}
+              </View>
+            )}
+          </View>
+        </Card>
+
+        {/* Stat row */}
+        <View style={styles.statRow}>
+          <View style={styles.statCell}>
+            <StatCard
+              compact
+              value={waxLogs.length}
+              label="Times waxed"
+            />
+          </View>
+          <View style={styles.statCellSpacer} />
+          <View style={styles.statCell}>
+            <StatCard
+              compact
+              value={testLogs.length}
+              label="Tests logged"
+            />
+          </View>
         </View>
 
-        <View style={styles.historyContainer}>
-          <Text style={styles.header}>Notes</Text>
-          <Text style={styles.placeholderText}>
-            {ski.notes || 'No notes yet'}
+        {/* Wax history */}
+        <SectionHeader title="Wax history" />
+        {waxLogs.length === 0 ? (
+          <View style={styles.emptyHistory}>
+            <Text style={styles.emptyHistoryText}>No wax logs yet</Text>
+          </View>
+        ) : (
+          <Card padding={0} style={styles.historyCard}>
+            {waxLogs.map((log, i) => (
+              <View key={log.id} style={styles.historyRowWrap}>
+                <ListItem
+                  leading={
+                    <View
+                      style={[
+                        styles.colorDot,
+                        {backgroundColor: log.kickWax ? colors.warning : colors.red},
+                      ]}
+                    />
+                  }
+                  title={formatDate(log.date)}
+                  subtitle={waxLogSubtitle(log)}
+                  showDivider={i < waxLogs.length - 1}
+                />
+              </View>
+            ))}
+          </Card>
+        )}
+
+        {/* Test history */}
+        <SectionHeader title="Test history" />
+        {testLogs.length === 0 ? (
+          <View style={styles.emptyHistory}>
+            <Text style={styles.emptyHistoryText}>No tests yet</Text>
+          </View>
+        ) : (
+          <Card padding={0} style={styles.historyCard}>
+            {testLogs.map((log, i) => (
+              <View key={log.id} style={styles.historyRowWrap}>
+                <ListItem
+                  leading={<RatingBadge value={log.glideRating} />}
+                  title={testLogTitle(log)}
+                  subtitle={testLogSubtitle(log)}
+                  showDivider={i < testLogs.length - 1}
+                />
+              </View>
+            ))}
+          </Card>
+        )}
+
+        {/* Notes */}
+        <SectionHeader title="Notes" />
+        <Card>
+          <Text style={styles.notes}>
+            {ski.notes ? ski.notes : 'No notes yet'}
           </Text>
-        </View>
+        </Card>
       </ScrollView>
-      {!isCoachView && <Footer />}
-    </View>
+      {!isCoachView && <TabBar role="athlete" />}
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  safe: {flex: 1, backgroundColor: colors.bg},
+  loadingWrap: {
     flex: 1,
-    backgroundColor: 'black',
-  },
-  loading: {
-    marginTop: 40,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollViewContent: {
-    paddingBottom: 20,
-  },
-  infoContainer: {
-    padding: 20,
-  },
-  headerContainer: {
-    flexDirection: 'row',
-    backgroundColor: '#282828',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    height: 50,
+    justifyContent: 'center',
   },
-  historyContainer: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    marginBottom: 20,
+  notFoundWrap: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.lg,
   },
-  historyRow: {
-    backgroundColor: '#222',
-    borderRadius: 8,
-    padding: 12,
-    marginVertical: 4,
+  notFound: {
+    ...typography.displayMd,
+    color: colors.textSecondary,
   },
-  historyDate: {
-    color: '#fff',
-    fontWeight: '600',
+  scroll: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing['4xl'],
   },
-  historyDetail: {
-    color: '#aaa',
-    marginTop: 2,
+
+  hero: {
+    overflow: 'hidden',
+    marginBottom: spacing.lg,
   },
-  header: {
-    color: '#fff',
-    fontSize: 22,
-    fontWeight: 'bold',
-    marginBottom: 10,
+  heroAccent: {
+    height: 4,
+    width: '100%',
   },
-  infoRow: {
+  heroBody: {
+    padding: spacing.lg,
+  },
+  heroName: {
+    ...typography.displayLg,
+    color: colors.textPrimary,
+    marginBottom: spacing.md,
+  },
+  heroPillRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 8,
+    flexWrap: 'wrap',
+    marginBottom: spacing.lg,
   },
-  label: {
-    color: '#ccc',
-    fontSize: 18,
+  heroPillWrap: {
+    marginRight: spacing.sm,
+    marginBottom: spacing.sm,
   },
-  value: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
+  miniStatRow: {
+    flexDirection: 'row',
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    paddingTop: spacing.md,
   },
-  placeholderText: {
-    color: '#777',
+  miniStat: {
+    flex: 1,
+  },
+  miniStatLabel: {
+    ...typography.caption,
+    color: colors.textTertiary,
+    marginBottom: spacing.xs,
+  },
+  miniStatValue: {
+    ...typography.headingMd,
+    color: colors.textPrimary,
+  },
+  metaRow: {
+    marginTop: spacing.md,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  metaText: {
+    ...typography.bodySm,
+    color: colors.textSecondary,
+    marginBottom: 2,
+  },
+
+  statRow: {
+    flexDirection: 'row',
+    marginBottom: spacing.sm,
+  },
+  statCell: {flex: 1},
+  statCellSpacer: {width: spacing.md},
+
+  historyCard: {
+    paddingHorizontal: spacing.lg,
+  },
+  historyRowWrap: {},
+  emptyHistory: {
+    padding: spacing.lg,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+  },
+  emptyHistoryText: {
+    ...typography.body,
+    color: colors.textTertiary,
     fontStyle: 'italic',
   },
-  spacer: {
-    flex: 1,
+
+  colorDot: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+  },
+  ratingBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ratingBadgeText: {
+    ...typography.bodySm,
+    color: colors.textPrimary,
+    fontWeight: '700',
+  },
+  notes: {
+    ...typography.body,
+    color: colors.textPrimary,
+    lineHeight: 22,
   },
 });
 
