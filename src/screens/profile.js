@@ -30,7 +30,6 @@ import {
   getProfile,
   deleteAccount,
 } from '../services/userService';
-import {seedCurrentUser} from '../services/seed';
 import {auth} from '../services/firebase';
 import {
   Header,
@@ -80,7 +79,6 @@ const ProfileScreen = () => {
 
   const [editField, setEditField] = useState(null);
   const [tempValue, setTempValue] = useState('');
-  const [seeding, setSeeding] = useState(false);
 
   // Password change flow.
   const [pwModalOpen, setPwModalOpen] = useState(false);
@@ -349,24 +347,6 @@ const ProfileScreen = () => {
     ]);
   }, [signOut, navigation]);
 
-  const handleSeed = useCallback(async () => {
-    if (!uid) {
-      return;
-    }
-    setSeeding(true);
-    try {
-      const result = await seedCurrentUser(uid);
-      Alert.alert(
-        'Seed complete',
-        `Created ${result.created}, skipped ${result.skipped}.`,
-      );
-    } catch (err) {
-      Alert.alert('Seed failed', String(err.message || err));
-    } finally {
-      setSeeding(false);
-    }
-  }, [uid]);
-
   const handlePasswordSubmit = useCallback(async () => {
     setPwError('');
     if (newPw.length < 6) {
@@ -619,18 +599,6 @@ const ProfileScreen = () => {
           </View>
         </Card>
 
-        {__DEV__ && (
-          <View style={styles.devRow}>
-            <Button
-              variant="secondary"
-              size="md"
-              icon="leaf-outline"
-              loading={seeding}
-              onPress={handleSeed}>
-              Seed sample data
-            </Button>
-          </View>
-        )}
       </ScrollView>
 
       {/* Edit-field modal */}
@@ -922,10 +890,6 @@ const styles = StyleSheet.create({
     ...typography.bodySm,
     color: colors.red,
     fontWeight: '600',
-  },
-  devRow: {
-    marginTop: spacing.xl,
-    alignItems: 'center',
   },
 
   modalBackdrop: {
