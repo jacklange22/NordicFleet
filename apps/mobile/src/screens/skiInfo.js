@@ -223,6 +223,13 @@ const SkiInfo = ({route, navigation}) => {
     if (log.humidity !== null && log.humidity !== undefined) {
       bits.push(`${log.humidity}% humidity`);
     }
+    if (log.location?.label) {
+      bits.push(`📍 ${log.location.label}`);
+    } else if (log.location?.latitude !== undefined) {
+      bits.push(
+        `📍 ${log.location.latitude.toFixed(2)}, ${log.location.longitude.toFixed(2)}`,
+      );
+    }
     const rel = relativeDate(log.date);
     if (rel) {
       bits.push(rel);

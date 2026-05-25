@@ -12,12 +12,14 @@ import {
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useNavigation} from '@react-navigation/native';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 
 import Toast from 'react-native-toast-message';
 import {useAuth} from '../context/AuthContext';
 import useSkis from '../hooks/useSkis';
 import {createTestLog} from '../services/testLogService';
 import {firestore} from '../services/firebase';
+import {getCurrentLocation} from '../services/locationService';
 import {
   Header,
   Card,
@@ -154,7 +156,36 @@ const TestingLogScreen = () => {
     snowType: '',
     surface: '',
   });
+  const [location, setLocation] = useState(null);
+  const [locationLabel, setLocationLabel] = useState('');
+  const [fetchingLocation, setFetchingLocation] = useState(false);
   const [skiTestEntries, setSkiTestEntries] = useState({});
+
+  const captureLocation = async () => {
+    setFetchingLocation(true);
+    try {
+      const here = await getCurrentLocation();
+      if (here) {
+        setLocation(here);
+      } else {
+        Toast.show({
+          type: 'error',
+          text1: 'Location unavailable',
+          text2:
+            'Make sure Location Services + NordicFleet are enabled in Settings.',
+          position: 'top',
+          visibilityTime: 2400,
+        });
+      }
+    } finally {
+      setFetchingLocation(false);
+    }
+  };
+
+  const clearLocation = () => {
+    setLocation(null);
+    setLocationLabel('');
+  };
 
   useEffect(() => {
     setSkiTestEntries(prev => {
@@ -216,6 +247,14 @@ const TestingLogScreen = () => {
         humidity: conditions.humidity,
         snowType: conditions.snowType,
         surface: conditions.surface,
+        location: location
+          ? {
+              latitude: location.latitude,
+              longitude: location.longitude,
+              accuracy: location.accuracy,
+              label: locationLabel.trim() || null,
+            }
+          : null,
         ...entry,
       };
       if (technique === 'skate') {
@@ -349,6 +388,61 @@ const TestingLogScreen = () => {
                     </View>
                   ))}
                 </View>
+
+                <View style={styles.fieldSpacer} />
+                <Text style={styles.miniLabel}>Location</Text>
+                {location ? (
+                  <>
+                    <View style={styles.locRow}>
+                      <Ionicons
+                        name="location"
+                        size={18}
+                        color={colors.red}
+                      />
+                      <Text style={styles.locText}>
+                        {location.latitude.toFixed(4)},{' '}
+                        {location.longitude.toFixed(4)}
+                        {location.accuracy
+                          ? ` (±${Math.round(location.accuracy)}m)`
+                          : ''}
+                      </Text>
+                      <Pressable
+                        onPress={clearLocation}
+                        hitSlop={8}
+                        accessibilityRole="button"
+                        accessibilityLabel="Remove location">
+                        <Ionicons
+                          name="close-circle"
+                          size={20}
+                          color={colors.textTertiary}
+                        />
+                      </Pressable>
+                    </View>
+                    <View style={styles.fieldSpacer} />
+                    <Input
+                      label="Label (optional)"
+                      icon="pricetag-outline"
+                      value={locationLabel}
+                      onChangeText={setLocationLabel}
+                      placeholder="e.g. Craftsbury"
+                      autoCapitalize="words"
+                    />
+                  </>
+                ) : (
+                  <View style={styles.chipRow}>
+                    <View style={styles.chipWrap}>
+                      <Pill
+                        variant="outline"
+                        color="red"
+                        onPress={captureLocation}
+                        accessibilityLabel="Use current location">
+                        {fetchingLocation
+                          ? 'Locating…'
+                          : 'Use current location'}
+                      </Pill>
+                    </View>
+                  </View>
+                )}
               </Card>
 
               <SectionHeader title="Select skis" />
@@ -445,6 +539,24 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   chipRow: {flexDirection: 'row', flexWrap: 'wrap'},
+  locRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.bg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    gap: spacing.sm,
+  },
+  locText: {
+    flex: 1,
+    color: colors.textPrimary,
+    fontSize: 14,
+    fontWeight: '500',
+    fontVariant: ['tabular-nums'],
+  },
   chipWrap: {marginRight: spacing.sm, marginBottom: spacing.sm},
   fieldSpacer: {height: spacing.lg},
   selectorCard: {marginBottom: spacing.lg},

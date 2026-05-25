@@ -14,6 +14,7 @@
   "dependencies": {
     "@nordicfleet/core": "*",
     "@react-native-async-storage/async-storage": "1.24.0",
+    "@react-native-community/geolocation": "^3.4.0",
     "@react-native-firebase/analytics": "21.14.0",
     "@react-native-firebase/app": "21.14.0",
     "@react-native-firebase/auth": "21.14.0",
