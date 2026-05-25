@@ -1,0 +1,35 @@
+=== NordicFleet coach-pairing verification ===
+Coach:   coach-verify-1779671532@nordicfleet.test
+Athlete: athlete-verify-1779671532@nordicfleet.test
+
+[1/13] Sign up coach + role=coach profile
+  ✓ coach profile written with role=coach
+[2/13] Sign up athlete + role=athlete profile
+  ✓ athlete profile written with role=athlete
+[3/13] setCoachByEmail (athlete looks up coach + writes coachId)
+  ✓ athlete's coach-by-email lookup finds coach uid
+[4/13] Verify athlete profile now has coachId=COACH_UID
+  ✓ athlete.coachId == coach uid
+[5/13] Query users where coachId == COACH_UID (coach's view of roster)
+  ✓ coach's roster query returns 1 athlete
+[6/13] Athlete adds a ski to their fleet
+  ✓ ski 'Roster Ski' created
+[7/13] Coach reads athlete's skis subcollection (rule: isCoachOf)
+  ✓ coach sees 1 ski in athlete's fleet
+[8/13] Coach POST to athlete's skis — should be denied
+  ✓ coach write to athlete's skis denied
+[9/13] removeCoach — athlete clears coachId
+  ✓ PATCH submitted
+[10/13] Verify athlete profile coachId is now null
+  ✓ athlete.coachId is null after removeCoach
+[11/13] After unlink, coach read of athlete's skis is denied
+  ✓ coach list denied with 403
+  ✓ after unlink, coach direct ski read denied
+[12/13] setCoachByEmail with non-existent email returns no coach
+  ✓ non-existent email lookup returns 0 coaches (service throws coach/not-found)
+[13/13] setCoachByEmail with an athlete email returns no coach
+  ✓ athlete email + role=coach filter returns 0 (service throws coach/not-found)
+
+==============================
+Passed: 14, Failed: 0
+==============================
