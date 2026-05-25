@@ -1,6 +1,0 @@
-{
-  "buildCommand": "cd ../.. && npm install && npm run build --workspace=@nordicfleet/web",
-  "installCommand": "echo skipped (install runs in buildCommand)",
-  "outputDirectory": ".next",
-  "framework": "nextjs"
-}
