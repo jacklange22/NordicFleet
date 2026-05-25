@@ -1,0 +1,45 @@
+=== NordicFleet data integrity verification ===
+User A: data-a-1779671439@nordicfleet.test
+User B: data-b-1779671439@nordicfleet.test
+
+[setup] Creating two test users…
+  A uid=xiG0FAZ2LOS3l5qlA3QANGyFCQx1
+  B uid=n10Sqtn96FU4F2rfz1vTegCeEzg2
+
+[1/5] CREATE operations
+  ✓ profile doc created with email
+  ✓ profile doc has role=athlete
+  ✓ ski has 14 fields written
+  ✓ ski retired=false by default
+  ✓ wax log glideWaxes length matches glideLayers (2)
+  ✓ classic test log: stabilityRating null
+  ✓ classic test log: kickRating preserved
+
+[2/5] READ operations
+  ✓ list skis returns 1 doc
+  ✓ get nonexistent profile returns 403 (service maps to null)
+  ✓ wax-logs filter by skiId returns only matching
+
+[3/5] UPDATE operations
+  ✓ PATCH weight=72 succeeded
+  ✓ PATCH preserved role
+  ✓ ski update bumped updateTime (2026-05-25T01:10:41.419990Z → 2026-05-25T01:10:44.323185Z)
+
+[4/5] DELETE operations
+  ✓ soft delete: retired flag set true, doc still exists
+  ✓ soft-deleted ski's wax logs remain (history preserved)
+  ✓ hard delete returns 200
+  ✓ after hard delete, GET returns 404
+
+[5/5] SECURITY rules
+  ✓ unauthenticated request denied (403)
+  ✓ User B cannot read User A's athlete profile
+  ✓ User B cannot write to User A's skis
+  ✓ coach lookup by email returns the coach doc
+
+[6/6] OFFLINE persistence (code-level — verified via grep)
+  ✓ src/services/firebase.js enables persistence with CACHE_SIZE_UNLIMITED
+
+==============================
+Passed: 22, Failed: 0
+==============================
