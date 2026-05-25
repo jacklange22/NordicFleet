@@ -3,7 +3,7 @@
 // each Firestore ski doc stores a `seedId` matching its source JSON id; we
 // skip any whose seedId is already present.
 
-import seedData from '../seedData.json';
+import {seedData} from '@nordicfleet/core';
 import {listSkis, createSki} from './skiService';
 
 /**
