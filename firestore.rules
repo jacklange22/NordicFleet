@@ -45,5 +45,68 @@ service cloud.firestore {
         allow write: if isOwner(uid);
       }
     }
+
+    // Coach acceptance — top-level collection so the coach can query
+    // "requests for me" without touching the athlete's user doc tree.
+    match /coachRequests/{requestId} {
+      // Either party in the request can read it.
+      allow read: if request.auth != null
+        && (request.auth.uid == resource.data.athleteUid
+            || request.auth.uid == resource.data.coachUid);
+
+      // Athletes create new requests targeting a coach. They must be
+      // the one signing the request and the doc must start as 'pending'.
+      allow create: if request.auth != null
+        && request.auth.uid == request.resource.data.athleteUid
+        && request.resource.data.status == 'pending';
+
+      // Two state transitions are allowed via update:
+      //  - The athlete cancels their own pending request → 'cancelled'.
+      //  - The coach accepts or declines a pending request →
+      //    'accepted' / 'declined'.
+      // Once a request is in a terminal state ('accepted', 'declined',
+      // 'cancelled', 'ended'), it can also transition 'accepted' → 'ended'
+      // by either party (mutual unlink).
+      allow update: if request.auth != null
+        && (
+          (request.auth.uid == resource.data.athleteUid
+            && resource.data.status == 'pending'
+            && request.resource.data.status == 'cancelled')
+          ||
+          (request.auth.uid == resource.data.coachUid
+            && resource.data.status == 'pending'
+            && (request.resource.data.status == 'accepted'
+                || request.resource.data.status == 'declined'))
+          ||
+          ((request.auth.uid == resource.data.athleteUid
+            || request.auth.uid == resource.data.coachUid)
+            && resource.data.status == 'accepted'
+            && request.resource.data.status == 'ended')
+        );
+
+      // No client-side delete — requests are an audit log.
+      allow delete: if false;
+    }
+
+    // In-app messages — coach → athlete only. The coach must currently
+    // be the athlete's linked coach at create time (rules check
+    // users/{athleteUid}.coachId == request.auth.uid).
+    match /messages/{messageId} {
+      allow read: if request.auth != null
+        && (request.auth.uid == resource.data.fromUid
+            || request.auth.uid == resource.data.toUid);
+
+      allow create: if request.auth != null
+        && request.auth.uid == request.resource.data.fromUid
+        && exists(/databases/$(database)/documents/users/$(request.resource.data.toUid))
+        && get(/databases/$(database)/documents/users/$(request.resource.data.toUid)).data.coachId == request.auth.uid;
+
+      // Athlete can mark a message read; nothing else.
+      allow update: if request.auth != null
+        && request.auth.uid == resource.data.toUid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read', 'updatedAt']);
+
+      allow delete: if false;
+    }
   }
 }

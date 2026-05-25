@@ -91,6 +91,15 @@ function querySnapshot(path, filters = [], orderBy = null) {
       if (op === '>=') {
         return v >= val;
       }
+      if (op === 'in') {
+        return Array.isArray(val) && val.includes(v);
+      }
+      if (op === 'not-in') {
+        return Array.isArray(val) && !val.includes(v);
+      }
+      if (op === 'array-contains') {
+        return Array.isArray(v) && v.includes(val);
+      }
       return false;
     });
   }

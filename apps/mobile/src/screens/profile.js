@@ -24,11 +24,16 @@ import useSkis from '../hooks/useSkis';
 import useDashboardStats from '../hooks/useDashboardStats';
 import {
   updateProfile,
-  setCoachByEmail,
   removeCoach,
   getProfile,
   deleteAccount,
 } from '../services/userService';
+import {
+  requestCoach,
+  cancelRequest,
+  subscribeOutgoingRequestsForAthlete,
+  syncCoachIdFromRequests,
+} from '../services/coachRequestService';
 import {auth} from '../services/firebase';
 import {
   Header,
@@ -95,6 +100,30 @@ const ProfileScreen = () => {
   const [coachError, setCoachError] = useState('');
   const [coachSubmitting, setCoachSubmitting] = useState(false);
   const [coachProfile, setCoachProfile] = useState(null);
+  const [outgoingRequests, setOutgoingRequests] = useState([]);
+
+  // Subscribe to the athlete's outgoing coach requests so the UI can
+  // show pending / declined banners and so we can compensate the
+  // accepted-cross-doc-write that Firestore rules don't let the coach
+  // do directly. (See NOTES.md "Coach-acceptance flow".)
+  useEffect(() => {
+    if (!uid) {
+      setOutgoingRequests([]);
+      return;
+    }
+    return subscribeOutgoingRequestsForAthlete(uid, list => {
+      setOutgoingRequests(list);
+      // When a request transitions to accepted/ended, the athlete writes
+      // its own coachId. Best-effort — failures are ignored (the next
+      // snapshot fires the same path).
+      syncCoachIdFromRequests(uid, list).catch(() => {});
+    });
+  }, [uid]);
+
+  const pendingOutgoing = outgoingRequests.find(r => r.status === 'pending');
+  const declinedOutgoing = outgoingRequests
+    .filter(r => r.status === 'declined')
+    .sort((a, b) => (b.updatedAt?.seconds || 0) - (a.updatedAt?.seconds || 0))[0];
 
   // Delete account flow (App Store guideline 5.1.1(v)).
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -202,13 +231,14 @@ const ProfileScreen = () => {
     }
     setCoachSubmitting(true);
     try {
-      await setCoachByEmail(uid, trimmed);
+      const myEmail = profile?.email || user?.email || '';
+      await requestCoach(uid, myEmail, trimmed);
       Toast.show({
         type: 'success',
-        text1: 'Coach added',
-        text2: trimmed,
+        text1: 'Request sent',
+        text2: 'Your coach will see it on their dashboard.',
         position: 'top',
-        visibilityTime: 2200,
+        visibilityTime: 2400,
       });
       closeCoachModal();
     } catch (err) {
@@ -219,13 +249,47 @@ const ProfileScreen = () => {
         );
       } else if (code === 'coach/self-link') {
         setCoachError('You cannot be your own coach.');
+      } else if (code === 'coach/already-requested') {
+        setCoachError(
+          'You already have a pending or active request with this coach.',
+        );
       } else {
-        setCoachError("Couldn't add coach, please try again.");
+        setCoachError("Couldn't send request, please try again.");
       }
     } finally {
       setCoachSubmitting(false);
     }
-  }, [coachEmailInput, uid, closeCoachModal]);
+  }, [coachEmailInput, uid, closeCoachModal, profile?.email, user?.email]);
+
+  const handleCancelRequest = useCallback(() => {
+    if (!pendingOutgoing) {
+      return;
+    }
+    Alert.alert(
+      'Cancel request?',
+      `Cancel your pending request to ${pendingOutgoing.coachEmail}?`,
+      [
+        {text: 'Keep', style: 'cancel'},
+        {
+          text: 'Cancel request',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await cancelRequest(pendingOutgoing.id);
+              Toast.show({
+                type: 'success',
+                text1: 'Request cancelled',
+                position: 'top',
+                visibilityTime: 1800,
+              });
+            } catch (err) {
+              Alert.alert('Cancel failed', String(err.message || err));
+            }
+          },
+        },
+      ],
+    );
+  }, [pendingOutgoing]);
 
   const handleRemoveCoach = useCallback(() => {
     Alert.alert(
@@ -515,12 +579,47 @@ const ProfileScreen = () => {
                     />
                   </View>
                 </>
+              ) : pendingOutgoing ? (
+                <View style={styles.rowOuter}>
+                  <ListItem
+                    icon="hourglass-outline"
+                    iconColor={colors.warning}
+                    title="Request pending"
+                    subtitle={pendingOutgoing.coachEmail}
+                    right={<Text style={styles.editAction}>Cancel</Text>}
+                    onPress={handleCancelRequest}
+                    accessibilityLabel="Cancel pending coach request"
+                    chevron={false}
+                  />
+                </View>
+              ) : declinedOutgoing ? (
+                <>
+                  <View style={styles.rowOuter}>
+                    <ListItem
+                      icon="close-circle-outline"
+                      iconColor={colors.red}
+                      title="Request declined"
+                      subtitle={declinedOutgoing.coachEmail}
+                      chevron={false}
+                      showDivider
+                    />
+                  </View>
+                  <View style={styles.rowOuter}>
+                    <ListItem
+                      icon="add-circle-outline"
+                      title="Request another coach"
+                      subtitle="Try a different email"
+                      onPress={openCoachModal}
+                      accessibilityLabel="Add a coach"
+                    />
+                  </View>
+                </>
               ) : (
                 <View style={styles.rowOuter}>
                   <ListItem
                     icon="add-circle-outline"
                     title="Add a coach"
-                    subtitle="Share your fleet with a coach"
+                    subtitle="Send your coach a request"
                     onPress={openCoachModal}
                     accessibilityLabel="Add a coach"
                   />

@@ -12,8 +12,13 @@ import {SafeAreaView} from 'react-native-safe-area-context';
 import {useNavigation} from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
+import Toast from 'react-native-toast-message';
 import {useAuth} from '../context/AuthContext';
 import {subscribeAthletesForCoach} from '../services/userService';
+import {
+  subscribePendingRequestsForCoach,
+  respondToRequest,
+} from '../services/coachRequestService';
 import {
   Header,
   Card,
@@ -23,6 +28,7 @@ import {
   SectionHeader,
   EmptyState,
   TabBar,
+  Button,
 } from '../components/ui';
 import {colors, spacing, typography} from '../theme';
 
@@ -68,6 +74,8 @@ const CoachDashboardScreen = () => {
   const [athletes, setAthletes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [pendingRequests, setPendingRequests] = useState([]);
+  const [respondingId, setRespondingId] = useState(null);
 
   useEffect(() => {
     if (!uid) {
@@ -82,6 +90,37 @@ const CoachDashboardScreen = () => {
     });
     return unsub;
   }, [uid]);
+
+  useEffect(() => {
+    if (!uid) {
+      setPendingRequests([]);
+      return;
+    }
+    return subscribePendingRequestsForCoach(uid, setPendingRequests);
+  }, [uid]);
+
+  const handleRespond = async (requestId, accept) => {
+    setRespondingId(requestId);
+    try {
+      await respondToRequest(requestId, accept);
+      Toast.show({
+        type: 'success',
+        text1: accept ? 'Request accepted' : 'Request declined',
+        position: 'top',
+        visibilityTime: 1800,
+      });
+    } catch (err) {
+      Toast.show({
+        type: 'error',
+        text1: 'Action failed',
+        text2: String(err.message || err),
+        position: 'top',
+        visibilityTime: 2400,
+      });
+    } finally {
+      setRespondingId(null);
+    }
+  };
 
   const filtered = useMemo(() => {
     if (!searchTerm) {
@@ -123,6 +162,51 @@ const CoachDashboardScreen = () => {
           <StatCard compact value="—" label="Tests / wk" />
         </View>
       </View>
+      {pendingRequests.length > 0 && (
+        <>
+          <SectionHeader title="Pending requests" />
+          {pendingRequests.map(req => (
+            <Card key={req.id} style={styles.requestCard}>
+              <View style={styles.requestRow}>
+                <Avatar name={req.athleteEmail || 'Athlete'} size={40} />
+                <View style={styles.requestText}>
+                  <Text style={styles.athleteName} numberOfLines={1}>
+                    {req.athleteEmail}
+                  </Text>
+                  <Text style={styles.athleteEmail} numberOfLines={1}>
+                    Wants you as their coach
+                  </Text>
+                </View>
+              </View>
+              <View style={styles.requestActions}>
+                <View style={styles.requestActionCell}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    fullWidth
+                    disabled={respondingId === req.id}
+                    onPress={() => handleRespond(req.id, false)}
+                    accessibilityLabel={`Decline ${req.athleteEmail}`}>
+                    Decline
+                  </Button>
+                </View>
+                <View style={styles.requestActionCell}>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    fullWidth
+                    icon="checkmark"
+                    loading={respondingId === req.id}
+                    onPress={() => handleRespond(req.id, true)}
+                    accessibilityLabel={`Accept ${req.athleteEmail}`}>
+                    Accept
+                  </Button>
+                </View>
+              </View>
+            </Card>
+          ))}
+        </>
+      )}
       <SectionHeader title="Athletes" />
       <Input
         label="Search athletes"
@@ -240,6 +324,25 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   rowSpacer: {height: spacing.md},
+  requestCard: {
+    marginBottom: spacing.md,
+  },
+  requestRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  requestText: {
+    flex: 1,
+    marginLeft: spacing.md,
+  },
+  requestActions: {
+    flexDirection: 'row',
+  },
+  requestActionCell: {
+    flex: 1,
+    marginHorizontal: spacing.xs,
+  },
   noMatchWrap: {
     alignItems: 'center',
     paddingVertical: spacing['3xl'],
