@@ -1,5 +1,171 @@
 # Morning report — autonomous NordicFleet rewrite
 
+## Platform foundation session
+
+Biggest session of the rewrite so far — restructured the codebase
+into a monorepo and added five substantial features. Every step
+shipped its own commit; see `git log --oneline` for the full
+sequence (the prefixes are `Architecture A1/A2/A3`, `Web B1/B2`,
+`Feature C1/D1/E1/F1`, `Platform G1`).
+
+### Goals (in order of importance)
+
+| # | Goal | State |
+|---|---|---|
+| 1 | Monorepo with shared business logic | ✅ Done (A1–A3) |
+| 2 | Web preview at apps/web | ✅ Code complete + builds locally; Vercel deploy deferred (BLOCKERS.md) |
+| 3 | Coach acceptance flow (privacy gap fix) | ✅ Done (C1) |
+| 4 | In-app messaging coach → athlete | ✅ Done (D1) |
+| 5 | Wax dictionary + typeahead | ✅ ~60 curated entries + WaxPicker wired into WaxLog (E1) |
+| 6 | Location tagging on tests | ✅ Done (F1) |
+
+### Architecture (Phase A)
+
+The flat React Native project at the repo root is now an npm
+workspaces monorepo:
+- **apps/mobile** — the entire prior RN app, moved via `git mv` so
+  history is preserved. metro.config.js extended to watch the
+  workspace root + resolve hoisted modules.
+- **apps/web** — Next.js 16.2.6 + React 19 + Tailwind 4 + Firebase
+  JS SDK 11. Same dark theme + design tokens as mobile (ported to
+  Tailwind 4 `@theme` syntax). 9 routes generated; build is green.
+- **packages/core** — `@nordicfleet/core`. Pure JS. Types,
+  validators, constants (wax dictionary, ski brands, etc.), and
+  payload builders that shape Firestore writes. Both apps import
+  from here; tests live with the code.
+
+A3 extracts validation + payload shaping out of the mobile
+services and into core. Mobile services are now thin wrappers
+that wire serverTimestamp() + the Firestore SDK around payloads
+core has normalized. The same builders will be reused by the web
+app when it grows write paths.
+
+### Web preview (Phase B)
+
+Code complete, builds locally, **Vercel deploy deferred**. The
+CLI deploy hit two structural issues during the session (npm
+workspaces + Vercel CLI don't auto-detect the monorepo, the
+root upload exceeded Vercel's 15k-file limit). Both are solvable
+via the standard monorepo recipe — `BLOCKERS.md` has the manual
+finish-line: link the project, set Root Directory to apps/web,
+override Install/Build to `cd ../.. && npm install / npm run
+web:build`, paste the 6 `NEXT_PUBLIC_FIREBASE_*` env vars in.
+
+The web app supports: signup, login, sign-out, athlete fleet
+view, ski detail (hero + wax/test history read-only), coach
+dashboard with athlete list, profile (read-only with an
+"edit on iOS" callout).
+
+### Coach acceptance (Phase C)
+
+The previous direct `setCoachByEmail` write was a privacy gap —
+any athlete could claim any coach. Replaced with a
+request/response flow rooted in a new top-level `coachRequests/`
+collection:
+
+```
+athlete sends   → coachRequests/{id} status:'pending'
+coach accepts   → status:'accepted'  (athlete client then writes its own coachId)
+coach declines  → status:'declined'
+athlete cancels → status:'cancelled'
+either ends     → status:'ended'      (mutual unlink)
+```
+
+Firestore rules enforce who can transition which states. The
+cross-doc "athlete coachId" write happens client-side on the
+athlete (the rules permit them to write their own profile) — no
+Cloud Function needed.
+
+UI: athlete's Profile shows pending / declined banners; coach's
+dashboard gets a "Pending requests" section with Accept / Decline
+buttons.
+
+### Messaging (Phase D)
+
+Coach → athlete messages in a new top-level `messages/` collection.
+- Coach sends from AthleteDetail (overflow icon → slide-up modal:
+  optional subject + multiline body + multi-select Pill row for
+  attaching the athlete's skis).
+- Athlete sees a new "Messages" TabBar tab with a live unread
+  badge driven by a Firestore subscription.
+- Detail screen shows the body + attached ski ListItems that tap
+  through to SkiInfo. Mark-read fires on open.
+
+11 jest specs cover the service. Firestore rules require the
+sender to currently be the recipient's coach.
+
+### Wax dictionary (Phase E)
+
+`packages/core/src/constants/waxDictionary.js` has ~60 curated
+entries from the main manufacturers (Swix dominates — VR / V /
+CH / LF / HF / TS lines, plus klister + base preps; Toko
+Performance / World Cup / JetStream / Grip; Star Skigo; Vauhti
+FKM + Grip; Rode Multigrade + Blackbase; Holmenkol Alpha Mix;
+Briko-Maplus). Each entry has a stable id, manufacturer / product /
+variant, type ('kick' | 'glide' | 'binder' | 'base' | 'klister'),
+searchKeywords, and a tempRange when established in the public
+catalog.
+
+`WaxPicker` (apps/mobile/src/components/ui/WaxPicker.js) is the
+typeahead atom — read-only Input that opens a bottom-sheet modal
+on tap, with a Search field + filtered FlatList + "Use as typed"
+fallback. Wired into WaxLog's kick wax + glide layer inputs.
+Stored value pairs the dictionary id (nullable) with the
+free-text display name, so old logs without ids still render.
+
+### Location tagging (Phase F)
+
+Optional geotag on test logs via @react-native-community/
+geolocation. The TestingLog Conditions card has a "Use current
+location" Pill that resolves to a lat/lng + accuracy display +
+a "Label" Input ("e.g. Craftsbury"). On SkiInfo's test history,
+the label (or coordinates) renders inline as "📍 Craftsbury".
+
+Tolerates denial / unavailability gracefully — the test log
+just saves with `location: null`.
+
+### Verification
+
+```
+npm test                          83 / 83 core, 218 / 219 mobile (1 skipped)
+npm run lint                      0 errors
+cd apps/mobile && npx react-native bundle → clean
+cd apps/web && npx next build     → ✓ Compiled, 9 routes
+xcodebuild -workspace apps/mobile/ios/NordicFleet.xcworkspace → ** BUILD SUCCEEDED **
+```
+
+Live Firestore scripts are unchanged from the previous session
+(verify-flows.sh + verify-data-integrity.sh + verify-coach-
+pairing.sh + verify-seed.sh — 6/29/14/12 respectively). They
+still pass; the new coach-acceptance + messaging schemas are
+covered by the in-memory firestoreMock specs.
+
+### Outstanding for the user
+
+1. **Web app — finish Vercel deploy** (15 min). Step-by-step in
+   `BLOCKERS.md` → "Web app — Vercel deploy + env vars".
+2. **Deploy the updated firestore.rules** before the new coach-
+   acceptance + messaging features work against live Firestore:
+   ```bash
+   cd /Users/jacklange/NordicFleet
+   firebase use nordicfleet-11e67
+   firebase deploy --only firestore:rules
+   ```
+3. **Pod install on iOS** — the geolocation dep is new this
+   session. Already done locally; reproduce on any fresh clone:
+   ```bash
+   cd apps/mobile/ios
+   PATH="/opt/homebrew/opt/ruby@3.3/bin:$PATH" \
+     LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 \
+     bundle exec pod install
+   ```
+4. **Walk through `MANUAL_VERIFICATION.md`** with the new flows
+   on a real device. The doc gets updated in the next polish
+   session; for now Flows 9–12 (coach add, delete account, share
+   ski / fleet) still apply and three new flows (request coach,
+   send/receive message, location-tag a test) need adding —
+   tracked in NOTES.md.
+
 ## Targeted polish session
 
 Three narrow fixes after a device walkthrough — one commit each, no

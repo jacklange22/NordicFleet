@@ -1,89 +1,131 @@
 # NordicFleet
 
-iOS-only React Native app for cross-country ski fleet tracking. Built with React Native 0.73.6, JavaScript, React Navigation 6, and Firebase (Auth + Firestore) via `@react-native-firebase/*`.
+Cross-country ski fleet tracker. Athletes log waxes + tests on iOS;
+coaches see their athletes' fleets read-only; everyone gets a web
+preview at `apps/web`.
+
+Native iOS app (React Native 0.76) + Next.js 16 web preview + shared
+`@nordicfleet/core` business-logic package, organized as an npm
+workspaces monorepo.
 
 ## Quick start
 
 ```bash
-npm install
-cd ios && bundle install && bundle exec pod install && cd ..
+npm install                       # installs all workspaces
+npm test                          # core + mobile test suites
+npm run lint                      # both workspaces
+
+# iOS app
+cd apps/mobile/ios
+PATH="/opt/homebrew/opt/ruby@3.3/bin:$PATH" \
+  LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 \
+  bundle install
+PATH="/opt/homebrew/opt/ruby@3.3/bin:$PATH" \
+  LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 \
+  bundle exec pod install
+cd ../..
 npm run ios
+
+# Web preview
+cp apps/web/.env.local.example apps/web/.env.local   # fill in Firebase config
+npm run web:dev                                       # http://localhost:3000
+npm run web:build                                     # production build
 ```
 
-First-time setup requires Xcode and a Firebase project (see "Firebase setup" below).
+First-time setup requires Xcode 26.5 (iOS) and a Firebase project
+(see `BLOCKERS.md`).
 
-## Project structure
-
-```
-App.tsx                  Root: ErrorBoundary > AuthProvider > NavigationContainer
-src/
-  context/               React Context (AuthProvider, useAuth)
-  services/              Firestore + Auth service layer
-    firebase.js          Shared init; explicitly enables disk persistence
-    userService.js       getProfile, updateProfile, subscribeProfile, …
-    skiService.js        listSkis, createSki, updateSki, deleteSki (soft), subscribeSkis, subscribeSki, …
-    waxLogService.js     createWaxLog, listWaxLogsForSki, subscribeWaxLogsForSki, …
-    testLogService.js    createTestLog, listTestLogsForSki, subscribeTestLogsForSki, …
-    seed.js              Idempotent seedCurrentUser(uid) using seedId markers
-  components/            Stateless UI atoms (Dropdown, MultiSelectDropdown, Footer, etc.)
-  screens/               One file per route (Welcome, Login, Signup, Home, Profile, NewSki, SkiInfo, WaxLog, TestingLog, AuthLoading)
-  seedData.json          Sample-data source for the seed function
-__mocks__/               Jest mocks for @react-native-firebase/* and AsyncStorage
-firestore.rules          Per-user rules; only the owning uid can read or write their docs
-firebase.json            Points firestore CLI at firestore.rules
-```
-
-## How auth works
-
-`AuthProvider` (in `src/context/AuthContext.js`) wraps `<NavigationContainer>` and listens to `auth().onAuthStateChanged`. It exposes `{ user, loading, signIn, signUp, signOut }` via `useAuth()`. `AuthLoadingScreen` is the initial route — it renders a spinner while `loading`, then `navigation.replace`s into `Home` (if `user`) or `Welcome` (if not).
-
-Sign-up creates the user's Firestore profile doc as part of the flow. Errors are mapped to user-facing strings in `login.js` and `signup.js`.
-
-## Data model
+## Layout
 
 ```
-users/{uid}                              email, displayName, weight, height, team, location, createdAt, updatedAt
-  /skis/{skiId}                          name, brand, model, technique, type, build, base, grind, length, flex, year, notes, retired, seedId, createdAt, updatedAt
-  /waxLogs/{logId}                       skiId, date, binder, kickLayers, kickWax, glideLayers, glideWaxes[], notes, createdAt
-  /testLogs/{logId}                      skiId, date, temperature, humidity, snowType, surface, glideWax, kickWax, glideRating, kickRating, stabilityRating, climbingRating, notes, createdAt
+nordicfleet/
+├── apps/
+│   ├── mobile/                  React Native 0.76 iOS app
+│   │   ├── App.tsx              ErrorBoundary > AuthProvider > Stack
+│   │   ├── ios/                 Podfile, *.xcworkspace
+│   │   └── src/
+│   │       ├── context/         AuthContext
+│   │       ├── components/ui/   atoms (Card, Button, Input, Pill,
+│   │       │                    Header, TabBar, StatCard, Avatar,
+│   │       │                    EmptyState, ListItem, SectionHeader,
+│   │       │                    WaxPicker, …)
+│   │       ├── components/share/SkiShareCard, FleetShareCard
+│   │       ├── hooks/           useSkis, useProfile, useDashboardStats
+│   │       ├── screens/         Welcome, Login, Signup, ForgotPassword,
+│   │       │                    RoleSelect, Home, AddSki, SkiInfo,
+│   │       │                    WaxLog, TestingLog, Profile,
+│   │       │                    CoachDashboard, AthleteDetail,
+│   │       │                    Messages, MessageDetail
+│   │       ├── services/        skiService, waxLogService,
+│   │       │                    testLogService, userService,
+│   │       │                    coachRequestService, messageService,
+│   │       │                    locationService, shareService, seed
+│   │       └── theme/           design tokens
+│   └── web/                     Next.js 16 web preview
+│       └── src/
+│           ├── app/             /, /login, /signup, /home, /coach,
+│           │                    /profile, /ski/[id]
+│           ├── components/      Card, Button, Pill, StatCard,
+│           │                    SignedInGuard, SiteHeader
+│           └── lib/             firebase.js (lazy init), firestore.js
+├── packages/
+│   └── core/                    @nordicfleet/core — shared logic
+│       └── src/
+│           ├── types/           JSDoc typedefs + runtime enums
+│           ├── validation/      pure validators
+│           ├── constants/       skiBrands, snowTypes, surfaceTypes,
+│           │                    binderTypes, waxDictionary, seedData
+│           └── services/        payload builders
+├── scripts/                     verify-*.sh against live Firestore
+├── firestore.rules              shared security rules
+├── firebase.json
+├── verification-screenshots/    gitignored
+└── *.md                         BLOCKERS / MORNING_REPORT / NOTES /
+                                 LAUNCH_READINESS / DEVICE_INSTALL /
+                                 MANUAL_VERIFICATION
 ```
 
-Firestore disk persistence is enabled at app boot in `src/services/firebase.js`, so offline writes queue locally and replay when the device reconnects.
+## What's in `@nordicfleet/core`
 
-## Tests
+Pure JS — no React Native, no Firebase SDK dependencies. Both
+`apps/mobile` and `apps/web` import from here.
 
-```bash
-npm test                  # Jest, fully mocked Firebase
-npm test -- --coverage    # coverage report
-```
+- **types/** — JSDoc typedefs for Profile / Ski / WaxLog / TestLog /
+  Message / CoachRequest / Wax; runtime enums for SKI_TECHNIQUES,
+  SKI_TYPES, COACH_REQUEST_STATUSES, WAX_TYPES.
+- **validation/** — `isValidEmail`, `validatePassword`,
+  `validateSkiInput`, `validateWaxLogInput`, `validateTestLogInput`.
+- **constants/** — ski brands, snow types, surface types, binder
+  types, seed data JSON, curated wax dictionary (~60 entries from
+  Swix / Toko / Star / Vauhti / Rode / Holmenkol / Briko-Maplus)
+  with `searchWaxes` / `getWaxById` helpers.
+- **services/** — payload builders called before any Firestore
+  write: `buildSkiCreatePayload`, `buildSkiUpdatePayload`,
+  `buildWaxLogCreatePayload`, `buildTestLogCreatePayload`,
+  `buildCoachRequestCreatePayload`, `buildCoachRequestStatusPayload`,
+  `buildMessageCreatePayload`, `buildMarkReadPayload`.
 
-Tests use the in-memory Firestore mock in `__mocks__/@react-native-firebase/firestore.js`. Reset between tests with `firestoreMock.__resetFirestoreMock()`; seed with `__seedDoc(path, data)`.
+83 jest specs, all green.
 
-Auth tests reset with `authMock.__resetAuthMock()` and can seed a user with `__seedUser(email, password, uid)` or directly set the current user with `__setCurrentUser({...})`.
+## Firebase setup
 
-## Firebase setup (one-time)
+The project is `nordicfleet-11e67`. Required console state:
+1. Email/Password auth enabled.
+2. Firestore database created in production mode.
+3. `firestore.rules` deployed (see `BLOCKERS.md` for the command).
+4. A Web app registered in Project Settings → General → Your apps
+   (the values populate `apps/web/.env.local`).
 
-1. Make sure `ios/GoogleService-Info.plist` is present and the project name in `app.json`/`AppDelegate.mm` matches.
-2. In the Firebase console for the project:
-   - Authentication → Sign-in method → Email/Password → Enable.
-   - Firestore Database → Create database → Production mode.
-3. Deploy the rules:
-   ```bash
-   firebase deploy --only firestore:rules
-   ```
-   (or paste `firestore.rules` into the console under Firestore → Rules → Publish).
-4. The seed button on the Profile screen (visible in `__DEV__` builds) populates the current user with sample skis. It is idempotent.
+Run `./scripts/verify-flows.sh`, `./scripts/verify-data-integrity.sh`,
+`./scripts/verify-coach-pairing.sh`, and `./scripts/verify-seed.sh`
+to confirm the data layer end to end.
 
-## Lint
+## Documentation
 
-```bash
-npm run lint
-```
-
-## What's iOS-only
-
-The `android/` directory is shipped from the React Native template but the app is never built for Android. Do not bother with Gradle.
-
-## Notes from the rewrite
-
-See `NOTES.md` for design decisions and `BLOCKERS.md` for any outstanding items.
+- **`DEVICE_INSTALL.md`** — get the iOS app on your iPhone via a free
+  Apple ID in ~15 minutes.
+- **`MANUAL_VERIFICATION.md`** — UI walkthrough checklist.
+- **`MORNING_REPORT.md`** — latest-session summary on top.
+- **`LAUNCH_READINESS.md`** — honest shipping assessment.
+- **`NOTES.md`** — design decisions and trade-offs.
+- **`BLOCKERS.md`** — items requiring user action.

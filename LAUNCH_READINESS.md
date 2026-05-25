@@ -1,6 +1,7 @@
 # NordicFleet — Launch Readiness Assessment
 
-**Generated:** 2026-05-25 (updated after the targeted polish session)
+**Generated:** 2026-05-25 (updated after the platform foundation session)
+**Architecture:** npm-workspaces monorepo · apps/mobile (RN 0.76 iOS) · apps/web (Next.js 16 preview) · packages/core (shared business logic, pure JS)
 **Stack:** React Native 0.76.x · @react-native-firebase 21.x · Firebase iOS 11.x · Xcode 26.5 · Node 20.20 LTS
 **Branch:** `claude-rewrite`
 **Last commit before report:** `a523380 Docs F1: device install guide for free Apple ID path`
@@ -118,6 +119,11 @@ were not exercised against live Firebase in this session.
 | Minor | Numeric inputs lacked unit affordances | **Fixed** in commit `81843ef` (polish session). Length cm / flex kg / weight kg / height cm / temperature °C / humidity % suffixes on every relevant Input; keyboards tightened to `number-pad` or `decimal-pad`; SkiInfo hero displays now show units explicitly. |
 | App Store blocker | No way to delete account (guideline 5.1.1(v)) | **Implemented** in commit `88318f3 Feature C1`. Full reauth-then-delete flow with cascading subcollection cleanup. Live-verified by the new DELETE ACCOUNT section in `verify-data-integrity.sh` (29/29). |
 | Feature ask | Lighter-weight sharing than the coach relationship | **Implemented** in commit `25e4d26 Feature D1`. Native iOS share sheet of styled PNG snapshots of single-ski or full-fleet cards. |
+| Privacy gap | Athletes could unilaterally claim any coach | **Closed** in the platform session — new `coachRequests/` collection + accept/decline UI; existing rules + new request-state rules; client-side athlete-side coachId sync after acceptance. See NOTES.md. |
+| Feature ask | Coach → athlete messaging | **Implemented** in the platform session. Top-level `messages/` collection with ski-attachment support, live unread badge on the athlete TabBar. |
+| Feature ask | Structured wax dictionary | **Implemented** ~60 curated entries covering the main brands (Swix dominant). WaxPicker typeahead wired into WaxLog. Add more as they come up. |
+| Feature ask | Location tagging on tests | **Implemented** via @react-native-community/geolocation. Optional; degrades to null on denial. SkiInfo test history shows "📍 label" or coords. |
+| Platform | iOS-only flat repo wouldn't scale | **Restructured** to monorepo (apps/mobile + apps/web + packages/core). Shared types + validators + payload builders. Web preview deployable to Vercel. |
 
 ## Other gaps
 
@@ -232,23 +238,42 @@ Nothing critical unresolved.
 ## Test coverage snapshot
 
 ```
-Unit tests       : 187 / 188 pass  (1 skipped — App.test.tsx pre-existing)
-Lint             : 0 errors, 6 warnings  (pre-existing inline-style nits)
-JS bundle        : clean (npx react-native bundle)
-iOS build        : ** BUILD SUCCEEDED ** (Xcode 26.5 + new native modules)
-verify-flows.sh             :  6 /  6 pass  (happy path)
-verify-data-integrity.sh    : 29 / 29 pass  (incl. delete-account section)
-verify-coach-pairing.sh     : 14 / 14 pass
-verify-seed.sh              : 12 / 12 pass  (NEW — seed-clobber regression)
-UI screenshots              :  3 (Welcome / Home dashboard) + 12-flow manual checklist
+npm test                          83 / 83 core, 218 / 219 mobile (1 skipped)
+npm run lint                      0 errors, 6 pre-existing warnings
+npx react-native bundle           clean (apps/mobile)
+npx next build                    ✓ Compiled, 9 routes (apps/web)
+xcodebuild                        ** BUILD SUCCEEDED ** (Xcode 26.5)
+verify-flows.sh                    6 /  6
+verify-data-integrity.sh          29 / 29 (incl. delete-account section)
+verify-coach-pairing.sh           14 / 14
+verify-seed.sh                    12 / 12
 ```
 
 ## My recommendation
 
-**Install on your iPhone via DEVICE_INSTALL.md now. Walk through
-the 4 new flows in MANUAL_VERIFICATION.md (~5 min). After that the
-app is solid for personal use and ready to share with a small
-group.**
+**Install on your iPhone, deploy the updated rules + the web app,
+walk through the new flows. After that the platform is solid for
+personal use, the coach acceptance + messaging features are ready
+for a small-group beta, and the architecture supports comfortable
+feature work for the next ~year of solo development.**
+
+The platform foundation session changed the recommendation
+materially:
+1. The architecture is now actually a platform (monorepo,
+   shared core, clean module boundaries) rather than a flat RN
+   app — adding feature #7 doesn't require restructuring.
+2. The privacy gap (athletes claiming coaches without consent) is
+   closed at the data layer (Firestore rules) + UI layer.
+3. There's a deployable web preview for showing the product to
+   people who don't have iPhones.
+
+Before sharing with anyone, the user still needs to:
+- Deploy the updated `firestore.rules` (one command — see
+  BLOCKERS.md).
+- Finish the Vercel deploy (~15 min — also BLOCKERS.md).
+- Walk through `MANUAL_VERIFICATION.md` (which is now missing the
+  three new flows — request coach, send/receive message, location-
+  tag a test; tracked in NOTES.md as a next-session item).
 
 What's stronger than the last assessment:
 - The two user-reported bugs (seed clobber, add-coach no-op) are

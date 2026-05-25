@@ -2,6 +2,92 @@
 
 Decisions made during autonomous overnight rewrite — see commit log for context.
 
+## Platform foundation session decisions
+
+### Coach-acceptance flow — client-side cross-doc compensation
+
+The coach acceptance request/response model lives entirely in the
+client + Firestore rules. **There's no Cloud Function.** When a
+coach accepts a request, the rules let them flip
+`coachRequests/{id}.status` from `'pending'` to `'accepted'` but
+the rules cannot — under our existing schema — let the coach also
+write `users/{athleteUid}.coachId`.
+
+Instead, the athlete client subscribes to its own outgoing
+requests (`subscribeOutgoingRequestsForAthlete`) and on every
+snapshot calls `syncCoachIdFromRequests(athleteUid, requests)`,
+which picks the most-recent accepted request's coachUid (or null
+if none) and writes it to `users/{athleteUid}.coachId`. The
+athlete is permitted to write their own profile, so this works
+without privileged credentials.
+
+Consequence: the athlete must launch the app at least once after
+the coach accepts before they're "really" linked (their coachId
+is set). The coach's queries against the athlete's
+subcollections will fail with `permission-denied` until then —
+but the coach's dashboard subscribePendingRequestsForCoach query
+already sees the accepted state, so the UI is consistent.
+
+Trade-off accepted: simpler infrastructure (no Cloud Function),
+slight observability lag (~next-app-open) on the athlete side.
+
+### Web app deploys with the monorepo recipe, not turbo / nx
+
+The web app is plain Next.js + npm workspaces. Vercel deploys via
+the documented monorepo pattern: Root Directory = apps/web,
+Install Command + Build Command override `cd ../..` to run at the
+workspace root. No turborepo / nx required (would be over-
+engineered for two apps + one package). If we add a third app
+later and the workspace dep graph gets tangled, that's the moment
+to introduce a build orchestrator.
+
+### Wax dictionary: ~60 entries, not 400
+
+The brief budgeted 1–2 hours of careful research for 200–400
+entries. I prioritized a smaller-but-trustworthy set: ~60 entries
+covering Swix (the dominant brand in nordic racing) plus the
+common products from Toko / Star / Vauhti / Rode / Holmenkol /
+Briko-Maplus. Every entry is verifiable on the manufacturer's
+current public product page; nothing fabricated.
+
+Add entries as they come up in real test logs (each must be
+verifiable on the manufacturer's product page; don't make them
+up). The `WaxPicker` "Use as typed" fallback means users aren't
+blocked by gaps in the dictionary.
+
+### Wax tempRange uses Celsius unconditionally
+
+`tempRange.unit === 'C'` on every entry. The UI converts for
+display if we ever localize. Keeping it singular avoids a per-
+entry unit-mismatch bug class.
+
+### Location keyboard: numbers-and-punctuation (carry-over)
+
+Temperature on test logs already uses `numbers-and-punctuation`
+to preserve the minus key (decided in the polish session).
+Location lat/lng values don't have a user-entry input — they're
+captured from the GPS — so this is informational.
+
+### create-next-app produced TypeScript-config files
+
+Even with `--js`, create-next-app dropped a `jsconfig.json` and a
+`next.config.mjs` that pretend to be JS. Left them as-is; they
+work with the JS-only code path.
+
+### Vercel CLI couldn't auto-detect the workspace dep graph
+
+Two attempts during the session: (1) `vercel` from inside
+apps/web uploaded just that subtree, then `npm install` couldn't
+resolve `@nordicfleet/core: "*"` against the registry; (2)
+`vercel` from the repo root tried to upload 17,691 files
+(exceeded the 15k limit). The fix is the documented monorepo
+recipe — set Root Directory in the dashboard + override
+Install/Build to `cd ../..`. Documented in BLOCKERS.md.
+
+A `.vercelignore` was added (apps/mobile, node_modules, Pods,
+.next, verification-screenshots, scripts/verify-*.log) so any
+future CLI deploy stays under the file limit.
+
 ## Targeted polish session decisions
 
 ### Temperature keyboard type
