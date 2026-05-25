@@ -1,118 +1,225 @@
-# Manual verification checklist
+# Manual UI verification checklist
 
-The data layer is verified end-to-end by `scripts/verify-flows.sh`, which
-exercises Auth signup/signin, Firestore profile/ski/waxLog/testLog
-create+read+update, and cross-session persistence using the same REST
-APIs the React Native client uses. Run it any time with:
+The data layer is verified end-to-end by two automated scripts:
 
-```
-./scripts/verify-flows.sh
-```
-
-A passing run looks like the output committed in commit `Verify P2`.
+| Script | What it covers | Last run |
+|---|---|---|
+| `scripts/verify-flows.sh` | Happy-path REST round-trip of signup → ski → wax → test → profile-edit → sign-out / sign-in. | Re-run any time. |
+| `scripts/verify-data-integrity.sh` | 22 checks: CRUD edge cases, soft / hard delete, every security-rule positive & negative path. | See `scripts/verify-data-integrity.log`. **22/22 pass.** |
+| `scripts/verify-coach-pairing.sh` | 14 checks: full coach pair / unlink lifecycle, error paths for non-existent / non-coach emails. | See `scripts/verify-coach-pairing.log`. **14/14 pass.** |
 
 The UI rendering above the data layer needs you (the human) to tap
-through. The simulator is booted and the app is installed. To launch:
+through. Reliable programmatic taps on the simulator aren't available
+here, so use this checklist on the booted simulator.
 
+## Prerequisites
+
+1. The latest design is built and installed on the simulator. If you
+   haven't rebuilt since the Polish A1 commit:
+   ```bash
+   npm run ios
+   ```
+2. iOS Settings → Passwords → AutoFill Passwords → **on** (so you can
+   verify the autofill flow in Flow 2).
+3. The previous test user is signed out. If unsure, run:
+   ```bash
+   xcrun simctl uninstall booted com.NordicFleet.app
+   npm run ios
+   ```
+   to start from a clean install.
+
+Optional: screenshots of any step you want to capture go to
+`verification-screenshots/<step>.png` (gitignored). Use:
+```bash
+xcrun simctl io booted screenshot verification-screenshots/<name>.png
 ```
-xcrun simctl launch booted com.NordicFleet.app
-```
-
-Walk through the six flows below. Each step has a clear pass/fail
-criterion. If anything doesn't match the expected state, note it and
-file a bug.
-
-## Flow 1: Signup → Home (empty state)
-
-1. App opens to the **Welcome** screen — NordicFleet logo, "Welcome"
-   heading, red "Track now" button, "Already a member? Log in" link.
-2. Tap **Track now**.
-3. **Signup** screen loads. Three fields: Email, Password, Confirm
-   Password.
-4. Enter `e2e-ui-<your initials>-<timestamp>@nordicfleet.test`,
-   `Test1234!`, `Test1234!`.
-5. Tap **Sign up**.
-6. ✅ **PASS**: lands on the Home screen with the empty-state message
-   "No skis yet — tap the + to add your first."
-7. (Optional) Check the Firebase console for project `nordicfleet-11e67`
-   → Authentication → Users tab. New email is listed.
-   Firestore Database → users/{uid} document exists with that email.
-
-## Flow 2: Add ski → SkiInfo → Home
-
-1. From Home, tap the **+** (newSki) icon in the footer.
-2. **New Ski!** form appears.
-3. Fill in:
-   - Brand: Fischer (dropdown)
-   - Model: Speedmax
-   - Base: Plus
-   - Technique: Classic (dropdown)
-   - Type: cold (dropdown)
-   - Build: World Cup
-   - Grind: Universal
-   - Length: 200
-   - Name: Test Ski 1
-   - Flex: 90
-   - (Notes can stay empty.)
-4. Tap **Save**.
-5. ✅ **PASS**: navigates to **SkiInfo** screen showing "Test Ski 1" at
-   the top and all field values.
-6. Tap the home icon in the footer.
-7. ✅ **PASS**: Home shows "Test Ski 1" in the list.
-
-## Flow 3: Wax log creation
-
-1. From Home, tap the wax-log icon in the footer.
-2. **Waxing Log** screen.
-3. Tap **Select Skis Waxed** → multi-select dropdown → tap "Test Ski 1"
-   → tap **Done**.
-4. Wax input panel appears for the ski. Since technique is Classic,
-   you'll see binder, kick layers/wax, glide layers/waxes, notes.
-5. Set kick layers to 1, kick wax "VR40", glide layers to 2, glide
-   waxes "CH8" and "HF8", notes "test wax".
-6. Tap **Save**.
-7. ✅ **PASS**: navigates back to Home.
-8. Tap "Test Ski 1" → SkiInfo → **Wax History** section.
-9. ✅ **PASS**: shows one row with today's date and "CH8, HF8 + kick: VR40".
-
-## Flow 4: Test log creation
-
-1. From Home, tap the test-log icon (the notepad icon) in the footer.
-2. **Testing Log** screen.
-3. Snow → Choose one → "Old".
-4. Surface → Choose one → "Hardpack".
-5. **Select Skis Tested** → tap "Test Ski 1" → Done.
-6. Temperature: -5. Humidity: 70.
-7. Tests section: test input appears. Set glide wax "CH8", kick wax
-   "VR40", glide rating 8, kick rating 7.
-8. Tap **Save**.
-9. ✅ **PASS**: routes back to Home.
-10. Tap "Test Ski 1" → SkiInfo → **Test History**.
-11. ✅ **PASS**: shows one row with today's date and "Glide 8 / Kick 7 @ -5°C".
-
-## Flow 5: Profile edit
-
-1. From Home, tap the round profile button (top-right of the header).
-2. **Profile** screen. Email shown.
-3. Tap **Edit** next to Weight (kg).
-4. Modal appears with a text input.
-5. Type `72`.
-6. Tap **Save**.
-7. ✅ **PASS**: modal closes, Weight field shows "72".
-
-## Flow 6: Sign out → Sign in → data persists
-
-1. Profile → red **Sign out** button at the bottom.
-2. Confirm in the Alert.
-3. ✅ **PASS**: routes back to Welcome.
-4. Tap **Already a member? Log in**.
-5. Enter the same email and password you used in Flow 1.
-6. Tap **Login**.
-7. ✅ **PASS**: lands on Home with "Test Ski 1" still in the list.
-8. Tap "Test Ski 1" → SkiInfo → both Wax History and Test History rows
-   are still there.
 
 ---
 
-If any step fails, capture a screenshot via `xcrun simctl io booted
-screenshot /tmp/<step>.png` and share it with the development thread.
+## Flow 1: Signup → RoleSelect → Home
+
+1. App opens to the **Welcome** screen.
+   - NordicFleet logo, large "NordicFleet" title, subtitle ("Track and
+     manage your nordic skis like a pro team.").
+   - Three feature bullets with red-tinted icon badges.
+   - Red "Get started" primary button at the bottom, "I already have
+     an account" ghost link below it.
+2. Tap **Get started**.
+3. **Sign up** screen loads with floating-label inputs for Email,
+   Password, Confirm Password.
+4. Enter `e2e-ui-<your initials>-<timestamp>@nordicfleet.test`, a
+   strong password, and confirm.
+5. Tap **Sign up**.
+6. **Role select** appears. Two large tappable cards: Athlete and
+   Coach. Tap **Athlete**. The card border turns red and a
+   checkmark-circle shows in the corner.
+7. A "Link a coach (optional)" Input appears beneath. Leave it blank
+   for this flow.
+8. Tap **Continue**.
+9. ✅ **PASS**: Lands on the **Home** dashboard. Header shows "Welcome
+   back" + an Avatar. Three StatCards: Total skis = 0, Last wax = —,
+   Tests logged = 0. The empty state below reads "No skis in your
+   fleet yet" with a red "Add a ski" button.
+
+---
+
+## Flow 2: Sign in autofill (new in this session)
+
+1. From Home, tap the **Profile** tab in the bottom TabBar.
+2. Scroll to the bottom of Profile, tap the red **Sign out** ListItem.
+   Confirm the alert.
+3. Welcome screen. Tap **I already have an account**.
+4. **Sign in** screen. Tap the **Email** field.
+   - ✅ **PASS**: iOS keyboard's QuickType bar shows the saved email
+     from Flow 1 (only after you saved it in Settings during signup).
+5. Tap the **Password** field.
+   - ✅ **PASS**: iOS offers to autofill the saved password (Face ID
+     prompt on a real device; on the simulator, just tap the suggestion).
+6. ✅ **PASS**: Tap **Sign in** → lands on Home with the same Avatar.
+
+Notes:
+- The Forgot password? link below the password field navigates to a
+  **Reset password** screen. Try entering a non-existent email — you
+  should see "No account found with that email" inline. Entering a
+  valid email (use the one from Flow 1) shows the green check
+  confirmation screen.
+
+---
+
+## Flow 3: Add a ski
+
+1. Home → tap **+ Add ski** in the TabBar (or the Add-a-ski EmptyState
+   CTA if the fleet is empty).
+2. **Add ski** screen with the new sectioned form (Identity / Specs /
+   Setup / Notes) and a "Save" right action in the Header (greyed out
+   until valid).
+3. Identity:
+   - Ski name: `Test Ski 1`.
+   - Brand: tap the **Fischer** pill.
+   - Model: `Speedmax`.
+4. Specs:
+   - Technique pill: **Classic**.
+   - Type pill: **Cold**.
+   - Length: `200`. Flex: `90`.
+5. Setup: Base `Plus`, Build `World Cup`, Grind `Universal`.
+6. Tap the bottom **Save ski** button (or the right-side Save in the
+   Header).
+7. ✅ **PASS**: A green "Ski added" toast slides in from the top, and
+   the screen transitions to **SkiInfo** for the new ski.
+
+---
+
+## Flow 4: SkiInfo hero detail
+
+1. From the SkiInfo screen reached in Flow 3:
+   - Header: back chevron + ski name.
+   - Hero card: large ski name, technique + type outline pills, brand
+     ghost pill, then a 3-column Flex / Length / Grind mini-stat row.
+   - Two StatCards: "Times waxed" = 0, "Tests logged" = 0.
+   - Wax history section: empty card "No wax logs yet".
+   - Test history section: empty card "No tests yet".
+   - Notes section: "No notes yet".
+2. Tap the back chevron → return to Home → the new ski card is in the
+   fleet list with a red accent bar on the left.
+
+---
+
+## Flow 5: Log a wax
+
+1. Home → **Wax** tab.
+2. Step 1 card "Select skis" — tap the pill for **Test Ski 1**. It
+   turns solid red.
+3. Step 2: a per-ski card appears with the ski name + technique pill.
+   - Binder pill row: tap **VG Swix** (or another).
+   - Kick layers stepper: leave at 1. Kick wax: `VR40`.
+   - Glide layers stepper: set to 2. Glide layer 1: `CH8`. Glide layer
+     2: `HF8`.
+4. Notes: `test wax`.
+5. Tap **Save wax log** (or Save in the Header).
+6. ✅ **PASS**: Green "Wax logged" toast, returns to Home.
+7. Tap the ski card → SkiInfo → "Times waxed" StatCard is now 1, and a
+   ListItem appears under Wax history with today's date + "CH8, HF8 ·
+   Kick: VR40 · Binder: VG Swix".
+
+---
+
+## Flow 6: Log a test
+
+1. Home → **Test** tab.
+2. Conditions card: temperature `-5`, humidity `70`, snow pill
+   **Old**, surface pill **Hardpack**.
+3. Select skis: tap **Test Ski 1**.
+4. Ratings card appears: drag through the 1–10 numbered pills for
+   Glide (set to 8) and Kick (set to 7). Selected number lights red,
+   the big number in the row header echoes the value.
+5. Notes: `test ride`.
+6. Tap **Save test log**.
+7. ✅ **PASS**: Green "Test logged" toast, returns to Home.
+8. SkiInfo → "Tests logged" is now 1, Test history shows the new row
+   with a red rating badge.
+
+---
+
+## Flow 7: Profile edit + change password
+
+1. Profile tab.
+2. Hero shows Avatar (initials or photo), name, email. The three
+   StatCards row: Skis = 1, Wax logs = 1, Tests = 1.
+3. Personal info Card with ListItems for Weight / Height / Team /
+   Location, each with an "Edit" right action.
+4. Tap the **Weight (kg)** row.
+5. Modal: floating-label Input, type `72`, tap **Save**.
+6. ✅ **PASS**: Modal closes, row shows "72 kg", green "Profile
+   updated" toast slides in.
+7. Account section → **Change password** row → opens the reauth modal
+   with two password Inputs.
+   - The "Current password" field is keychain-aware (autofills the
+     existing password on real devices).
+   - The "New password" field offers strong-password generation in
+     real iOS (passwordRules attribute).
+8. Optional: walk through a password change end-to-end and verify
+   sign-out / sign-in still works with the new one.
+
+---
+
+## Flow 8: Coach flow
+
+This needs two separate accounts, easier on the simulator if you can
+reset the keychain between tries (`xcrun simctl uninstall booted
+com.NordicFleet.app && npm run ios`).
+
+### 8a. Coach side
+1. Welcome → Get started → Sign up with `coach-ui-<ts>@nordicfleet.test`
+   + password.
+2. RoleSelect → tap **Coach** → Continue.
+3. ✅ **PASS**: Lands on **My athletes** dashboard. EmptyState:
+   "No athletes yet — share your account email…".
+4. Sign out from Profile → Welcome.
+
+### 8b. Athlete side
+1. Sign up `athlete-ui-<ts>@nordicfleet.test`.
+2. RoleSelect → Athlete → in the coach-email input, type the coach
+   email from step 8a.1 → Continue.
+3. ✅ **PASS**: Lands on Home with the regular athlete TabBar.
+
+### 8c. Coach sees the new athlete
+1. Sign out, sign in as the coach.
+2. ✅ **PASS**: My athletes dashboard now shows one athlete card with
+   the athlete's email + Avatar.
+3. Tap the athlete card → **AthleteDetail** opens with the athlete's
+   name in the header, an Avatar in the header right slot, "Coach
+   view" subtitle, and an empty fleet state if the athlete hasn't
+   added skis yet.
+
+---
+
+## What to do if anything fails
+
+1. Capture a screenshot: `xcrun simctl io booted screenshot
+   verification-screenshots/<step>-fail.png`.
+2. Run the matching data-layer script to confirm whether the issue is
+   UI-only or also at the data layer:
+   - `./scripts/verify-flows.sh` for the basic CRUD path.
+   - `./scripts/verify-data-integrity.sh` for edge cases & rules.
+   - `./scripts/verify-coach-pairing.sh` for the coach flow.
+3. Note the failure and step number in this file or as a GitHub issue.

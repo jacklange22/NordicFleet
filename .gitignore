@@ -64,3 +64,6 @@ yarn-error.log
 
 # testing
 /coverage
+
+# Local UI verification screenshots (not for git)
+verification-screenshots/
