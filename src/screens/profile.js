@@ -1,4 +1,4 @@
-import React, {useState, useCallback, useEffect} from 'react';
+import React, {useState, useCallback, useEffect, useRef} from 'react';
 import {
   StyleSheet,
   View,
@@ -17,6 +17,8 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 
 import Toast from 'react-native-toast-message';
 import LoadingScreen from '../components/LoadingScreen';
+import {shareSnapshot} from '../services/shareService';
+import FleetShareCard from '../components/share/FleetShareCard';
 import {useAuth} from '../context/AuthContext';
 import useProfile from '../hooks/useProfile';
 import useSkis from '../hooks/useSkis';
@@ -99,6 +101,30 @@ const ProfileScreen = () => {
   const [deletePw, setDeletePw] = useState('');
   const [deleteError, setDeleteError] = useState('');
   const [deleteSubmitting, setDeleteSubmitting] = useState(false);
+
+  // Share fleet flow.
+  const [sharing, setSharing] = useState(false);
+  const fleetShareRef = useRef(null);
+
+  const handleShareFleet = useCallback(async () => {
+    setSharing(true);
+    try {
+      await shareSnapshot(fleetShareRef, 'my_fleet', {
+        title: 'My fleet · NordicFleet',
+        message: 'My ski fleet — shared from NordicFleet',
+      });
+    } catch (err) {
+      Toast.show({
+        type: 'error',
+        text1: 'Share failed',
+        text2: String(err.message || err),
+        position: 'top',
+        visibilityTime: 2200,
+      });
+    } finally {
+      setSharing(false);
+    }
+  }, []);
 
   // When the athlete profile has a coachId, fetch the coach's profile
   // (rules allow any auth'd user to read role=='coach' docs).
@@ -551,6 +577,18 @@ const ProfileScreen = () => {
               showDivider
             />
           </View>
+          {!isCoach && (
+            <View style={styles.rowOuter}>
+              <ListItem
+                icon="share-outline"
+                title="Share my fleet"
+                subtitle={sharing ? 'Preparing image…' : 'Send a snapshot of your skis'}
+                onPress={handleShareFleet}
+                accessibilityLabel="Share my fleet"
+                showDivider
+              />
+            </View>
+          )}
           <View style={styles.rowOuter}>
             <ListItem
               icon="log-out-outline"
@@ -831,6 +869,19 @@ const ProfileScreen = () => {
         </KeyboardAvoidingView>
       </Modal>
 
+      {/* Off-screen fleet share card for snapshot capture. */}
+      {!isCoach && (
+        <View pointerEvents="none" style={styles.shareCardHost}>
+          <FleetShareCard
+            ref={fleetShareRef}
+            profile={profile}
+            skis={skis}
+            totalWaxes={totalWaxes}
+            totalTests={totalTests}
+          />
+        </View>
+      )}
+
       <TabBar role={role} />
     </SafeAreaView>
   );
@@ -907,6 +958,12 @@ const styles = StyleSheet.create({
   },
   modalActionCell: {flex: 1, marginHorizontal: spacing.xs},
   modalFieldSpacer: {height: spacing.md},
+  shareCardHost: {
+    position: 'absolute',
+    left: -10000,
+    top: 0,
+    opacity: 0,
+  },
 });
 
 export default ProfileScreen;

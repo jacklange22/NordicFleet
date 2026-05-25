@@ -63,8 +63,10 @@ describe('SkiInfo', () => {
     await waitFor(() => {
       expect(tree.getAllByText('Fischer Speedmax').length).toBeGreaterThan(0);
     });
-    expect(tree.getByText('Fischer')).toBeTruthy();
-    expect(tree.getByText('Universal')).toBeTruthy();
+    // Note: each field can appear twice — once in the visible UI, once
+    // in the off-screen SkiShareCard. Just assert "present at least once".
+    expect(tree.getAllByText('Fischer').length).toBeGreaterThan(0);
+    expect(tree.getAllByText('Universal').length).toBeGreaterThan(0);
     expect(tree.getByText('Some notes')).toBeTruthy();
   });
 
@@ -89,7 +91,8 @@ describe('SkiInfo', () => {
     await waitFor(() => {
       expect(tree.getAllByText('Speedmax').length).toBeGreaterThan(0);
     });
-    // CH6 is displayed in history detail (as part of the glide-wax list)
-    expect(tree.getByText(/CH6/)).toBeTruthy();
+    // CH6 is displayed in history detail (as part of the glide-wax
+    // list) AND on the off-screen SkiShareCard. Either match counts.
+    expect(tree.getAllByText(/CH6/).length).toBeGreaterThan(0);
   });
 });

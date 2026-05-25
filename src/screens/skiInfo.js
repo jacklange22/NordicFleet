@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from 'react';
+import React, {useState, useEffect, useRef, useCallback} from 'react';
 import {
   View,
   Text,
@@ -6,13 +6,18 @@ import {
   ScrollView,
   ActivityIndicator,
   StatusBar,
+  Pressable,
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
+import Ionicons from 'react-native-vector-icons/Ionicons';
+import Toast from 'react-native-toast-message';
 
 import {useAuth} from '../context/AuthContext';
 import {subscribeSki} from '../services/skiService';
 import {subscribeWaxLogsForSki} from '../services/waxLogService';
 import {subscribeTestLogsForSki} from '../services/testLogService';
+import {shareSnapshot} from '../services/shareService';
+import SkiShareCard from '../components/share/SkiShareCard';
 import {
   Header,
   Card,
@@ -125,6 +130,35 @@ const SkiInfo = ({route, navigation}) => {
   const [waxLogs, setWaxLogs] = useState([]);
   const [testLogs, setTestLogs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [sharing, setSharing] = useState(false);
+  const shareCardRef = useRef(null);
+
+  const handleShare = useCallback(async () => {
+    if (!ski) {
+      return;
+    }
+    setSharing(true);
+    try {
+      await shareSnapshot(
+        shareCardRef,
+        (ski.name || 'ski').replace(/\s+/g, '_').toLowerCase(),
+        {
+          title: `${ski.name || 'My ski'} · NordicFleet`,
+          message: `${ski.name || 'My ski'} — shared from NordicFleet`,
+        },
+      );
+    } catch (err) {
+      Toast.show({
+        type: 'error',
+        text1: 'Share failed',
+        text2: String(err.message || err),
+        position: 'top',
+        visibilityTime: 2200,
+      });
+    } finally {
+      setSharing(false);
+    }
+  }, [ski]);
 
   useEffect(() => {
     if (!uid || !skiId) {
@@ -227,7 +261,30 @@ const SkiInfo = ({route, navigation}) => {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <StatusBar barStyle="light-content" />
-      <Header title={ski.name || 'Ski'} />
+      <Header
+        title={ski.name || 'Ski'}
+        right={
+          !isCoachView ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Share ski"
+              onPress={handleShare}
+              disabled={sharing}
+              hitSlop={8}
+              style={({pressed}) => [
+                styles.shareBtn,
+                sharing && {opacity: 0.5},
+                pressed && {opacity: 0.6},
+              ]}>
+              <Ionicons
+                name="share-outline"
+                size={22}
+                color={colors.textPrimary}
+              />
+            </Pressable>
+          ) : undefined
+        }
+      />
       <ScrollView
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}>
@@ -369,6 +426,19 @@ const SkiInfo = ({route, navigation}) => {
           </Text>
         </Card>
       </ScrollView>
+
+      {/* Off-screen share card. Position it absolutely far off-screen
+          so it never blocks taps but stays in the render tree —
+          captureRef needs a mounted, laid-out View. */}
+      <View pointerEvents="none" style={styles.shareCardHost}>
+        <SkiShareCard
+          ref={shareCardRef}
+          ski={ski}
+          waxLogs={waxLogs}
+          testLogs={testLogs}
+        />
+      </View>
+
       {!isCoachView && <TabBar role="athlete" />}
     </SafeAreaView>
   );
@@ -498,6 +568,19 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: colors.textPrimary,
     lineHeight: 22,
+  },
+  shareBtn: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: -spacing.sm,
+  },
+  shareCardHost: {
+    position: 'absolute',
+    left: -10000,
+    top: 0,
+    opacity: 0,
   },
 });
 
