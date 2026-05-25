@@ -1,0 +1,6 @@
+framework module RNFBAnalytics {
+  umbrella header "RNFBAnalytics-umbrella.h"
+
+  export *
+  module * { export * }
+}

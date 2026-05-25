@@ -415,12 +415,12 @@ echo
 
 # ─── 7. Offline persistence config (code-level) ──────────────────────
 echo "[7/7] OFFLINE persistence (code-level — verified via grep)"
-if grep -q "persistence: true" src/services/firebase.js && \
-   grep -q "CACHE_SIZE_UNLIMITED" src/services/firebase.js; then
-  echo "  ✓ src/services/firebase.js enables persistence with CACHE_SIZE_UNLIMITED"
+if grep -q "persistence: true" apps/mobile/src/services/firebase.js && \
+   grep -q "CACHE_SIZE_UNLIMITED" apps/mobile/src/services/firebase.js; then
+  echo "  ✓ apps/mobile/src/services/firebase.js enables persistence with CACHE_SIZE_UNLIMITED"
   PASS_COUNT=$((PASS_COUNT + 1))
 else
-  echo "  ✗ persistence config missing in src/services/firebase.js"
+  echo "  ✗ persistence config missing in apps/mobile/src/services/firebase.js"
   FAIL_COUNT=$((FAIL_COUNT + 1))
 fi
 echo

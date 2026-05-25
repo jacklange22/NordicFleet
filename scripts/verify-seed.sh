@@ -68,7 +68,7 @@ print(','.join(out))
   python3 <<EOF >/tmp/seed-actions.json
 import json
 existing = set(filter(None, "$existing_seed_ids".split(',')))
-d = json.load(open('src/seedData.json'))
+d = json.load(open('apps/mobile/src/seedData.json'))
 to_create = []
 to_skip = []
 for ski in d['users'][0]['skis']:
