@@ -1,4 +1,4 @@
-import React, {useState, useCallback} from 'react';
+import React, {useState, useCallback, useEffect} from 'react';
 import {
   StyleSheet,
   View,
@@ -21,7 +21,12 @@ import {useAuth} from '../context/AuthContext';
 import useProfile from '../hooks/useProfile';
 import useSkis from '../hooks/useSkis';
 import useDashboardStats from '../hooks/useDashboardStats';
-import {updateProfile} from '../services/userService';
+import {
+  updateProfile,
+  setCoachByEmail,
+  removeCoach,
+  getProfile,
+} from '../services/userService';
 import {seedCurrentUser} from '../services/seed';
 import {auth} from '../services/firebase';
 import {
@@ -81,6 +86,32 @@ const ProfileScreen = () => {
   const [pwError, setPwError] = useState('');
   const [pwSubmitting, setPwSubmitting] = useState(false);
 
+  // Add / change coach flow.
+  const [coachModalOpen, setCoachModalOpen] = useState(false);
+  const [coachEmailInput, setCoachEmailInput] = useState('');
+  const [coachError, setCoachError] = useState('');
+  const [coachSubmitting, setCoachSubmitting] = useState(false);
+  const [coachProfile, setCoachProfile] = useState(null);
+
+  // When the athlete profile has a coachId, fetch the coach's profile
+  // (rules allow any auth'd user to read role=='coach' docs).
+  useEffect(() => {
+    const cId = profile?.coachId;
+    if (!cId) {
+      setCoachProfile(null);
+      return;
+    }
+    let cancelled = false;
+    getProfile(cId).then(p => {
+      if (!cancelled) {
+        setCoachProfile(p);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [profile?.coachId]);
+
   const openEdit = def => {
     const v = profile?.[def.key];
     setTempValue(v !== undefined && v !== null ? String(v) : '');
@@ -112,6 +143,84 @@ const ProfileScreen = () => {
       setEditField(null);
     }
   }, [editField, tempValue, uid]);
+
+  const openCoachModal = useCallback(() => {
+    setCoachEmailInput('');
+    setCoachError('');
+    setCoachModalOpen(true);
+  }, []);
+
+  const closeCoachModal = useCallback(() => {
+    setCoachModalOpen(false);
+    setCoachEmailInput('');
+    setCoachError('');
+  }, []);
+
+  const submitCoach = useCallback(async () => {
+    setCoachError('');
+    const trimmed = coachEmailInput.trim();
+    const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!EMAIL_RE.test(trimmed)) {
+      setCoachError('Please enter a valid email');
+      return;
+    }
+    if (!uid) {
+      setCoachError('Not signed in');
+      return;
+    }
+    setCoachSubmitting(true);
+    try {
+      await setCoachByEmail(uid, trimmed);
+      Toast.show({
+        type: 'success',
+        text1: 'Coach added',
+        text2: trimmed,
+        position: 'top',
+        visibilityTime: 2200,
+      });
+      closeCoachModal();
+    } catch (err) {
+      const code = err && err.code;
+      if (code === 'coach/not-found') {
+        setCoachError(
+          'No coach account found with that email. Make sure your coach has signed up first.',
+        );
+      } else if (code === 'coach/self-link') {
+        setCoachError('You cannot be your own coach.');
+      } else {
+        setCoachError("Couldn't add coach, please try again.");
+      }
+    } finally {
+      setCoachSubmitting(false);
+    }
+  }, [coachEmailInput, uid, closeCoachModal]);
+
+  const handleRemoveCoach = useCallback(() => {
+    Alert.alert(
+      'Remove coach?',
+      'Your coach will no longer be able to see your fleet.',
+      [
+        {text: 'Cancel', style: 'cancel'},
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await removeCoach(uid);
+              Toast.show({
+                type: 'success',
+                text1: 'Coach removed',
+                position: 'top',
+                visibilityTime: 1800,
+              });
+            } catch (err) {
+              Alert.alert('Remove failed', String(err.message || err));
+            }
+          },
+        },
+      ],
+    );
+  }, [uid]);
 
   const handleSignOut = useCallback(() => {
     Alert.alert('Sign out?', 'You will need to log in again next time.', [
@@ -288,36 +397,61 @@ const ProfileScreen = () => {
           <>
             <SectionHeader title="Coach" />
             <Card padding={0}>
-              <View style={styles.rowOuter}>
-                {profile?.coachUid ? (
-                  <ListItem
-                    leading={
-                      <Avatar
-                        name={profile.coachName || profile.coachEmail || ''}
-                        size={32}
-                      />
-                    }
-                    title={profile.coachName || profile.coachEmail || 'Coach'}
-                    subtitle={
-                      profile.coachEmail && profile.coachName
-                        ? profile.coachEmail
-                        : 'Linked coach'
-                    }
-                    right={<Text style={styles.editAction}>Change</Text>}
-                    onPress={() => {}}
-                    accessibilityLabel="Change coach"
-                    chevron={false}
-                  />
-                ) : (
+              {profile?.coachId ? (
+                <>
+                  <View style={styles.rowOuter}>
+                    <ListItem
+                      leading={
+                        <Avatar
+                          name={
+                            coachProfile?.displayName ||
+                            coachProfile?.email ||
+                            'Coach'
+                          }
+                          size={32}
+                        />
+                      }
+                      title={
+                        coachProfile?.displayName ||
+                        coachProfile?.email ||
+                        'Coach'
+                      }
+                      subtitle={
+                        coachProfile?.email &&
+                        coachProfile?.email !== coachProfile?.displayName
+                          ? coachProfile.email
+                          : 'Linked coach'
+                      }
+                      right={<Text style={styles.editAction}>Change</Text>}
+                      onPress={openCoachModal}
+                      accessibilityLabel="Change coach"
+                      chevron={false}
+                      showDivider
+                    />
+                  </View>
+                  <View style={styles.rowOuter}>
+                    <ListItem
+                      icon="close-circle-outline"
+                      iconColor={colors.red}
+                      title="Remove coach"
+                      destructive
+                      onPress={handleRemoveCoach}
+                      accessibilityLabel="Remove coach"
+                      chevron={false}
+                    />
+                  </View>
+                </>
+              ) : (
+                <View style={styles.rowOuter}>
                   <ListItem
                     icon="add-circle-outline"
                     title="Add a coach"
                     subtitle="Share your fleet with a coach"
-                    onPress={() => {}}
+                    onPress={openCoachModal}
                     accessibilityLabel="Add a coach"
                   />
-                )}
-              </View>
+                </View>
+              )}
             </Card>
           </>
         )}
@@ -481,6 +615,65 @@ const ProfileScreen = () => {
         </KeyboardAvoidingView>
       </Modal>
 
+      {/* Add / change coach modal */}
+      <Modal
+        animationType="fade"
+        transparent
+        visible={coachModalOpen}
+        onRequestClose={closeCoachModal}>
+        <KeyboardAvoidingView
+          style={styles.modalBackdrop}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>
+              {profile?.coachId ? 'Change coach' : 'Add a coach'}
+            </Text>
+            <Text style={styles.modalSubtitle}>
+              Enter your coach's email. They need to have signed up for a
+              NordicFleet coach account first.
+            </Text>
+            <View style={styles.modalFieldSpacer} />
+            <Input
+              label="Coach email"
+              icon="mail-outline"
+              value={coachEmailInput}
+              onChangeText={setCoachEmailInput}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+              autoComplete="email"
+              textContentType="emailAddress"
+              error={coachError || undefined}
+              editable={!coachSubmitting}
+            />
+            <View style={styles.modalActions}>
+              <View style={styles.modalActionCell}>
+                <Button
+                  variant="ghost"
+                  size="md"
+                  fullWidth
+                  disabled={coachSubmitting}
+                  onPress={closeCoachModal}>
+                  Cancel
+                </Button>
+              </View>
+              <View style={styles.modalActionCell}>
+                <Button
+                  variant="primary"
+                  size="md"
+                  fullWidth
+                  icon="checkmark"
+                  loading={coachSubmitting}
+                  onPress={submitCoach}
+                  accessibilityLabel="Save coach">
+                  Save
+                </Button>
+              </View>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
       <TabBar role={role} />
     </SafeAreaView>
   );
@@ -544,6 +737,12 @@ const styles = StyleSheet.create({
     ...typography.displayMd,
     color: colors.textPrimary,
     marginBottom: spacing.lg,
+  },
+  modalSubtitle: {
+    ...typography.body,
+    color: colors.textSecondary,
+    marginTop: -spacing.md,
+    marginBottom: spacing.sm,
   },
   modalActions: {
     flexDirection: 'row',
