@@ -1,4 +1,4 @@
-import React, {useEffect, useState, useCallback} from 'react';
+import React, {useEffect, useState, useCallback, useMemo} from 'react';
 import {
   View,
   Text,
@@ -6,13 +6,19 @@ import {
   FlatList,
   ActivityIndicator,
   StatusBar,
+  Modal,
+  Pressable,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useNavigation} from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import Toast from 'react-native-toast-message';
 
 import {useAuth} from '../context/AuthContext';
 import {subscribeSkisForAthlete} from '../services/skiService';
+import {sendMessage} from '../services/messageService';
 import {
   Header,
   Card,
@@ -21,6 +27,8 @@ import {
   StatCard,
   SectionHeader,
   EmptyState,
+  Input,
+  Button,
 } from '../components/ui';
 import {colors, radius, spacing, typography} from '../theme';
 
@@ -84,6 +92,56 @@ const AthleteDetailScreen = ({route}) => {
 
   const [skis, setSkis] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Send-message modal state.
+  const [msgOpen, setMsgOpen] = useState(false);
+  const [msgSubject, setMsgSubject] = useState('');
+  const [msgBody, setMsgBody] = useState('');
+  const [msgSkiIds, setMsgSkiIds] = useState([]);
+  const [msgError, setMsgError] = useState('');
+  const [msgSubmitting, setMsgSubmitting] = useState(false);
+
+  const toggleMsgSki = id =>
+    setMsgSkiIds(prev =>
+      prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id],
+    );
+
+  const closeMsgModal = () => {
+    setMsgOpen(false);
+    setMsgSubject('');
+    setMsgBody('');
+    setMsgSkiIds([]);
+    setMsgError('');
+  };
+
+  const submitMessage = async () => {
+    setMsgError('');
+    if (!msgBody.trim()) {
+      setMsgError('Write something before sending.');
+      return;
+    }
+    setMsgSubmitting(true);
+    try {
+      await sendMessage({
+        fromUid: coachUid,
+        toUid: athleteUid,
+        body: msgBody,
+        subject: msgSubject,
+        attachedSkiIds: msgSkiIds,
+      });
+      Toast.show({
+        type: 'success',
+        text1: 'Message sent',
+        position: 'top',
+        visibilityTime: 1800,
+      });
+      closeMsgModal();
+    } catch (err) {
+      setMsgError(String(err.message || err));
+    } finally {
+      setMsgSubmitting(false);
+    }
+  };
 
   useEffect(() => {
     if (!coachUid || !athleteUid) {
@@ -153,10 +211,21 @@ const AthleteDetailScreen = ({route}) => {
         title={headerLabel}
         subtitle="Coach view"
         right={
-          <Avatar
-            name={headerLabel}
-            size={32}
-          />
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Send message"
+            hitSlop={8}
+            onPress={() => setMsgOpen(true)}
+            style={({pressed}) => [
+              styles.headerAction,
+              pressed && {opacity: 0.6},
+            ]}>
+            <Ionicons
+              name="chatbubble-outline"
+              size={22}
+              color={colors.textPrimary}
+            />
+          </Pressable>
         }
       />
       {loading ? (
@@ -180,6 +249,84 @@ const AthleteDetailScreen = ({route}) => {
           }
         />
       )}
+
+      {/* Send-message modal */}
+      <Modal
+        animationType="slide"
+        transparent
+        visible={msgOpen}
+        onRequestClose={closeMsgModal}>
+        <KeyboardAvoidingView
+          style={styles.modalBackdrop}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Send a message</Text>
+            <Input
+              label="Subject (optional)"
+              icon="text-outline"
+              value={msgSubject}
+              onChangeText={setMsgSubject}
+              autoCapitalize="sentences"
+            />
+            <View style={styles.modalSpacer} />
+            <Input
+              label="Message"
+              icon="chatbubble-outline"
+              value={msgBody}
+              onChangeText={setMsgBody}
+              multiline
+              autoCapitalize="sentences"
+              error={msgError || undefined}
+            />
+            {skis.length > 0 && (
+              <>
+                <View style={styles.modalSpacer} />
+                <Text style={styles.modalLabel}>Attach skis (optional)</Text>
+                <View style={styles.attachChipRow}>
+                  {skis.map(ski => {
+                    const selected = msgSkiIds.includes(ski.id);
+                    return (
+                      <View key={ski.id} style={styles.attachChipWrap}>
+                        <Pill
+                          variant={selected ? 'solid' : 'outline'}
+                          color="red"
+                          onPress={() => toggleMsgSki(ski.id)}
+                          accessibilityLabel={`Attach ${ski.name}`}>
+                          {ski.name}
+                        </Pill>
+                      </View>
+                    );
+                  })}
+                </View>
+              </>
+            )}
+            <View style={styles.modalActions}>
+              <View style={styles.modalActionCell}>
+                <Button
+                  variant="ghost"
+                  size="md"
+                  fullWidth
+                  disabled={msgSubmitting}
+                  onPress={closeMsgModal}>
+                  Cancel
+                </Button>
+              </View>
+              <View style={styles.modalActionCell}>
+                <Button
+                  variant="primary"
+                  size="md"
+                  fullWidth
+                  icon="send-outline"
+                  loading={msgSubmitting}
+                  onPress={submitMessage}
+                  accessibilityLabel="Send the message">
+                  Send
+                </Button>
+              </View>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -256,6 +403,41 @@ const styles = StyleSheet.create({
     paddingRight: spacing.lg,
   },
   rowSpacer: {height: spacing.md},
+  headerAction: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: -spacing.sm,
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'flex-end',
+  },
+  modalCard: {
+    backgroundColor: colors.surfaceElevated,
+    borderTopLeftRadius: radius.xl,
+    borderTopRightRadius: radius.xl,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.xl,
+    paddingBottom: spacing['2xl'],
+  },
+  modalTitle: {
+    ...typography.displayMd,
+    color: colors.textPrimary,
+    marginBottom: spacing.lg,
+  },
+  modalSpacer: {height: spacing.md},
+  modalLabel: {
+    ...typography.caption,
+    color: colors.textTertiary,
+    marginBottom: spacing.sm,
+  },
+  attachChipRow: {flexDirection: 'row', flexWrap: 'wrap'},
+  attachChipWrap: {marginRight: spacing.sm, marginBottom: spacing.sm},
+  modalActions: {flexDirection: 'row', marginTop: spacing.xl},
+  modalActionCell: {flex: 1, marginHorizontal: spacing.xs},
 });
 
 export default AthleteDetailScreen;

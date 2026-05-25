@@ -18,6 +18,8 @@ import AddSkiForm from './src/screens/newSki.js';
 import RoleSelectScreen from './src/screens/roleSelect.js';
 import CoachDashboardScreen from './src/screens/coachDashboard.js';
 import AthleteDetailScreen from './src/screens/athleteDetail.js';
+import MessagesScreen from './src/screens/messages.js';
+import MessageDetailScreen from './src/screens/messageDetail.js';
 import {AuthProvider} from './src/context/AuthContext';
 import ErrorBoundary from './src/components/ErrorBoundary';
 import Toast from 'react-native-toast-message';
@@ -74,6 +76,11 @@ const App = () => {
               <Stack.Screen
                 name="AthleteDetail"
                 component={AthleteDetailScreen}
+              />
+              <Stack.Screen name="Messages" component={MessagesScreen} />
+              <Stack.Screen
+                name="MessageDetail"
+                component={MessageDetailScreen}
               />
             </Stack.Navigator>
           </NavigationContainer>
