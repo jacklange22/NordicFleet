@@ -1,26 +1,65 @@
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useMemo, useState} from 'react';
 import {
-  SafeAreaView,
   View,
   Text,
   StyleSheet,
   FlatList,
-  TouchableOpacity,
   ActivityIndicator,
+  StatusBar,
+  Pressable,
 } from 'react-native';
-import ProfileButton from '../components/profilebutton.js';
+import {SafeAreaView} from 'react-native-safe-area-context';
+import {useNavigation} from '@react-navigation/native';
+import Ionicons from 'react-native-vector-icons/Ionicons';
+
 import {useAuth} from '../context/AuthContext';
 import {subscribeAthletesForCoach} from '../services/userService';
-import {useNavigation} from '@react-navigation/native';
+import {
+  Header,
+  Card,
+  Avatar,
+  StatCard,
+  Input,
+  SectionHeader,
+  EmptyState,
+  TabBar,
+} from '../components/ui';
+import {colors, spacing, typography} from '../theme';
 
-/**
- * Coach dashboard — primary landing for users with role='coach'.
- * Lists every athlete linked via the coach's athleteIds.
- *
- * No new-ski / wax-log / test-log footer entries: coaches consume data,
- * they don't produce it. The only navigation out is to Profile (sign out)
- * or into an individual athlete's detail screen.
- */
+const AthleteCard = ({athlete, onPress}) => {
+  const name = athlete.displayName || athlete.email || athlete.uid;
+  return (
+    <Card
+      onPress={onPress}
+      accessibilityLabel={`Open ${name}`}
+      style={styles.athleteCard}>
+      <View style={styles.athleteRow}>
+        <Avatar name={name} size={40} />
+        <View style={styles.athleteMain}>
+          <Text style={styles.athleteName} numberOfLines={1}>
+            {name}
+          </Text>
+          {!!athlete.email && (
+            <Text style={styles.athleteEmail} numberOfLines={1}>
+              {athlete.email}
+            </Text>
+          )}
+          {!!athlete.team && (
+            <Text style={styles.athleteTeam} numberOfLines={1}>
+              {athlete.team}
+            </Text>
+          )}
+        </View>
+        <Ionicons
+          name="chevron-forward"
+          size={20}
+          color={colors.textTertiary}
+        />
+      </View>
+    </Card>
+  );
+};
+
 const CoachDashboardScreen = () => {
   const {user} = useAuth();
   const uid = user?.uid;
@@ -28,6 +67,7 @@ const CoachDashboardScreen = () => {
 
   const [athletes, setAthletes] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     if (!uid) {
@@ -43,127 +83,170 @@ const CoachDashboardScreen = () => {
     return unsub;
   }, [uid]);
 
-  const renderAthleteRow = ({item}) => (
-    <TouchableOpacity
-      accessibilityRole="button"
-      accessibilityLabel={`Open ${item.email || item.displayName || 'athlete'}`}
-      style={styles.athleteRow}
-      onPress={() =>
-        navigation.navigate('AthleteDetail', {
-          athleteUid: item.uid,
-          athleteEmail: item.email,
-          athleteName: item.displayName,
-        })
-      }>
-      <View style={styles.athleteInfo}>
-        <Text style={styles.athleteName}>
-          {item.displayName || item.email || item.uid}
-        </Text>
-        {!!item.team && <Text style={styles.athleteTeam}>{item.team}</Text>}
+  const filtered = useMemo(() => {
+    if (!searchTerm) {
+      return athletes;
+    }
+    const needle = searchTerm.toLowerCase();
+    return athletes.filter(a => {
+      const name = (a.displayName || '').toLowerCase();
+      const email = (a.email || '').toLowerCase();
+      const team = (a.team || '').toLowerCase();
+      return (
+        name.includes(needle) ||
+        email.includes(needle) ||
+        team.includes(needle)
+      );
+    });
+  }, [athletes, searchTerm]);
+
+  const openAthlete = athlete => {
+    navigation.navigate('AthleteDetail', {
+      athleteUid: athlete.uid,
+      athleteEmail: athlete.email,
+      athleteName: athlete.displayName,
+    });
+  };
+
+  const Heading = (
+    <View>
+      <View style={styles.statRow}>
+        <View style={styles.statCell}>
+          <StatCard compact value={athletes.length} label="Athletes" />
+        </View>
+        <View style={styles.statCellSpacer} />
+        <View style={styles.statCell}>
+          <StatCard compact value="—" label="Total skis" />
+        </View>
+        <View style={styles.statCellSpacer} />
+        <View style={styles.statCell}>
+          <StatCard compact value="—" label="Tests / wk" />
+        </View>
       </View>
-      <Text style={styles.arrow}>→</Text>
-    </TouchableOpacity>
+      <SectionHeader title="Athletes" />
+      <Input
+        label="Search athletes"
+        icon="search-outline"
+        value={searchTerm}
+        onChangeText={setSearchTerm}
+        autoCapitalize="none"
+      />
+      <View style={styles.afterSearch} />
+    </View>
   );
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.header}>
-        <Text style={styles.headerText}>My Athletes</Text>
-        <ProfileButton />
-      </View>
-
+    <SafeAreaView style={styles.safe} edges={['top']}>
+      <StatusBar barStyle="light-content" />
+      <Header
+        title="My athletes"
+        left={null}
+        right={
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Settings"
+            onPress={() => navigation.navigate('Profile')}
+            hitSlop={8}
+            style={({pressed}) => pressed && {opacity: 0.6}}>
+            <Ionicons
+              name="settings-outline"
+              size={22}
+              color={colors.textPrimary}
+            />
+          </Pressable>
+        }
+      />
       {loading ? (
-        <ActivityIndicator color="#fff" style={styles.loading} />
+        <View style={styles.loadingWrap}>
+          <ActivityIndicator color={colors.red} />
+        </View>
       ) : (
         <FlatList
-          style={styles.list}
-          data={athletes}
+          contentContainerStyle={styles.scroll}
+          data={filtered}
           keyExtractor={item => item.uid}
-          renderItem={renderAthleteRow}
+          renderItem={({item}) => (
+            <AthleteCard athlete={item} onPress={() => openAthlete(item)} />
+          )}
+          ListHeaderComponent={Heading}
+          ItemSeparatorComponent={Spacer}
           ListEmptyComponent={
-            <View style={styles.empty}>
-              <Text style={styles.emptyText}>No athletes yet.</Text>
-              <Text style={styles.emptySubText}>
-                Share your account email with athletes so they can add you as
-                their coach during signup.
-              </Text>
-            </View>
+            athletes.length === 0 ? (
+              <EmptyState
+                icon="people-outline"
+                title="No athletes yet"
+                description="Share your account email with athletes so they can add you as their coach during signup."
+              />
+            ) : (
+              <View style={styles.noMatchWrap}>
+                <Text style={styles.noMatchText}>
+                  No athletes match your search.
+                </Text>
+              </View>
+            )
           }
         />
       )}
+      <TabBar role="coach" />
     </SafeAreaView>
   );
 };
 
+const Spacer = () => <View style={styles.rowSpacer} />;
+
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#000',
+  safe: {flex: 1, backgroundColor: colors.bg},
+  scroll: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing['4xl'],
+    flexGrow: 1,
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  loadingWrap: {
+    flex: 1,
     alignItems: 'center',
-    paddingHorizontal: 16,
-    backgroundColor: '#282828',
-    height: 50,
+    justifyContent: 'center',
   },
-  headerText: {
-    fontSize: 24,
-    color: '#fff',
+  statRow: {
+    flexDirection: 'row',
+    marginBottom: spacing.md,
   },
-  loading: {
-    flex: 1,
-    marginTop: 40,
-  },
-  list: {
-    flex: 1,
-  },
+  statCell: {flex: 1},
+  statCellSpacer: {width: spacing.sm},
+
+  afterSearch: {height: spacing.lg},
+
+  athleteCard: {},
   athleteRow: {
-    backgroundColor: '#333',
-    padding: 20,
-    borderRadius: 10,
-    marginBottom: 12,
-    marginHorizontal: 16,
-    marginTop: 12,
-    borderWidth: 1,
-    borderColor: 'grey',
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
   },
-  athleteInfo: {
+  athleteMain: {
     flex: 1,
+    marginLeft: spacing.md,
   },
   athleteName: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '600',
+    ...typography.headingMd,
+    color: colors.textPrimary,
+  },
+  athleteEmail: {
+    ...typography.bodySm,
+    color: colors.textSecondary,
+    marginTop: 2,
   },
   athleteTeam: {
-    color: '#aaa',
-    fontSize: 13,
-    marginTop: 4,
+    ...typography.bodySm,
+    color: colors.textTertiary,
+    marginTop: 2,
   },
-  arrow: {
-    fontSize: 24,
-    color: 'white',
-    paddingHorizontal: 10,
-  },
-  empty: {
-    padding: 40,
+  rowSpacer: {height: spacing.md},
+  noMatchWrap: {
     alignItems: 'center',
+    paddingVertical: spacing['3xl'],
   },
-  emptyText: {
-    color: '#fff',
-    fontSize: 16,
-    fontStyle: 'italic',
-    marginBottom: 12,
-  },
-  emptySubText: {
-    color: '#888',
-    fontSize: 14,
-    textAlign: 'center',
+  noMatchText: {
+    ...typography.body,
+    color: colors.textTertiary,
   },
 });
 
