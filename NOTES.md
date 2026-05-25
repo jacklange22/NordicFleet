@@ -2,6 +2,24 @@
 
 Decisions made during autonomous overnight rewrite — see commit log for context.
 
+## Targeted polish session decisions
+
+### Temperature keyboard type
+
+The polish brief recommended `decimal-pad` for "decimal" numeric fields,
+listing temperature alongside weight and height. I overrode this for
+**temperature only** and kept `numbers-and-punctuation`.
+
+Reason: iOS `decimal-pad` is digits + the locale's decimal separator
+with no minus key. Nordic ski test temperatures are routinely negative
+(cold-snow conditions are often −5 °C to −15 °C). Removing the minus
+key would break the most common use case for that field.
+
+Weight and height stay on `decimal-pad` (the brief's
+recommendation) — negatives aren't meaningful there.
+Humidity moved to `number-pad` (whole numbers, 0–100).
+Length and flex moved to `number-pad` (whole numbers).
+
 ## Bug-fix + sharing session decisions
 
 ### Coach-side cascade on `deleteAccount`

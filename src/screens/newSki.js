@@ -238,8 +238,10 @@ const AddSkiForm = () => {
                 icon="resize-outline"
                 value={length}
                 onChangeText={setLength}
-                keyboardType="numeric"
+                keyboardType="number-pad"
                 suffix="cm"
+                autoCapitalize="none"
+                autoCorrect={false}
               />
             </View>
             <View style={styles.row2Spacer} />
@@ -249,8 +251,10 @@ const AddSkiForm = () => {
                 icon="pulse-outline"
                 value={flex}
                 onChangeText={setFlex}
-                keyboardType="numeric"
+                keyboardType="number-pad"
                 suffix="kg"
+                autoCapitalize="none"
+                autoCorrect={false}
               />
             </View>
           </View>

@@ -202,7 +202,7 @@ const styles = StyleSheet.create({
   },
   suffix: {
     ...typography.body,
-    color: colors.textTertiary,
+    color: colors.textSecondary,
     marginLeft: spacing.sm,
     fontWeight: '600',
   },

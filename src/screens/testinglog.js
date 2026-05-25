@@ -303,6 +303,8 @@ const TestingLogScreen = () => {
                       onChangeText={t => setCondition('temperature', t)}
                       keyboardType="numbers-and-punctuation"
                       suffix="°C"
+                      autoCapitalize="none"
+                      autoCorrect={false}
                     />
                   </View>
                   <View style={styles.row2Spacer} />
@@ -312,8 +314,10 @@ const TestingLogScreen = () => {
                       icon="water-outline"
                       value={conditions.humidity}
                       onChangeText={t => setCondition('humidity', t)}
-                      keyboardType="numeric"
+                      keyboardType="number-pad"
                       suffix="%"
+                      autoCapitalize="none"
+                      autoCorrect={false}
                     />
                   </View>
                 </View>

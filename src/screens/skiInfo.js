@@ -321,12 +321,16 @@ const SkiInfo = ({route, navigation}) => {
             <View style={styles.miniStatRow}>
               <View style={styles.miniStat}>
                 <Text style={styles.miniStatLabel}>Flex</Text>
-                <Text style={styles.miniStatValue}>{ski.flex ?? '—'}</Text>
+                <Text style={styles.miniStatValue}>
+                  {ski.flex !== null && ski.flex !== undefined && ski.flex !== ''
+                    ? `${ski.flex} kg`
+                    : '—'}
+                </Text>
               </View>
               <View style={styles.miniStat}>
                 <Text style={styles.miniStatLabel}>Length</Text>
                 <Text style={styles.miniStatValue}>
-                  {ski.length ? `${ski.length}cm` : '—'}
+                  {ski.length ? `${ski.length} cm` : '—'}
                 </Text>
               </View>
               <View style={styles.miniStat}>

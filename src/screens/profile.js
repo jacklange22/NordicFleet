@@ -51,9 +51,12 @@ const FIELD_DEFS = [
   {key: 'location', label: 'Location', icon: 'location-outline'},
 ];
 
+// Brief: decimal-pad for weight/height. iOS decimal-pad shows digits +
+// the locale's decimal separator (no minus sign — fine for these, since
+// negative weight/height isn't meaningful).
 const keyboardTypeFor = field => {
   if (NUMERIC_FIELDS.has(field)) {
-    return 'numeric';
+    return 'decimal-pad';
   }
   return 'default';
 };
@@ -596,20 +599,27 @@ const ProfileScreen = () => {
             <Text style={styles.modalTitle}>
               {editField ? `Edit ${editField.label}` : ''}
             </Text>
-            {editField && (
-              <Input
-                label={editField.label}
-                icon={editField.icon}
-                value={tempValue}
-                onChangeText={setTempValue}
-                keyboardType={keyboardTypeFor(editField.key)}
-                autoCapitalize={
-                  editField.key === 'location' || editField.key === 'team'
-                    ? 'words'
-                    : 'sentences'
-                }
-              />
-            )}
+            {editField && (() => {
+              const isNumeric = NUMERIC_FIELDS.has(editField.key);
+              return (
+                <Input
+                  label={editField.label}
+                  icon={editField.icon}
+                  value={tempValue}
+                  onChangeText={setTempValue}
+                  keyboardType={keyboardTypeFor(editField.key)}
+                  suffix={isNumeric ? (editField.suffix || '').trim() : undefined}
+                  autoCapitalize={
+                    isNumeric
+                      ? 'none'
+                      : editField.key === 'location' || editField.key === 'team'
+                      ? 'words'
+                      : 'sentences'
+                  }
+                  autoCorrect={!isNumeric}
+                />
+              );
+            })()}
             <View style={styles.modalActions}>
               <View style={styles.modalActionCell}>
                 <Button
