@@ -5,6 +5,24 @@ import {useNavigation, useRoute} from '@react-navigation/native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {colors, spacing, typography} from '../../theme';
 
+// Both useNavigation and useRoute throw when the component isn't inside a
+// NavigationContainer / Screen. Tests sometimes render screens standalone,
+// so wrap defensively — TabBar should degrade rather than crash.
+const useSafeNavigation = () => {
+  try {
+    return useNavigation();
+  } catch {
+    return null;
+  }
+};
+const useSafeRoute = () => {
+  try {
+    return useRoute();
+  } catch {
+    return null;
+  }
+};
+
 /**
  * Bottom tab bar with five entries for athletes, two for coaches.
  *
@@ -43,8 +61,8 @@ const COACH_TABS = [
 
 const TabBar = ({role = 'athlete'}) => {
   const insets = useSafeAreaInsets();
-  const navigation = useNavigation();
-  const route = useRoute();
+  const navigation = useSafeNavigation();
+  const route = useSafeRoute();
   const tabs = role === 'coach' ? COACH_TABS : ATHLETE_TABS;
 
   return (
@@ -54,7 +72,7 @@ const TabBar = ({role = 'athlete'}) => {
         {paddingBottom: Math.max(insets.bottom, spacing.sm)},
       ]}>
       {tabs.map(tab => {
-        const active = route.name === tab.route;
+        const active = route?.name === tab.route;
         const iconName = active ? tab.activeIcon : tab.icon;
         const color = active ? colors.red : colors.textTertiary;
         return (
@@ -64,7 +82,7 @@ const TabBar = ({role = 'athlete'}) => {
             accessibilityLabel={tab.label}
             accessibilityState={{selected: active}}
             onPress={() => {
-              if (!active) {
+              if (!active && navigation) {
                 navigation.navigate(tab.route);
               }
             }}

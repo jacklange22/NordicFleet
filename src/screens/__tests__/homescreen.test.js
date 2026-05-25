@@ -1,6 +1,7 @@
 import React from 'react';
 import {render, waitFor} from '@testing-library/react-native';
 import {NavigationContainer} from '@react-navigation/native';
+import {SafeAreaProvider} from 'react-native-safe-area-context';
 import authMock from '@react-native-firebase/auth';
 import firestoreMock from '@react-native-firebase/firestore';
 
@@ -12,13 +13,22 @@ beforeEach(() => {
   firestoreMock.__resetFirestoreMock();
 });
 
+// Provide initial safe-area metrics so TabBar's useSafeAreaInsets() resolves
+// synchronously instead of waiting for the native module.
+const SA_METRICS = {
+  frame: {x: 0, y: 0, width: 320, height: 640},
+  insets: {top: 0, left: 0, right: 0, bottom: 0},
+};
+
 const renderHome = () =>
   render(
-    <NavigationContainer>
-      <AuthProvider>
-        <HomeScreen />
-      </AuthProvider>
-    </NavigationContainer>,
+    <SafeAreaProvider initialMetrics={SA_METRICS}>
+      <NavigationContainer>
+        <AuthProvider>
+          <HomeScreen />
+        </AuthProvider>
+      </NavigationContainer>
+    </SafeAreaProvider>,
   );
 
 describe('HomeScreen', () => {
@@ -26,7 +36,7 @@ describe('HomeScreen', () => {
     authMock.__setCurrentUser({uid: 'u1', email: 'a@b.com'});
     const tree = renderHome();
     await waitFor(() =>
-      tree.getByText('No skis yet — tap the + to add your first.'),
+      tree.getByText('No skis in your fleet yet'),
     );
   });
 

@@ -11,8 +11,9 @@ import {colors, radius, spacing, typography} from '../../theme';
  *   label       short caption
  *   accent      'red' | 'success' | 'warning' | undefined
  *   compact     when true, uses displayLg instead of displayXl
+ *   valueStyle  extra style merged onto the value Text (e.g. shrink long strings)
  */
-const StatCard = ({value, label, accent, compact = false}) => {
+const StatCard = ({value, label, accent, compact = false, valueStyle}) => {
   const accentColor =
     accent === 'red'
       ? colors.red
@@ -29,6 +30,7 @@ const StatCard = ({value, label, accent, compact = false}) => {
           compact ? typography.displayLg : typography.displayXl,
           {color: accentColor},
           styles.value,
+          valueStyle,
         ]}
         accessibilityRole="text">
         {value}
