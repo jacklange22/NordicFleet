@@ -1,0 +1,19 @@
+# Mobile app — not needed for the web build. Keeps the Vercel upload
+# under the 15k-file limit.
+apps/mobile/
+
+# Build artifacts + caches
+**/node_modules/
+**/.next/
+**/out/
+
+# iOS / Android native
+**/ios/Pods/
+**/vendor/bundle/
+
+# Local env files (Vercel project env vars supply these)
+**/.env.local
+
+# Verification artifacts
+verification-screenshots/
+scripts/verify-*.log
