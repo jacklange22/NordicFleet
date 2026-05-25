@@ -12,9 +12,8 @@ import {SafeAreaView} from 'react-native-safe-area-context';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import {useAuth} from '../context/AuthContext';
 import {Header, Input, Button} from '../components/ui';
+import {isValidEmail} from '@nordicfleet/core';
 import {colors, spacing, typography} from '../theme';
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const mapResetError = code => {
   switch (code) {
@@ -41,7 +40,7 @@ const ForgotPasswordScreen = ({navigation}) => {
   const handleSubmit = async () => {
     setError('');
     const trimmed = email.trim();
-    if (!EMAIL_RE.test(trimmed)) {
+    if (!isValidEmail(trimmed)) {
       setError('Please enter a valid email');
       return;
     }

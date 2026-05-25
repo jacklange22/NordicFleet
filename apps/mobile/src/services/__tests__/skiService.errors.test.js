@@ -10,7 +10,11 @@ describe('skiService error paths', () => {
     const err = new Error('quota');
     err.code = 'resource-exhausted';
     firestoreMock.__injectError(err);
-    await expect(createSki('u1', {name: 'X'})).rejects.toThrow('quota');
+    // Pass a fully-valid input so validation lets the call through
+    // to Firestore, where the injected error fires.
+    await expect(
+      createSki('u1', {name: 'X', technique: 'classic', type: 'cold'}),
+    ).rejects.toThrow('quota');
   });
 
   it('updateSki rejects when set fails', async () => {

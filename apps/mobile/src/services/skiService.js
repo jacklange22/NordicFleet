@@ -1,3 +1,7 @@
+import {
+  buildSkiCreatePayload,
+  buildSkiUpdatePayload,
+} from '@nordicfleet/core';
 import {db, firestore} from './firebase';
 
 const skisCollection = uid =>
@@ -50,26 +54,11 @@ export async function createSki(uid, data) {
   if (!uid) {
     throw new Error('createSki: uid is required');
   }
+  // Validation + normalization lives in @nordicfleet/core so the web
+  // app applies the exact same rules. The platform-specific bit here
+  // is just the serverTimestamp fields.
   const payload = {
-    name: data.name || '',
-    brand: data.brand || '',
-    model: data.model || '',
-    technique: (data.technique || '').toLowerCase(),
-    type: (data.type || '').toLowerCase(),
-    build: data.build || '',
-    base: data.base || '',
-    grind: data.grind || '',
-    length:
-      data.length !== undefined && data.length !== ''
-        ? Number(data.length)
-        : null,
-    flex:
-      data.flex !== undefined && data.flex !== '' ? Number(data.flex) : null,
-    year: data.year ?? null,
-    notes: data.notes || '',
-    retired: data.retired || false,
-    // Preserve a seed identifier so seeding can stay idempotent.
-    seedId: data.seedId || null,
+    ...buildSkiCreatePayload(data),
     createdAt: firestore.FieldValue.serverTimestamp(),
     updatedAt: firestore.FieldValue.serverTimestamp(),
   };
@@ -88,8 +77,12 @@ export async function updateSki(uid, skiId, partial) {
   if (!uid || !skiId) {
     throw new Error('updateSki: uid and skiId required');
   }
+  // Empty / undefined partials are tolerated (no-op). Anything provided
+  // goes through the core builder for normalization. The `retired` field
+  // is special-cased because the soft-delete path passes just {retired}.
+  const normalized = buildSkiUpdatePayload(partial || {});
   await skiDoc(uid, skiId).set(
-    {...partial, updatedAt: firestore.FieldValue.serverTimestamp()},
+    {...normalized, updatedAt: firestore.FieldValue.serverTimestamp()},
     {merge: true},
   );
 }

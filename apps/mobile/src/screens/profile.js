@@ -14,6 +14,7 @@ import {SafeAreaView} from 'react-native-safe-area-context';
 import {useNavigation} from '@react-navigation/native';
 
 import Toast from 'react-native-toast-message';
+import {isValidEmail} from '@nordicfleet/core';
 import LoadingScreen from '../components/LoadingScreen';
 import {shareSnapshot} from '../services/shareService';
 import FleetShareCard from '../components/share/FleetShareCard';
@@ -191,8 +192,7 @@ const ProfileScreen = () => {
   const submitCoach = useCallback(async () => {
     setCoachError('');
     const trimmed = coachEmailInput.trim();
-    const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!EMAIL_RE.test(trimmed)) {
+    if (!isValidEmail(trimmed)) {
       setCoachError('Please enter a valid email');
       return;
     }

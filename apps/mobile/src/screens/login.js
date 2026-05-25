@@ -11,9 +11,8 @@ import {
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useAuth} from '../context/AuthContext';
 import {Header, Input, Button} from '../components/ui';
+import {isValidEmail} from '@nordicfleet/core';
 import {colors, spacing, typography} from '../theme';
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const mapAuthError = code => {
   switch (code) {
@@ -39,7 +38,7 @@ const LoginScreen = ({navigation}) => {
 
   const handleLogin = async () => {
     setError('');
-    if (!EMAIL_RE.test(email)) {
+    if (!isValidEmail(email)) {
       setError('Please enter a valid email');
       return;
     }

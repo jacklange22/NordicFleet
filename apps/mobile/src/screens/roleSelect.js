@@ -13,9 +13,8 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import {useAuth} from '../context/AuthContext';
 import {updateProfile, setCoachByEmail} from '../services/userService';
 import {Header, Card, Button, Input} from '../components/ui';
+import {isValidEmail} from '@nordicfleet/core';
 import {colors, spacing, typography} from '../theme';
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const RoleCard = ({icon, title, description, selected, onPress}) => (
   <Card
@@ -79,7 +78,7 @@ const RoleSelectScreen = ({navigation}) => {
 
       const trimmed = coachEmail.trim();
       if (trimmed) {
-        if (!EMAIL_RE.test(trimmed)) {
+        if (!isValidEmail(trimmed)) {
           setError('Please enter a valid email');
           setSubmitting(false);
           return;

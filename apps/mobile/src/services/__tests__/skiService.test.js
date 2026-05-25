@@ -75,10 +75,22 @@ describe('skiService', () => {
     });
 
     it('handles empty optional fields without coercing to NaN', async () => {
-      const id = await createSki('u1', {name: 'X', length: '', flex: ''});
+      const id = await createSki('u1', {
+        name: 'X',
+        technique: 'classic',
+        type: 'cold',
+        length: '',
+        flex: '',
+      });
       const ski = await getSki('u1', id);
       expect(ski.length).toBeNull();
       expect(ski.flex).toBeNull();
+    });
+
+    it('throws when technique is missing (validation in core)', async () => {
+      await expect(createSki('u1', {name: 'X'})).rejects.toThrow(
+        /Technique/,
+      );
     });
   });
 
