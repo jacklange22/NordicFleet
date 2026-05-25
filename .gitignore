@@ -69,6 +69,10 @@ apps/*/vendor/bundle/
 out/
 .vercel
 
+# Local env files (Firebase web SDK keys)
+.env.local
+**/.env.local
+
 # Temporary files created by Metro to check the health of the file watcher
 .metro-health-check*
 

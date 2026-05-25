@@ -1,0 +1,60 @@
+@import 'tailwindcss';
+
+/*
+ * NordicFleet design tokens, ported from apps/mobile/src/theme/index.js.
+ * Tailwind 4 uses the `@theme` block instead of a tailwind.config.js.
+ *
+ * Surface colors are near-black on purpose (#0A0A0A on OLED looks better
+ * than pure #000). Red is the brand accent. textSecondary / textTertiary
+ * give us two dim greys for hierarchy.
+ */
+@theme {
+  /* surfaces */
+  --color-bg: #0a0a0a;
+  --color-surface: #161616;
+  --color-surface-elevated: #1f1f1f;
+  --color-border: #262626;
+  --color-border-strong: #404040;
+
+  /* brand */
+  --color-red: #e53935;
+  --color-red-pressed: #c62828;
+  --color-red-dim: #7f1d1d;
+
+  /* text */
+  --color-text-primary: #ffffff;
+  --color-text-secondary: #a3a3a3;
+  --color-text-tertiary: #737373;
+
+  /* semantic */
+  --color-success: #22c55e;
+  --color-warning: #f59e0b;
+
+  /* radii */
+  --radius-card: 16px;
+  --radius-pill: 9999px;
+
+  /* fonts */
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui,
+    'Segoe UI', Roboto, sans-serif;
+  --font-display:
+    -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif;
+}
+
+html,
+body {
+  background: var(--color-bg);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  min-height: 100vh;
+}
+
+/* Tabular numerals on stat displays so digits don't jitter when counts update. */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
