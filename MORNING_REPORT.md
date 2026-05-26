@@ -1,5 +1,72 @@
 # Morning report — autonomous NordicFleet rewrite
 
+## Web sign-in fix session
+
+- **Root cause of sign-in failure**: `vercel env ls production`
+  reported zero env vars on the `nordicfleet-web` Vercel project, so
+  every prior build inlined `undefined` for the six
+  `NEXT_PUBLIC_FIREBASE_*` values. `getAuthClient()` returned null,
+  and the sign-in form was effectively a no-op in the browser.
+  Diagnosed by grep'ing the deployed JS chunks for the literal
+  project id — none present; instead the chunks contained
+  `t.default.env.NEXT_PUBLIC_FIREBASE_API_KEY` references, proving
+  Next.js DefinePlugin had nothing to substitute.
+- **Fix applied**:
+  1. Pushed all six `NEXT_PUBLIC_FIREBASE_*` env vars to the
+     `nordicfleet-web` project via `vercel env add ... production`.
+  2. Reinstated `vercel.json` at the workspace root with the
+     correct monorepo recipe (`buildCommand: cd ../.. && npm run
+     web:build`, `outputDirectory: .next` — Vercel scopes both
+     relative to the auto-detected Next.js framework root at
+     `apps/web`).
+  3. Tightened `.vercelignore` to exclude only the heavy parts of
+     `apps/mobile` (ios/, android/, Pods/, vendor/, .expo/,
+     .bundle/) so the workspace dep tree stays intact for
+     `npm install` while the upload stays under Vercel's 15k-file
+     limit.
+  4. `vercel --prod` → ✅ READY. Re-fetched the deployed chunks;
+     they now contain the literal project id `nordicfleet-11e67`
+     and an `AIzaSy...` API key inlined as build-time constants.
+  5. Confirmed the API key works server-side against
+     `identitytoolkit.googleapis.com/v1/accounts:signInWithPassword`
+     with a throwaway account.
+- **Forgot password flow added**: yes. `/forgot-password` route
+  with email Input, success state, and Firebase-error mapping
+  (same strings as the iOS app's `forgotPassword.js`). Login page
+  shows a right-aligned "Forgot password?" link below the password
+  field.
+- **Deployed URL verified**: production deployment READY at
+  `https://nordicfleet-web.vercel.app/`. `curl` on `/login` and
+  `/forgot-password` confirms both pages render with the expected
+  copy and `/login` links to `/forgot-password`. **Driving the
+  sign-in form end-to-end through a real browser is left to the
+  user** — I can't programmatically click submit + read the
+  response from this environment.
+- **What the user must verify manually**:
+  1. Open https://nordicfleet-web.vercel.app/login in a private
+     browser window.
+  2. Sign in with a known account → should route to /home.
+  3. Sign out, click "Forgot password?" → should land on
+     /forgot-password.
+  4. Enter a real email + click "Send reset link" → should swap to
+     the green "Check your email" state.
+  5. Check the inbox — Firebase password-reset email should arrive
+     within ~30 seconds.
+- **Anything still broken**: nothing identified. The two prior
+  Vercel projects (`web` and `nordicfleet-web`) still both exist
+  in the user's Vercel account; `nordicfleet-web` is the live
+  one with the canonical URL and full env-var setup. `web` is
+  orphaned and can be deleted from the Vercel dashboard at the
+  user's leisure (no action required).
+
+```
+npm run lint                  0 errors
+npm test                      83 / 83 core, 218 / 219 mobile (1 skipped)
+npm run web:build             ✓ 9 routes (now includes /forgot-password)
+Deployed bundle (chunks)      Firebase config inlined (verified via curl + grep)
+Firebase REST signInWithPwd   OK with the inlined API key
+```
+
 ## Platform foundation session
 
 Biggest session of the rewrite so far — restructured the codebase
