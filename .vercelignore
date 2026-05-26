@@ -1,15 +1,19 @@
-# Mobile app — not needed for the web build. Keeps the Vercel upload
-# under the 15k-file limit.
-apps/mobile/
+# Exclude heavy directories that exceed Vercel's 15k-file upload limit.
+# Keep apps/mobile/package.json so the workspace tree is intact for
+# `npm install` at the monorepo root.
+
+apps/mobile/ios/
+apps/mobile/android/
+apps/mobile/Pods/
+apps/mobile/vendor/
+apps/mobile/.expo/
+apps/mobile/.bundle/
 
 # Build artifacts + caches
 **/node_modules/
 **/.next/
 **/out/
-
-# iOS / Android native
-**/ios/Pods/
-**/vendor/bundle/
+**/build/
 
 # Local env files (Vercel project env vars supply these)
 **/.env.local
@@ -17,3 +21,8 @@ apps/mobile/
 # Verification artifacts
 verification-screenshots/
 scripts/verify-*.log
+
+# IDE / OS
+.DS_Store
+.idea/
+.vscode/

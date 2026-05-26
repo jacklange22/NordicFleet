@@ -81,3 +81,4 @@ out/
 
 # Local UI verification screenshots (not for git)
 verification-screenshots/
+.env*
