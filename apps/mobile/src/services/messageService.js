@@ -12,6 +12,7 @@
 import {
   buildMessageCreatePayload,
   buildMarkReadPayload,
+  buildAdvisoryMessagePayload,
 } from '@nordicfleet/core';
 import {db, firestore} from './firebase';
 
@@ -32,6 +33,34 @@ const messageDoc = id => messagesCollection().doc(id);
 export async function sendMessage(args) {
   const payload = {
     ...buildMessageCreatePayload(args),
+    createdAt: firestore.FieldValue.serverTimestamp(),
+    updatedAt: firestore.FieldValue.serverTimestamp(),
+  };
+  const ref = await messagesCollection().add(payload);
+  return ref.id;
+}
+
+/**
+ * Coach-side: send a race-day advisory. Rides on the same `messages/`
+ * collection as a plain message — the doc gets `type: 'advisory'` and
+ * an `advisory` sub-object the athlete UI reads to render the
+ * structured view. Firestore rules don't need changing; this is the
+ * same write path as sendMessage.
+ *
+ * @param {Object} args
+ * @param {string} args.fromUid                 coach uid
+ * @param {string} args.toUid                   athlete uid
+ * @param {string} args.event                   race / event name
+ * @param {string} args.eventDate               YYYY-MM-DD
+ * @param {Object} [args.conditions]            optional snow/air etc.
+ * @param {Object[]} args.skiRecommendations    at least one {skiId, role: 'primary'|'backup', notes?}
+ * @param {string} [args.subject]               auto: "Race plan: {event}"
+ * @param {string} [args.body]                  optional free-form note
+ * @returns {Promise<string>}                   new message id
+ */
+export async function sendAdvisory(args) {
+  const payload = {
+    ...buildAdvisoryMessagePayload(args),
     createdAt: firestore.FieldValue.serverTimestamp(),
     updatedAt: firestore.FieldValue.serverTimestamp(),
   };

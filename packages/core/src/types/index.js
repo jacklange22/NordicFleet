@@ -11,6 +11,7 @@ require('./profile');
 require('./waxLog');
 require('./testLog');
 require('./message');
+require('./advisory');
 
 module.exports = {
   ...ski,
