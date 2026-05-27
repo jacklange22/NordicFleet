@@ -8,6 +8,7 @@ const {
   missingRequiredFields,
   duplicateMappings,
   detectSectionTechnique,
+  autoDetectNameColumn,
 } = require('../spreadsheetParser');
 
 describe('fieldForHeader', () => {
@@ -444,6 +445,67 @@ describe('detectSectionTechnique', () => {
   test('empty / non-array → null', () => {
     expect(detectSectionTechnique([])).toBeNull();
     expect(detectSectionTechnique(null)).toBeNull();
+  });
+});
+
+describe('autoDetectNameColumn', () => {
+  test('claims col 0 when it is unmapped and contains text', () => {
+    const mapping = [null, 'grind', 'type'];
+    const dataRows = [
+      ['skate red', '363+', 'warm'],
+      ['simi skis', 'g4', 'uni'],
+      ['cold ski', 'g5+', 'cold'],
+    ];
+    expect(autoDetectNameColumn(mapping, dataRows)).toEqual([
+      'name',
+      'grind',
+      'type',
+    ]);
+  });
+
+  test('does NOT claim col 0 when already mapped', () => {
+    const mapping = ['model', 'grind', 'type'];
+    const dataRows = [['Speedmax', 'g4', 'cold']];
+    expect(autoDetectNameColumn(mapping, dataRows)).toEqual([
+      'model',
+      'grind',
+      'type',
+    ]);
+  });
+
+  test('does NOT claim when col 0 is mostly numeric', () => {
+    const mapping = [null, 'name'];
+    const dataRows = [
+      ['123', 'a'],
+      ['456', 'b'],
+      ['789', 'c'],
+    ];
+    expect(autoDetectNameColumn(mapping, dataRows)).toEqual([null, 'name']);
+  });
+
+  test('ignores section-header rows when sampling', () => {
+    const mapping = [null, 'grind'];
+    const dataRows = [
+      ['skate'], // section header — should not bias the decision
+      ['skate red', '363+'],
+      ['simi skis', 'g4'],
+    ];
+    expect(autoDetectNameColumn(mapping, dataRows)).toEqual([
+      'name',
+      'grind',
+    ]);
+  });
+
+  test('needs at least 2 non-empty samples', () => {
+    const mapping = [null, 'grind'];
+    const dataRows = [['only one', 'g4']];
+    expect(autoDetectNameColumn(mapping, dataRows)).toEqual([null, 'grind']);
+  });
+
+  test('empty / non-array input → mapping returned unchanged', () => {
+    expect(autoDetectNameColumn(null, [])).toBeNull();
+    expect(autoDetectNameColumn([], [])).toEqual([]);
+    expect(autoDetectNameColumn([null, 'a'], null)).toEqual([null, 'a']);
   });
 });
 

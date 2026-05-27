@@ -686,9 +686,17 @@ function parseSpreadsheet(input) {
   const headerDetected = looksLikeHeaderRow(first);
   const headers = headerDetected ? first : [];
   const dataRows = headerDetected ? rawRows.slice(1) : rawRows;
-  const mapping = headerDetected
+  let mapping = headerDetected
     ? mapHeadersToFields(first)
     : new Array(first.length).fill(null);
+
+  // Spreadsheet convention: the column the user types ski names into
+  // very often has no header — the "label" column. If col 0 ended up
+  // unmapped and its data is mostly text (not numbers, not empty),
+  // claim it for `name`. The check excludes section-header rows so a
+  // sheet like "skate\nspeedmax\ns/lab" detects col 0 as name based
+  // on Speedmax and S/Lab, ignoring the "skate" marker.
+  mapping = autoDetectNameColumn(mapping, dataRows);
 
   // "Needs manual mapping" is a usability signal — true when we
   // couldn't figure out enough about the paste to auto-import it.
@@ -806,6 +814,57 @@ function detectSectionTechnique(row) {
   return SECTION_TECHNIQUE_VALUES[value] || null;
 }
 
+/**
+ * If column 0 is unmapped (typically because the header cell is blank
+ * or unrecognised) but contains text values across the early data
+ * rows, claim it for `name`. The check excludes section-header rows
+ * so a marker like `skate` on its own row doesn't bias the decision.
+ *
+ * @param {Array<string|null>} mapping
+ * @param {string[][]} dataRows
+ * @returns {Array<string|null>}  new mapping (or original if no change)
+ */
+function autoDetectNameColumn(mapping, dataRows) {
+  if (!Array.isArray(mapping) || mapping.length === 0) {
+    return mapping;
+  }
+  if (mapping[0]) {
+    return mapping;
+  }
+  // Sample the first non-section rows.
+  const samples = (dataRows || [])
+    .filter(r => Array.isArray(r) && !detectSectionTechnique(r))
+    .slice(0, 5);
+  if (samples.length === 0) {
+    return mapping;
+  }
+  let textCount = 0;
+  let nonEmptyCount = 0;
+  for (const r of samples) {
+    const cell =
+      typeof r[0] === 'string' ? r[0].trim() : '';
+    if (!cell) {
+      continue;
+    }
+    nonEmptyCount += 1;
+    if (!/^-?\d+(?:\.\d+)?$/.test(cell)) {
+      textCount += 1;
+    }
+  }
+  // Need at least two non-empty cells AND the majority must be text
+  // — this is what distinguishes a name column from a stray serial-
+  // number column the user forgot to label.
+  if (nonEmptyCount < 2) {
+    return mapping;
+  }
+  if (textCount < Math.ceil(nonEmptyCount / 2)) {
+    return mapping;
+  }
+  const next = mapping.slice();
+  next[0] = 'name';
+  return next;
+}
+
 module.exports = {
   detectDelimiter,
   tokenizeRows,
@@ -818,6 +877,7 @@ module.exports = {
   missingRequiredFields,
   duplicateMappings,
   detectSectionTechnique,
+  autoDetectNameColumn,
   HEADER_ALIASES,
   REQUIRED_FIELDS,
 };
