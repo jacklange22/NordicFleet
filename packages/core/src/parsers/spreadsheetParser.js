@@ -196,7 +196,7 @@ function tokenizeRows(input) {
 // and "ski-name" all collapse to "skiname".
 
 const HEADER_ALIASES = Object.freeze({
-  name: ['name', 'ski name', 'label', 'nickname'],
+  name: ['name', 'ski name', 'label', 'nickname', 'ski', 'description'],
   brand: ['brand', 'manufacturer', 'make'],
   model: ['model', 'ski model'],
   technique: [
@@ -214,13 +214,36 @@ const HEADER_ALIASES = Object.freeze({
     'temperature',
     'temperature range',
     'temp range',
+    // Real-world spreadsheets often label this column with the enum
+    // values themselves separated by slashes, in whatever order the
+    // user thinks of them. Match every permutation we've actually
+    // seen in user data.
+    'uni/cold/warm',
+    'cold/uni/warm',
+    'warm/uni/cold',
+    'cold/warm',
+    'cold/warm/uni',
+    'warm/cold/uni',
+    'cold/universal/warm',
   ],
   length: ['length', 'len', 'cm', 'size'],
-  flex: ['flex', 'hardness', 'flex kg', 'kg'],
+  flex: ['flex', 'hardness', 'flex kg', 'kg', 'stiffness'],
   build: ['build', 'construction', 'model year', 'series'],
   base: ['base', 'base type', 'base material'],
   grind: ['grind', 'structure', 'base structure', 'stone grind'],
-  year: ['year', 'manufacture year', 'production year'],
+  year: [
+    'year',
+    'year bought',
+    'manufacture year',
+    'production year',
+    'purchased',
+    'bought',
+  ],
+  // `description` intentionally lives on both `name` and `notes`. Since
+  // the alias-lookup keeps the earlier insertion in case of a slug
+  // collision, `description` resolves to `name` — which is what we
+  // want when the source spreadsheet has *no* name column but a
+  // description column does double duty for the row label.
   notes: ['notes', 'comments', 'remarks', 'description'],
 });
 
