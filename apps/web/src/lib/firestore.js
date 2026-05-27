@@ -18,6 +18,8 @@ import {
 import {
   buildSkiCreatePayload,
   buildSkiUpdatePayload,
+  buildWaxLogCreatePayload,
+  buildTestLogCreatePayload,
 } from '@nordicfleet/core';
 import {getDbClient} from './firebase';
 
@@ -246,6 +248,69 @@ export async function updateSki(uid, skiId, partial) {
  */
 export async function setSkiRetired(uid, skiId, retired) {
   return updateSki(uid, skiId, {retired: !!retired});
+}
+
+/**
+ * Append a wax log for the given ski. Returns the new doc id.
+ * Uses buildWaxLogCreatePayload from core to apply the same
+ * validation iOS does (skiId required, layers clamped, binder
+ * 'None' → null, etc.). Date is forced to serverTimestamp so the
+ * sort order on the ski-history list stays consistent.
+ *
+ * For skate skis the caller is expected to pass kickLayers: 0,
+ * kickWax: null — same contract as the mobile service.
+ *
+ * @param {string} uid
+ * @param {object} data   WaxLogInput shape
+ * @returns {Promise<string>}
+ */
+export async function createWaxLog(uid, data) {
+  if (!uid) {
+    throw new Error('createWaxLog: uid is required');
+  }
+  const db = getDbClient();
+  if (!db) {
+    throw new Error('Firestore is not configured');
+  }
+  const payload = {
+    ...buildWaxLogCreatePayload(data),
+    date: serverTimestamp(),
+    createdAt: serverTimestamp(),
+  };
+  const ref = await addDoc(
+    collection(db, 'users', uid, 'waxLogs'),
+    payload,
+  );
+  return ref.id;
+}
+
+/**
+ * Append a test log for the given ski. Same pattern as createWaxLog
+ * — goes through buildTestLogCreatePayload, attaches a serverTimestamp
+ * for the date + createdAt.
+ *
+ * @param {string} uid
+ * @param {object} data   TestLogInput shape
+ * @returns {Promise<string>}
+ */
+export async function createTestLog(uid, data) {
+  if (!uid) {
+    throw new Error('createTestLog: uid is required');
+  }
+  const db = getDbClient();
+  if (!db) {
+    throw new Error('Firestore is not configured');
+  }
+  const payload = {
+    ...buildTestLogCreatePayload(data),
+    date: serverTimestamp(),
+    createdAt: serverTimestamp(),
+  };
+  const ref = await addDoc(
+    collection(db, 'users', uid, 'testLogs'),
+    payload,
+  );
+  return ref.id;
 }
 
 export async function createSkisBatch(uid, skiInputs) {

@@ -65,6 +65,33 @@ function HomeInner() {
           <StatCard value="—" label="Tests logged" />
         </div>
 
+        {loaded && skis.length > 0 && (
+          <div className="grid grid-cols-2 gap-3 mb-6">
+            <Link href="/log/wax">
+              <Card className="hover:bg-surface-elevated transition-colors cursor-pointer h-full">
+                <div className="text-xs uppercase tracking-wider text-text-tertiary mb-1">
+                  Log
+                </div>
+                <div className="text-lg font-semibold">Wax a ski →</div>
+                <div className="text-text-secondary text-sm mt-1">
+                  Record what you ironed in today.
+                </div>
+              </Card>
+            </Link>
+            <Link href="/log/test">
+              <Card className="hover:bg-surface-elevated transition-colors cursor-pointer h-full">
+                <div className="text-xs uppercase tracking-wider text-text-tertiary mb-1">
+                  Log
+                </div>
+                <div className="text-lg font-semibold">Test a ski →</div>
+                <div className="text-text-secondary text-sm mt-1">
+                  Rate glide / kick / stability on conditions.
+                </div>
+              </Card>
+            </Link>
+          </div>
+        )}
+
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-xs uppercase tracking-wider text-text-tertiary">
             Your fleet
