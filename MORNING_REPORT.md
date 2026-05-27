@@ -1,5 +1,118 @@
 # Morning report — autonomous NordicFleet rewrite
 
+## Spreadsheet import fix session (2026-05-27)
+
+Real user paste hit the import flow and 0 of 32 rows survived
+validation. Six small parser fixes later, the same paste imports
+30 of 30 rows cleanly.
+
+### What was broken
+
+The user's spreadsheet looked like
+
+```
+        grind   uni/cold/warm   jl project  Flex  year bought  number  ...
+skate
+skate red   363+   warm        na          91    2019         764
+simi skis   g4     uni                     90    2022         64
+...
+classic
+
+ice klister gold ski  363+  uni         43  2022  229
+...
+```
+
+The parser hit five separate walls at once:
+- Column 0 had a blank header — the ski-name column got dropped.
+- `uni/cold/warm` matched no header alias — the type column got
+  dropped, then every row picked up `type: 'universal'` from the
+  F1.5 default.
+- The `skate` and `classic` single-cell section rows were parsed
+  as data rows and failed every required-field check.
+- `brand` + `model` were required at the parser level, but the
+  source data had neither.
+- `jl project`, `number`, `confidence` were custom annotation
+  columns the user wanted to keep but the parser silently dropped.
+
+### Fixes (six commits, each behind a re-run of the diagnostic)
+
+| # | Commit | What it did |
+|---|--------|-------------|
+| B.1 | `Fix import 1: expanded header aliases` | Added slash-list type permutations ("uni/cold/warm", "cold/warm", etc.), "year bought" / "purchased" / "bought" for year, "stiffness" for flex, "ski" / "description" for name. |
+| B.2 | `Fix import 2: relax required fields` | Dropped the "Brand is required" + "Model is required" parser errors. REQUIRED_FIELDS shrinks to `['name', 'technique']`. needsManualMapping now treats name as satisfiable via any of name / brand / model. UI dropdown labels move "(required)" off Brand/Model and onto Name. |
+| B.3 | `Fix import 3: detect technique from section headers` | New `detectSectionTechnique(row)` consumes single-cell "skate" / "classic" rows as state markers, inherits the technique onto subsequent rows, drops the technique-required error on inherited rows. Tight allow-list (no prefix regex) so a real ski row like "skate red" doesn't accidentally become a section header. |
+| B.4 | `Fix import 4: auto-detect name column` | When mapping[0] is null AND col 0 contains text in ≥2 non-section rows (majority non-numeric), claim col 0 for `name`. |
+| B.5 | `Fix import 5: skip empty separator rows` | After section-header detection, rows with 0-1 non-empty cells are dropped silently. |
+| B.6 | `Fix import 6: preserve unknown columns in notes` | New `findRescueColumns()` rescues columns whose header has a label, isn't mapped to a field, AND has data in ≥25% of non-section rows. Per-row values get folded into the notes column as `"{header}: {value}"`, separated by " · ". Parser surfaces these as `rescuedHeaders` (distinct from `unmappedHeaders`) so the UI can tell users what was preserved. |
+
+Each fix landed with its own tests + a re-run of the diagnostic
+script that proved it dropped the error count further.
+
+### After the fixes
+
+- **30 of 30 rows parse cleanly** (17 skate from the skate section
+  + 13 classic from the classic section).
+- Section markers don't show up as ghost rows.
+- The diagnostic test (`spreadsheetParser.realData.test.js`) pins
+  this with 14 specs — overall counts, mapping checks, and spot
+  checks of seven specific rows including "zeros" (type='zero',
+  literal text "zero" in number column gets rescued).
+- 261 core tests pass total (224 → 261).
+- Deployed: https://nordicfleet-web.vercel.app/import. Deploy ID:
+  `dpl_12MDsWwkor2GNE5NbxfiBfXba6gr`.
+
+### What still falls through (honest list)
+
+- **The "still at zach" annotation gets dropped on 3 rows.** Those
+  rows have "still at zach" in the `confidence` column. That column
+  is populated in only ~10% of rows, below the 25% rescue
+  threshold, so the values aren't preserved in notes. Those 3 rows
+  still parse cleanly otherwise — they just lose the "still at
+  zach" text. Workarounds: the user can move that text into the
+  `notes` column in their spreadsheet, or use the manual-mapping
+  screen to map `confidence` → `notes` explicitly.
+- **The manual-mapping screen (applyMapping) doesn't apply section
+  inheritance or rescue.** If the user has a paste with section
+  headers and opens "Edit mapping", the technique they re-map to
+  takes precedence, but if they leave technique unmapped the
+  section technique won't be re-applied. Similarly the rescue
+  re-runs only via parseSpreadsheet, not applyMapping. Fix is
+  small but adds API surface — deferred to a future session.
+- **Test fixture preserved:**
+  `packages/core/src/parsers/__tests__/fixtures/real-ski-data.tsv`
+  is the verbatim user paste, checked in so the next regression
+  shows up immediately.
+
+### Verification at session end
+
+```
+npm test --workspace=packages/core     17 / 17 suites, 261 / 261 tests
+npm test --workspace=apps/mobile       42 / 43 suites (1 skipped), 232 / 233 tests
+npm run web:build                      ✓ 10 routes incl. /import
+npx eslint apps/mobile/.               0 errors, 8 warnings (pre-existing)
+vercel --prod                          dpl_12MDsWwkor2GNE5NbxfiBfXba6gr READY
+                                       https://nordicfleet-web.vercel.app/import
+```
+
+### Manual verification you should still do
+
+Open https://nordicfleet-web.vercel.app/import in a signed-in
+browser, paste the fixture from
+`packages/core/src/parsers/__tests__/fixtures/real-ski-data.tsv`,
+and confirm:
+- ~30 ski cards render in the preview (no phantom "skate" /
+  "classic" rows).
+- Technique split visible (17 skate / 13 classic).
+- Grind codes like "g4", "b363", "li3", "fp2-20" appear in each
+  card's grind field.
+- The `jl project: ... · number: ...` annotations show up at the
+  bottom of the notes field in each row card.
+- "Folded into notes: jl project, number" message appears in the
+  preview header.
+- Save button enabled. Click it; ~30 skis land in your fleet.
+
+---
+
 ## Three-feature session (2026-05-26 → 2026-05-27)
 
 Three substantial features landed in one session, in the order the
