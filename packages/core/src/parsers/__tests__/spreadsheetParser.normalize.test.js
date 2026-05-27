@@ -7,6 +7,7 @@ const {
   applyMapping,
   missingRequiredFields,
   duplicateMappings,
+  detectSectionTechnique,
 } = require('../spreadsheetParser');
 
 describe('fieldForHeader', () => {
@@ -407,6 +408,88 @@ describe('missingRequiredFields', () => {
     expect(missingRequiredFields([])).toEqual(['name', 'technique']);
     expect(missingRequiredFields(null)).toEqual(['name', 'technique']);
     expect(missingRequiredFields(undefined)).toEqual(['name', 'technique']);
+  });
+});
+
+describe('detectSectionTechnique', () => {
+  test('single-cell "skate" row → "skate"', () => {
+    expect(detectSectionTechnique(['skate'])).toBe('skate');
+    expect(detectSectionTechnique(['Skate'])).toBe('skate');
+    expect(detectSectionTechnique(['SKATE  '])).toBe('skate');
+  });
+
+  test('single-cell "classic" row → "classic"', () => {
+    expect(detectSectionTechnique(['classic'])).toBe('classic');
+    expect(detectSectionTechnique(['Classical'])).toBe('classic');
+    expect(detectSectionTechnique(['Freestyle'])).toBe('skate');
+  });
+
+  test('multi-cell row → null even if a cell looks like a technique', () => {
+    expect(detectSectionTechnique(['skate', 'red', 'extra'])).toBeNull();
+  });
+
+  test('row with one non-empty cell + trailing empty cells → section', () => {
+    // This is what tokenizeRows produces from "skate\t\t\t\t" — the
+    // empty cells survive but only "skate" is non-empty.
+    expect(
+      detectSectionTechnique(['skate', '', '', '', '', '', '', '', '']),
+    ).toBe('skate');
+  });
+
+  test('non-technique single-cell row → null', () => {
+    expect(detectSectionTechnique(['banana'])).toBeNull();
+    expect(detectSectionTechnique(['skate red'])).toBeNull();
+  });
+
+  test('empty / non-array → null', () => {
+    expect(detectSectionTechnique([])).toBeNull();
+    expect(detectSectionTechnique(null)).toBeNull();
+  });
+});
+
+describe('parseSpreadsheet — section-header inheritance', () => {
+  test('"skate" row sets technique on subsequent rows', () => {
+    const input = `name\tlength
+skate
+Speedmax\t190
+S/Lab\t186
+classic
+Redline\t200`;
+    const out = parseSpreadsheet(input);
+    // Section rows themselves don't appear in output
+    expect(out.rows.length).toBe(3);
+    expect(out.rows[0].data).toMatchObject({
+      name: 'Speedmax',
+      technique: 'skate',
+      length: 190,
+    });
+    expect(out.rows[1].data.technique).toBe('skate');
+    expect(out.rows[2].data).toMatchObject({
+      name: 'Redline',
+      technique: 'classic',
+      length: 200,
+    });
+    // Every row should parse without a technique error
+    out.rows.forEach(r => {
+      expect(r.errors.find(e => e.field === 'technique')).toBeUndefined();
+    });
+  });
+
+  test('explicit technique column overrides section', () => {
+    const input = `name\ttechnique\tlength
+skate
+Speedmax\tclassic\t190`;
+    const out = parseSpreadsheet(input);
+    expect(out.rows[0].data.technique).toBe('classic');
+  });
+
+  test('section-header presence drops the manual-mapping flag for technique', () => {
+    // No technique column, but a section header sets it.
+    const input = `name\tlength
+skate
+Speedmax\t190`;
+    const out = parseSpreadsheet(input);
+    expect(out.needsManualMapping).toBe(false);
   });
 });
 

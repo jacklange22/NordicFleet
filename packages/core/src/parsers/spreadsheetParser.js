@@ -713,19 +713,97 @@ function parseSpreadsheet(input) {
     }
   }
 
-  const rows = dataRows.map(row => ({
-    raw: row,
-    ...normalizeRow(row, mapping),
-  }));
+  // Real user spreadsheets group skis by technique using a single-cell
+  // "section header" row — e.g. one row containing just "skate" sets
+  // every subsequent row's technique to skate until the next section.
+  // We strip those rows from the parsed output and inherit the
+  // technique onto data rows that don't have one of their own.
+  // sectionTechniqueDetected is also a signal to the manual-mapping
+  // gate — pastes that get technique from sections shouldn't be told
+  // they're missing a technique column.
+  let currentTechnique = null;
+  let sectionTechniqueDetected = false;
+  const rows = [];
+  for (const row of dataRows) {
+    const sectionTech = detectSectionTechnique(row);
+    if (sectionTech) {
+      currentTechnique = sectionTech;
+      sectionTechniqueDetected = true;
+      continue;
+    }
+    const result = normalizeRow(row, mapping);
+    if (!result.data.technique && currentTechnique) {
+      result.data.technique = currentTechnique;
+      // Drop the "technique missing" error since the section header
+      // filled it in.
+      result.errors = result.errors.filter(e => e.field !== 'technique');
+    }
+    rows.push({raw: row, ...result});
+  }
 
   return {
     delimiter,
     headers,
     mapping,
     rows,
-    needsManualMapping: !headerDetected || missingRequired,
+    needsManualMapping:
+      !headerDetected || (!haveName || (!haveTechnique && !sectionTechniqueDetected)),
     unmappedHeaders,
   };
+}
+
+// Tight exact-match table for section-header rows. We deliberately
+// don't reuse `normalizeTechnique` here — that one uses prefix regexes
+// (anything starting with 's' becomes 'skate'), which would let a
+// legitimate ski-name row like "skate red" accidentally become a
+// section header and consume the row's data. The user-paste samples
+// driving this list:
+//
+//   skate
+//   classic
+//   classical    (a few European users)
+//   skating      (transliteration)
+//   freestyle    (older form)
+//   diagonal     (rare, traditional name for classic)
+const SECTION_TECHNIQUE_VALUES = Object.freeze({
+  classic: 'classic',
+  classical: 'classic',
+  skate: 'skate',
+  skating: 'skate',
+  freestyle: 'skate',
+  diagonal: 'classic',
+});
+
+/**
+ * Identify a section-header row — i.e. a row with a single non-empty
+ * cell whose value is *exactly* a known technique enum. Returns the
+ * canonical technique string or null. Used by parseSpreadsheet to
+ * detect inline section markers like
+ *
+ *   skate
+ *   ski_a   grind_a   ...
+ *   ski_b   grind_b   ...
+ *   classic
+ *   ski_c   grind_c   ...
+ *
+ * where the user has grouped rows by technique instead of repeating
+ * the value in a column.
+ *
+ * @param {string[]} row
+ * @returns {string|null}  normalized technique or null
+ */
+function detectSectionTechnique(row) {
+  if (!Array.isArray(row)) {
+    return null;
+  }
+  const nonEmpty = row
+    .map(c => (typeof c === 'string' ? c.trim() : ''))
+    .filter(c => c.length > 0);
+  if (nonEmpty.length !== 1) {
+    return null;
+  }
+  const value = nonEmpty[0].toLowerCase();
+  return SECTION_TECHNIQUE_VALUES[value] || null;
 }
 
 module.exports = {
@@ -739,6 +817,7 @@ module.exports = {
   applyMapping,
   missingRequiredFields,
   duplicateMappings,
+  detectSectionTechnique,
   HEADER_ALIASES,
   REQUIRED_FIELDS,
 };
