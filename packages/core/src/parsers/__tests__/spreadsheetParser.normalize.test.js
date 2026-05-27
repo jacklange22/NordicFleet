@@ -9,6 +9,7 @@ const {
   duplicateMappings,
   detectSectionTechnique,
   autoDetectNameColumn,
+  findRescueColumns,
 } = require('../spreadsheetParser');
 
 describe('fieldForHeader', () => {
@@ -509,6 +510,61 @@ describe('autoDetectNameColumn', () => {
   });
 });
 
+describe('findRescueColumns', () => {
+  test('picks up columns with majority of data', () => {
+    const mapping = ['name', null, null, 'notes'];
+    const headers = ['name', 'jl project', 'number', 'notes'];
+    const dataRows = [
+      ['Speedmax', 'u15', '870', 'a'],
+      ['S/Lab', 'u14', '244', ''],
+      ['Redline', 'u12', '', ''],
+      ['Carbon', '', '100', ''],
+    ];
+    const rescued = findRescueColumns(mapping, headers, dataRows);
+    expect(rescued).toEqual([
+      {index: 1, header: 'jl project'},
+      {index: 2, header: 'number'},
+    ]);
+  });
+
+  test('drops sparse columns', () => {
+    const mapping = ['name', null];
+    const headers = ['name', 'rare'];
+    const dataRows = [
+      ['a', 'x'],
+      ['b', ''],
+      ['c', ''],
+      ['d', ''],
+      ['e', ''],
+    ];
+    // 1/5 = 20% < 25% threshold.
+    expect(findRescueColumns(mapping, headers, dataRows)).toEqual([]);
+  });
+
+  test('skips columns whose header has no label', () => {
+    const mapping = [null, 'name'];
+    const headers = ['', 'name']; // no header text to use as key
+    const dataRows = [
+      ['a', 'one'],
+      ['b', 'two'],
+    ];
+    expect(findRescueColumns(mapping, headers, dataRows)).toEqual([]);
+  });
+
+  test('ignores section-header rows when counting', () => {
+    const mapping = ['name', null];
+    const headers = ['name', 'extra'];
+    const dataRows = [
+      ['skate'], // section header — should not bias
+      ['a', 'x'],
+      ['b', 'y'],
+    ];
+    expect(findRescueColumns(mapping, headers, dataRows)).toEqual([
+      {index: 1, header: 'extra'},
+    ]);
+  });
+});
+
 describe('parseSpreadsheet — section-header inheritance', () => {
   test('"skate" row sets technique on subsequent rows', () => {
     const input = `name\tlength
@@ -552,6 +608,38 @@ skate
 Speedmax\t190`;
     const out = parseSpreadsheet(input);
     expect(out.needsManualMapping).toBe(false);
+  });
+
+  test('folds unmapped-but-populated columns into notes', () => {
+    const input = `name\tjl project\tnumber\tnotes\ttechnique
+Speedmax\tu15\t870\twas great\tclassic
+S/Lab\tu14\t244\t\tskate
+Redline\tu12\t610\t\tclassic
+Carbon\tu11\t100\t\tskate`;
+    const out = parseSpreadsheet(input);
+    expect(out.rows.length).toBe(4);
+    // jl project + number are both rescued (4/4 rows have data).
+    expect(out.rows[0].data.notes).toBe(
+      'was great\njl project: u15 · number: 870',
+    );
+    expect(out.rows[1].data.notes).toBe('jl project: u14 · number: 244');
+  });
+
+  test('does NOT fold a column that is sparsely populated', () => {
+    // `flag` has data in 1/5 rows = 20% < 25% threshold → not
+    // rescued. `jl project` has data in 5/5 → rescued.
+    const input = `name\ttechnique\tjl project\tflag
+Speedmax\tclassic\tu15\t!
+S/Lab\tskate\tu14\t
+Redline\tclassic\tu12\t
+Carbon\tskate\tu11\t
+RCS\tclassic\tu10\t`;
+    const out = parseSpreadsheet(input);
+    expect(out.rows.length).toBe(5);
+    // Row 0 has data in both the rescued and sparse columns. Only
+    // the rescued column should show up in notes.
+    expect(out.rows[0].data.notes).toBe('jl project: u15');
+    expect(out.rows[0].data.notes).not.toContain('flag');
   });
 
   test('rows with 0-1 non-empty cells are silently skipped', () => {

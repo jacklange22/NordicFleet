@@ -698,6 +698,14 @@ function parseSpreadsheet(input) {
   // on Speedmax and S/Lab, ignoring the "skate" marker.
   mapping = autoDetectNameColumn(mapping, dataRows);
 
+  // For headers we couldn't match (e.g. "jl project", "number") and
+  // that contain real data across the paste, fold the per-row values
+  // into the `notes` field so the user doesn't silently lose them.
+  // Columns whose values appear in only a handful of rows are NOT
+  // rescued (the user is better off remapping those by hand than
+  // having sparse junk show up on every row).
+  const rescueColumns = findRescueColumns(mapping, headers, dataRows);
+
   // "Needs manual mapping" is a usability signal — true when we
   // couldn't figure out enough about the paste to auto-import it.
   // The rule isn't a strict "REQUIRED_FIELDS subset of mapping"
@@ -756,6 +764,25 @@ function parseSpreadsheet(input) {
       // Drop the "technique missing" error since the section header
       // filled it in.
       result.errors = result.errors.filter(e => e.field !== 'technique');
+    }
+    // Rescue unmapped columns: append per-row values into notes as
+    // "{header}: {value}", separated by " · ".
+    if (rescueColumns.length > 0) {
+      const extras = [];
+      for (const {index, header} of rescueColumns) {
+        const cell =
+          typeof row[index] === 'string' ? row[index].trim() : '';
+        if (!cell) {
+          continue;
+        }
+        extras.push(`${header.toLowerCase()}: ${cell}`);
+      }
+      if (extras.length > 0) {
+        const rescueText = extras.join(' · ');
+        result.data.notes = result.data.notes
+          ? `${result.data.notes}\n${rescueText}`
+          : rescueText;
+      }
     }
     rows.push({raw: row, ...result});
   }
@@ -825,6 +852,59 @@ function detectSectionTechnique(row) {
   return SECTION_TECHNIQUE_VALUES[value] || null;
 }
 
+// Threshold for rescuing an unmapped column into notes. A column is
+// rescued only when at least this fraction of non-section data rows
+// have a value in it. Tuned against real user data: 25% keeps
+// annotation columns like "jl project" (~56% populated) and
+// "number" (~73%), while dropping mostly-empty columns like
+// "confidence" (~10%) that would just clutter every row's notes.
+const RESCUE_THRESHOLD = 0.25;
+
+/**
+ * Find the column indices that didn't map to a known field but DO
+ * have data in a meaningful fraction of rows. parseSpreadsheet uses
+ * the result to fold per-row values into the notes column instead of
+ * dropping them on the floor.
+ *
+ * @param {Array<string|null>} mapping
+ * @param {string[]} headers
+ * @param {string[][]} dataRows
+ * @returns {Array<{index: number, header: string}>}
+ */
+function findRescueColumns(mapping, headers, dataRows) {
+  if (!Array.isArray(mapping) || !Array.isArray(headers)) {
+    return [];
+  }
+  const sampled = (dataRows || []).filter(
+    r => Array.isArray(r) && !detectSectionTechnique(r),
+  );
+  if (sampled.length === 0) {
+    return [];
+  }
+  const out = [];
+  for (let i = 0; i < headers.length; i += 1) {
+    if (mapping[i]) {
+      continue;
+    }
+    const headerText = (headers[i] || '').trim();
+    if (!headerText) {
+      // No header label to use as the per-value key — skip.
+      continue;
+    }
+    let withData = 0;
+    for (const r of sampled) {
+      const cell = typeof r[i] === 'string' ? r[i].trim() : '';
+      if (cell) {
+        withData += 1;
+      }
+    }
+    if (withData / sampled.length >= RESCUE_THRESHOLD) {
+      out.push({index: i, header: headerText});
+    }
+  }
+  return out;
+}
+
 /**
  * If column 0 is unmapped (typically because the header cell is blank
  * or unrecognised) but contains text values across the early data
@@ -889,6 +969,7 @@ module.exports = {
   duplicateMappings,
   detectSectionTechnique,
   autoDetectNameColumn,
+  findRescueColumns,
   HEADER_ALIASES,
   REQUIRED_FIELDS,
 };
