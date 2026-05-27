@@ -9,6 +9,7 @@ import {
   sendPasswordResetEmail as fbSendPasswordResetEmail,
 } from 'firebase/auth';
 import {getAuthClient, isFirebaseConfigured} from '@/lib/firebase';
+import {ToastProvider} from '@/components/Toast';
 
 const AuthContext = createContext(null);
 
@@ -49,7 +50,9 @@ export function Providers({children}) {
   };
 
   return (
-    <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+    <AuthContext.Provider value={value}>
+      <ToastProvider>{children}</ToastProvider>
+    </AuthContext.Provider>
   );
 }
 
