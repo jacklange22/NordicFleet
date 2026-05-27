@@ -8,6 +8,8 @@ import {
   missingRequiredFields,
   duplicateMappings,
 } from '@nordicfleet/core';
+import {useAuth} from '../providers';
+import {createSkisBatch} from '@/lib/firestore';
 import {SignedInGuard} from '@/components/SignedInGuard';
 import {SiteHeader} from '@/components/SiteHeader';
 import {Card} from '@/components/Card';
@@ -22,11 +24,12 @@ import {Button} from '@/components/Button';
 // Stages:
 //   1. paste     — large textarea + Parse button
 //   2. preview   — summary card + per-row table with inline error
-//                  tags
+//                  tags. Save kicks off the batched write.
 //   2b. mapping  — manual column→field assignment when auto-detection
 //                  couldn't recognize a required field, or when the
 //                  paste had no header row.
-//   3. confirm   — after save (1.5)
+//   3. confirm   — success card with the count saved + any per-row
+//                  failures from the batched write.
 
 const EXAMPLE = `Brand\tModel\tTechnique\tType\tLength\tFlex
 Fischer\tSpeedmax\tClassic\tCold\t200\t90
@@ -76,9 +79,14 @@ export default function ImportPage() {
 }
 
 function Inner() {
-  const [stage, setStage] = useState('paste'); // 'paste' | 'preview' | 'mapping'
+  const {user} = useAuth();
+  // 'paste' | 'preview' | 'mapping' | 'confirm'
+  const [stage, setStage] = useState('paste');
   const [raw, setRaw] = useState('');
   const [parsed, setParsed] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [saveResult, setSaveResult] = useState(null); // {created, failed}
+  const [saveError, setSaveError] = useState('');
 
   const handleParse = () => {
     const result = parseSpreadsheet(raw);
@@ -89,6 +97,8 @@ function Inner() {
   const handleStartOver = () => {
     setStage('paste');
     setParsed(null);
+    setSaveResult(null);
+    setSaveError('');
   };
 
   const useExample = () => {
@@ -124,12 +134,51 @@ function Inner() {
     setStage('preview');
   };
 
+  const handleSave = async () => {
+    if (!user || !parsed) {
+      return;
+    }
+    const validRows = parsed.rows.filter(r => r.errors.length === 0);
+    if (validRows.length === 0) {
+      setSaveError('No valid rows to save. Fix the errors above first.');
+      return;
+    }
+    setSaving(true);
+    setSaveError('');
+    try {
+      const result = await createSkisBatch(
+        user.uid,
+        validRows.map(r => r.data),
+      );
+      setSaveResult({
+        ...result,
+        // Carry the row data alongside the failures so the confirm
+        // screen can show *which* ski failed, not just the index.
+        failedSkis: result.failed.map(f => ({
+          ...f,
+          name: validRows[f.index]?.data?.name || `Row ${f.index + 1}`,
+        })),
+        totalAttempted: validRows.length,
+      });
+      setStage('confirm');
+    } catch (err) {
+      setSaveError(
+        (err && err.message) ||
+          'Something went wrong saving — please try again.',
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const stepLabel =
     stage === 'paste'
       ? 'Step 1 of 2'
       : stage === 'mapping'
         ? 'Step 2 of 2 · mapping'
-        : 'Step 2 of 2';
+        : stage === 'confirm'
+          ? 'Done'
+          : 'Step 2 of 2';
 
   return (
     <div>
@@ -155,6 +204,9 @@ function Inner() {
             parsed={parsed}
             onStartOver={handleStartOver}
             onEnterMapping={handleEnterMapping}
+            onSave={handleSave}
+            saving={saving}
+            saveError={saveError}
           />
         )}
         {stage === 'mapping' && (
@@ -162,6 +214,12 @@ function Inner() {
             parsed={parsed}
             onApply={handleApplyMapping}
             onCancel={handleCancelMapping}
+          />
+        )}
+        {stage === 'confirm' && (
+          <ConfirmStep
+            result={saveResult}
+            onImportMore={handleStartOver}
           />
         )}
       </main>
@@ -227,7 +285,14 @@ function PasteStep({raw, setRaw, onParse, onUseExample}) {
   );
 }
 
-function PreviewStep({parsed, onStartOver, onEnterMapping}) {
+function PreviewStep({
+  parsed,
+  onStartOver,
+  onEnterMapping,
+  onSave,
+  saving,
+  saveError,
+}) {
   const rows = parsed.rows || [];
   const validRowCount = useMemo(
     () => rows.filter(r => r.errors.length === 0).length,
@@ -235,9 +300,13 @@ function PreviewStep({parsed, onStartOver, onEnterMapping}) {
   );
   const errorRowCount = rows.length - validRowCount;
   const delim = parsed.delimiter?.kind || 'tab';
+  const saveDisabled =
+    parsed.needsManualMapping || validRowCount === 0 || saving;
   const saveTitle = parsed.needsManualMapping
     ? 'Map your columns first'
-    : 'Save action lands in Feature 1.5';
+    : validRowCount === 0
+      ? 'Fix the row errors before saving'
+      : 'Save these skis to your fleet';
 
   return (
     <>
@@ -335,13 +404,90 @@ function PreviewStep({parsed, onStartOver, onEnterMapping}) {
         </div>
       )}
 
+      {saveError && (
+        <div className="mb-4 text-sm text-red bg-red/[0.05] border border-red/40 rounded-2xl p-4">
+          {saveError}
+        </div>
+      )}
+
       <div className="flex flex-wrap gap-3 justify-end">
-        <Button variant="ghost" size="md" onClick={onStartOver}>
+        <Button
+          variant="ghost"
+          size="md"
+          onClick={onStartOver}
+          disabled={saving}>
           ← Edit paste
         </Button>
-        <Button variant="primary" size="md" disabled title={saveTitle}>
+        <Button
+          variant="primary"
+          size="md"
+          disabled={saveDisabled}
+          loading={saving}
+          onClick={onSave}
+          title={saveTitle}>
           Save {validRowCount} {validRowCount === 1 ? 'ski' : 'skis'}
         </Button>
+      </div>
+    </>
+  );
+}
+
+function ConfirmStep({result, onImportMore}) {
+  const created = result?.created || [];
+  const failed = result?.failedSkis || [];
+  const allOk = failed.length === 0;
+  return (
+    <>
+      <div className="text-center mb-8">
+        <div className="w-20 h-20 rounded-full bg-success/15 border border-success/40 flex items-center justify-center mx-auto mb-6">
+          <span className="text-success text-4xl leading-none">✓</span>
+        </div>
+        <h1 className="text-4xl font-bold tracking-tight mb-3">
+          {created.length === 1
+            ? '1 ski added to your fleet'
+            : `${created.length} skis added to your fleet`}
+        </h1>
+        <p className="text-text-secondary text-lg max-w-xl mx-auto">
+          {allOk
+            ? "They're already syncing to your iOS app."
+            : `${failed.length} of ${result.totalAttempted} couldn't be saved — see below.`}
+        </p>
+      </div>
+
+      {!allOk && (
+        <Card className="mb-6 border-red/40">
+          <h2 className="text-sm uppercase tracking-wider text-text-tertiary mb-3">
+            Failed rows
+          </h2>
+          <ul className="space-y-2">
+            {failed.map(f => (
+              <li
+                key={f.index}
+                className="text-sm flex items-start gap-3 border-t border-border first:border-0 pt-2 first:pt-0">
+                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-red/20 text-red flex items-center justify-center text-xs font-bold">
+                  !
+                </span>
+                <div className="flex-1 min-w-0">
+                  <span className="text-white font-medium block truncate">
+                    {f.name}
+                  </span>
+                  <span className="text-red text-xs">{f.error}</span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
+
+      <div className="flex flex-wrap gap-3 justify-center">
+        <Button variant="ghost" size="md" onClick={onImportMore}>
+          Import more
+        </Button>
+        <Link href="/home">
+          <Button variant="primary" size="md">
+            View your fleet →
+          </Button>
+        </Link>
       </div>
     </>
   );

@@ -532,6 +532,15 @@ function normalizeRow(row, mapping) {
     data.name = `${data.brand} ${data.model}`;
   }
 
+  // The downstream Ski validator requires a snow `type`; the spreadsheet
+  // user almost never wants to label every row with one, so we default
+  // unmapped / empty type cells to 'universal' here. If the user *did*
+  // provide a type cell and it was unparseable, an error is already in
+  // the list — don't paper over that.
+  if (!data.type && !errors.some(e => e.field === 'type')) {
+    data.type = 'universal';
+  }
+
   // Required-field checks.
   if (!data.name) {
     errors.push({field: 'name', message: 'Name is required'});

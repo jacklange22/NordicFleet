@@ -199,6 +199,33 @@ describe('normalizeRow', () => {
     );
     expect(errors).toEqual([]);
   });
+
+  test('type defaults to universal when the cell is empty', () => {
+    const {data, errors} = normalizeRow(
+      ['Fischer', 'Speedmax', 'Classic', '', '', '', '', ''],
+      fullMapping,
+    );
+    expect(errors).toEqual([]);
+    expect(data.type).toBe('universal');
+  });
+
+  test('type defaults to universal when the field is unmapped', () => {
+    const {data, errors} = normalizeRow(
+      ['Fischer', 'Speedmax', 'Classic', '200'],
+      ['brand', 'model', 'technique', 'length'],
+    );
+    expect(errors).toEqual([]);
+    expect(data.type).toBe('universal');
+  });
+
+  test('unparseable type does NOT silently default — error stands', () => {
+    const {data, errors} = normalizeRow(
+      ['Fischer', 'Speedmax', 'Classic', 'Banana'],
+      ['brand', 'model', 'technique', 'type'],
+    );
+    expect(errors.some(e => e.field === 'type')).toBe(true);
+    expect(data.type).toBeUndefined();
+  });
 });
 
 describe('parseSpreadsheet (1.2 — end-to-end)', () => {

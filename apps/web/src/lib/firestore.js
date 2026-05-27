@@ -1,6 +1,6 @@
-// Read-side Firestore helpers for the web app. The web preview is
-// read-mostly (no log-creation paths yet — those stay on iOS for now),
-// so the surface here is intentionally small.
+// Firestore helpers for the web app. Read paths live alongside the
+// small set of write paths the web exposes — currently just the
+// import flow's batched ski create.
 
 import {
   collection,
@@ -11,7 +11,10 @@ import {
   query,
   where,
   orderBy,
+  addDoc,
+  serverTimestamp,
 } from 'firebase/firestore';
+import {buildSkiCreatePayload} from '@nordicfleet/core';
 import {getDbClient} from './firebase';
 
 function noop() {}
@@ -164,4 +167,69 @@ export async function listSkisForAthlete(athleteUid) {
   const list = [];
   snap.forEach(d => list.push({id: d.id, ...d.data()}));
   return list;
+}
+
+// ─── Write side ────────────────────────────────────────────────────────
+
+/**
+ * Create a single ski document under users/{uid}/skis. The platform
+ * adds createdAt / updatedAt serverTimestamps; validation +
+ * normalization is delegated to @nordicfleet/core so the web and iOS
+ * paths produce structurally identical docs.
+ *
+ * @param {string} uid
+ * @param {object} data  SkiInput shape (see packages/core/src/types/ski.js)
+ * @returns {Promise<string>}  new ski doc ID
+ */
+export async function createSki(uid, data) {
+  if (!uid) {
+    throw new Error('createSki: uid is required');
+  }
+  const db = getDbClient();
+  if (!db) {
+    throw new Error('Firestore is not configured');
+  }
+  const payload = {
+    ...buildSkiCreatePayload(data),
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  };
+  const ref = await addDoc(collection(db, 'users', uid, 'skis'), payload);
+  return ref.id;
+}
+
+/**
+ * Create several skis in parallel. Uses Promise.allSettled so one bad
+ * row doesn't abort the rest — callers receive a {created, failed}
+ * summary with per-row indices preserved for diagnostic messaging.
+ *
+ * @param {string} uid
+ * @param {Array<object>} skiInputs  array of SkiInput payloads
+ * @returns {Promise<{
+ *   created: Array<{index: number, id: string}>,
+ *   failed:  Array<{index: number, error: string}>,
+ * }>}
+ */
+export async function createSkisBatch(uid, skiInputs) {
+  if (!uid) {
+    throw new Error('createSkisBatch: uid is required');
+  }
+  if (!Array.isArray(skiInputs) || skiInputs.length === 0) {
+    return {created: [], failed: []};
+  }
+  const settled = await Promise.allSettled(
+    skiInputs.map(input => createSki(uid, input)),
+  );
+  const created = [];
+  const failed = [];
+  settled.forEach((res, idx) => {
+    if (res.status === 'fulfilled') {
+      created.push({index: idx, id: res.value});
+    } else {
+      const message =
+        (res.reason && res.reason.message) || String(res.reason);
+      failed.push({index: idx, error: message});
+    }
+  });
+  return {created, failed};
 }
