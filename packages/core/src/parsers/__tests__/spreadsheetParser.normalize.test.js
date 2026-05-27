@@ -119,16 +119,31 @@ describe('normalizeRow', () => {
     });
   });
 
-  test('flag missing required fields', () => {
-    const {errors} = normalizeRow(
+  test('brand-only row still gets a name + does not error on model', () => {
+    // Brand alone is enough — name falls back to brand (model gone is
+    // fine since brand+model are now both optional).
+    const {data, errors} = normalizeRow(
       ['Fischer', '', 'Classic', '', '', '', '', ''],
       fullMapping,
     );
     const fields = errors.map(e => e.field);
-    expect(fields).toContain('model');
-    // name auto-generates only when both brand+model present, so it's
-    // also missing here
+    expect(fields).not.toContain('brand');
+    expect(fields).not.toContain('model');
+    expect(fields).not.toContain('name');
+    expect(data.name).toBe('Fischer');
+  });
+
+  test('truly empty rows still flag missing name + technique', () => {
+    const {errors} = normalizeRow(
+      ['', '', '', '', '', '', '', ''],
+      fullMapping,
+    );
+    const fields = errors.map(e => e.field);
     expect(fields).toContain('name');
+    expect(fields).toContain('technique');
+    // Brand + model are NOT in the required-error list anymore.
+    expect(fields).not.toContain('brand');
+    expect(fields).not.toContain('model');
   });
 
   test('unparseable technique enum surfaces as error', () => {
@@ -354,13 +369,18 @@ describe('applyMapping', () => {
 });
 
 describe('missingRequiredFields', () => {
-  test('all three required fields present → empty', () => {
-    expect(missingRequiredFields(['brand', 'model', 'technique'])).toEqual([]);
+  // The required-field set is now ['name', 'technique']. Brand and
+  // model are intentionally optional — real spreadsheets often skip
+  // them.
+
+  test('both required fields present → empty', () => {
+    expect(missingRequiredFields(['name', 'technique'])).toEqual([]);
   });
 
   test('mapping with extras still has no missing', () => {
     expect(
       missingRequiredFields([
+        'name',
         'brand',
         'model',
         'technique',
@@ -371,23 +391,22 @@ describe('missingRequiredFields', () => {
   });
 
   test('partial mapping → returns the missing ones in canonical order', () => {
-    expect(missingRequiredFields(['brand', null, 'technique'])).toEqual(['model']);
-    expect(missingRequiredFields(['brand'])).toEqual(['model', 'technique']);
-    expect(missingRequiredFields([null, null, null])).toEqual([
-      'brand',
-      'model',
+    expect(missingRequiredFields(['name', null])).toEqual(['technique']);
+    expect(missingRequiredFields([null, 'technique'])).toEqual(['name']);
+    expect(missingRequiredFields([null, null])).toEqual(['name', 'technique']);
+  });
+
+  test('brand/model alone do NOT satisfy the required set', () => {
+    expect(missingRequiredFields(['brand', 'model'])).toEqual([
+      'name',
       'technique',
     ]);
   });
 
-  test('empty / falsy input → all three missing', () => {
-    expect(missingRequiredFields([])).toEqual(['brand', 'model', 'technique']);
-    expect(missingRequiredFields(null)).toEqual(['brand', 'model', 'technique']);
-    expect(missingRequiredFields(undefined)).toEqual([
-      'brand',
-      'model',
-      'technique',
-    ]);
+  test('empty / falsy input → both missing', () => {
+    expect(missingRequiredFields([])).toEqual(['name', 'technique']);
+    expect(missingRequiredFields(null)).toEqual(['name', 'technique']);
+    expect(missingRequiredFields(undefined)).toEqual(['name', 'technique']);
   });
 });
 

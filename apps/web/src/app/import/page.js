@@ -56,9 +56,9 @@ const FIELD_ORDER = [
 // having to read the footer status line.
 const MAPPING_OPTIONS = [
   {value: '', label: '— Skip column —'},
-  {value: 'name', label: 'Name'},
-  {value: 'brand', label: 'Brand (required)'},
-  {value: 'model', label: 'Model (required)'},
+  {value: 'name', label: 'Name (required)'},
+  {value: 'brand', label: 'Brand'},
+  {value: 'model', label: 'Model'},
   {value: 'technique', label: 'Technique (required)'},
   {value: 'type', label: 'Snow type'},
   {value: 'length', label: 'Length'},

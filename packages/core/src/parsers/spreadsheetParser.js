@@ -466,7 +466,8 @@ function trimStringOrNull(raw) {
  *  - type enum: must end up 'cold' | 'universal' | 'warm' | 'zero'
  *    (optional — empty → null, "warm" → 'warm', etc.).
  *  - length / flex / year — strip units, parse integer.
- *  - brand, model, technique are required. Missing → errors entry.
+ *  - name and technique are required. Missing → errors entry. Brand
+ *    and model are kept optional (real user data routinely omits both).
  *
  * @param {string[]} row
  * @param {Array<string|null>} mapping  column → field
@@ -554,6 +555,12 @@ function normalizeRow(row, mapping) {
   if (!data.name && data.brand && data.model) {
     data.name = `${data.brand} ${data.model}`;
   }
+  // Also fall back to brand-only or model-only if that's all we have.
+  // Real-world inventory sheets often omit one half — better to ship
+  // "Speedmax" than to fail the row.
+  if (!data.name && (data.brand || data.model)) {
+    data.name = data.brand || data.model;
+  }
 
   // The downstream Ski validator requires a snow `type`; the spreadsheet
   // user almost never wants to label every row with one, so we default
@@ -564,15 +571,15 @@ function normalizeRow(row, mapping) {
     data.type = 'universal';
   }
 
-  // Required-field checks.
+  // Required-field checks. Brand and model are intentionally NOT required
+  // here: real user spreadsheets often track skis purely by a free-form
+  // name column (e.g. "skate red", "g4 powder ski") and never record the
+  // manufacturer. The downstream validator (validateSkiInput in
+  // validation/ski.js) lets brand + model be empty strings, so the
+  // entire stack now agrees that name + technique + type are the
+  // required trio. Type already defaults to 'universal' above.
   if (!data.name) {
     errors.push({field: 'name', message: 'Name is required'});
-  }
-  if (!data.brand) {
-    errors.push({field: 'brand', message: 'Brand is required'});
-  }
-  if (!data.model) {
-    errors.push({field: 'model', message: 'Model is required'});
   }
   if (!data.technique) {
     errors.push({field: 'technique', message: 'Technique is required'});
@@ -598,7 +605,14 @@ function applyMapping(rawRows, mapping) {
   }));
 }
 
-const REQUIRED_FIELDS = Object.freeze(['brand', 'model', 'technique']);
+// What must be mappable (via a column header, an auto-detected first
+// column, or a section header) for the UI to consider a paste
+// auto-importable. The bar here is intentionally low — anything we
+// can't infer from the data, the user fixes in the manual-mapping UI.
+// Brand and model used to be on this list. They're not anymore:
+// real user spreadsheets routinely track skis by a free-form
+// "description" column and never record manufacturer info.
+const REQUIRED_FIELDS = Object.freeze(['name', 'technique']);
 
 /**
  * Required ski fields not yet present in the column→field mapping.
@@ -676,11 +690,19 @@ function parseSpreadsheet(input) {
     ? mapHeadersToFields(first)
     : new Array(first.length).fill(null);
 
-  const requiredFields = new Set(['brand', 'model', 'technique']);
+  // "Needs manual mapping" is a usability signal — true when we
+  // couldn't figure out enough about the paste to auto-import it.
+  // The rule isn't a strict "REQUIRED_FIELDS subset of mapping"
+  // check, because `name` can come from a brand+model auto-generate
+  // (or just brand, or just model), not only from an explicit name
+  // column. Mirror the same fallback chain used inside normalizeRow.
   const mappedFields = new Set(mapping.filter(Boolean));
-  const missingRequired = [...requiredFields].some(
-    f => !mappedFields.has(f),
-  );
+  const haveName =
+    mappedFields.has('name') ||
+    mappedFields.has('brand') ||
+    mappedFields.has('model');
+  const haveTechnique = mappedFields.has('technique');
+  const missingRequired = !haveName || !haveTechnique;
 
   const unmappedHeaders = [];
   if (headerDetected) {
