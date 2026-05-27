@@ -2,18 +2,22 @@
 
 import {useEffect, useState} from 'react';
 import Link from 'next/link';
-import {useParams} from 'next/navigation';
+import {useParams, useRouter} from 'next/navigation';
 import {useAuth} from '../../providers';
 import {SignedInGuard} from '@/components/SignedInGuard';
 import {SiteHeader} from '@/components/SiteHeader';
 import {Card} from '@/components/Card';
 import {Pill} from '@/components/Pill';
+import {Button} from '@/components/Button';
+import {Modal} from '@/components/Modal';
 import {StatCard} from '@/components/StatCard';
+import {useToast} from '@/components/Toast';
 import {
   subscribeProfile,
   getSki,
   subscribeWaxLogsForSki,
   subscribeTestLogsForSki,
+  setSkiRetired,
 } from '@/lib/firestore';
 
 function fmtDate(raw) {
@@ -41,11 +45,15 @@ export default function SkiInfoPage() {
 
 function Inner() {
   const {user} = useAuth();
+  const router = useRouter();
+  const toast = useToast();
   const {id: skiId} = useParams();
   const [ski, setSki] = useState(null);
   const [profile, setProfile] = useState(null);
   const [waxLogs, setWaxLogs] = useState([]);
   const [testLogs, setTestLogs] = useState([]);
+  const [retireOpen, setRetireOpen] = useState(false);
+  const [retiring, setRetiring] = useState(false);
 
   useEffect(() => {
     if (!user || !skiId) return;
@@ -71,15 +79,55 @@ function Inner() {
     );
   }
 
+  const handleRetireConfirm = async () => {
+    setRetiring(true);
+    try {
+      await setSkiRetired(user.uid, skiId, !ski.retired);
+      toast.success({
+        title: ski.retired ? 'Ski unretired' : 'Ski retired',
+        body: ski.name,
+      });
+      setRetireOpen(false);
+      // Refresh local state — subscribe pattern would be nicer but
+      // getSki was already used on mount; do a quick refetch.
+      const fresh = await getSki(user.uid, skiId);
+      setSki(fresh);
+    } catch (err) {
+      toast.error({
+        title: 'Could not update',
+        body: String((err && err.message) || err),
+      });
+    } finally {
+      setRetiring(false);
+    }
+  };
+
   return (
     <div>
       <SiteHeader role={profile?.role === 'coach' ? 'coach' : 'athlete'} />
       <main className="max-w-3xl mx-auto px-6 py-8">
-        <Link href="/home" className="text-text-secondary text-sm">
-          ← Back to fleet
-        </Link>
+        <div className="flex items-center justify-between mb-4">
+          <Link
+            href="/home"
+            className="text-text-secondary text-sm hover:text-white">
+            ← Back to fleet
+          </Link>
+          <div className="flex items-center gap-3">
+            <Link
+              href={`/ski/${skiId}/edit`}
+              className="text-red text-sm hover:text-red-pressed">
+              Edit
+            </Link>
+            <button
+              type="button"
+              onClick={() => setRetireOpen(true)}
+              className="text-text-secondary text-sm hover:text-white">
+              {ski.retired ? 'Unretire' : 'Retire'}
+            </button>
+          </div>
+        </div>
 
-        <Card className="mt-4 mb-6">
+        <Card className="mb-6">
           <h1 className="text-4xl font-bold tracking-tight mb-2">
             {ski.name}
           </h1>
@@ -91,6 +139,7 @@ function Inner() {
           <div className="flex gap-2 flex-wrap mb-4">
             {ski.technique && <Pill variant="outline">{ski.technique}</Pill>}
             {ski.type && <Pill variant="outline">{ski.type}</Pill>}
+            {ski.retired && <Pill variant="solid">Retired</Pill>}
           </div>
           <div className="grid grid-cols-3 gap-4 border-t border-border pt-4">
             <MiniStat label="Flex" value={ski.flex ? `${ski.flex} kg` : '—'} />
@@ -170,6 +219,35 @@ function Inner() {
           </>
         )}
       </main>
+
+      <Modal
+        open={retireOpen}
+        onClose={() => !retiring && setRetireOpen(false)}
+        title={ski.retired ? 'Unretire this ski?' : 'Retire this ski?'}
+        footer={
+          <>
+            <Button
+              variant="ghost"
+              size="md"
+              onClick={() => setRetireOpen(false)}
+              disabled={retiring}>
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              size="md"
+              loading={retiring}
+              onClick={handleRetireConfirm}>
+              {ski.retired ? 'Unretire' : 'Retire'}
+            </Button>
+          </>
+        }>
+        <p className="text-text-secondary text-sm">
+          {ski.retired
+            ? `"${ski.name}" will show up in your active fleet again. Its history stays where it is.`
+            : `"${ski.name}" will be hidden from your active fleet but its history stays. You can unretire it later.`}
+        </p>
+      </Modal>
     </div>
   );
 }

@@ -12,9 +12,13 @@ import {
   where,
   orderBy,
   addDoc,
+  setDoc,
   serverTimestamp,
 } from 'firebase/firestore';
-import {buildSkiCreatePayload} from '@nordicfleet/core';
+import {
+  buildSkiCreatePayload,
+  buildSkiUpdatePayload,
+} from '@nordicfleet/core';
 import {getDbClient} from './firebase';
 
 function noop() {}
@@ -210,6 +214,40 @@ export async function createSki(uid, data) {
  *   failed:  Array<{index: number, error: string}>,
  * }>}
  */
+/**
+ * Patch an existing ski. Goes through buildSkiUpdatePayload so the
+ * same validation + normalization rules iOS uses apply on web. Passes
+ * only the fields the caller provided (partial update).
+ *
+ * @param {string} uid
+ * @param {string} skiId
+ * @param {object} partial   any subset of SkiInput keys
+ */
+export async function updateSki(uid, skiId, partial) {
+  if (!uid || !skiId) {
+    throw new Error('updateSki: uid and skiId required');
+  }
+  const db = getDbClient();
+  if (!db) {
+    throw new Error('Firestore is not configured');
+  }
+  const normalized = buildSkiUpdatePayload(partial || {});
+  await setDoc(
+    doc(db, 'users', uid, 'skis', skiId),
+    {...normalized, updatedAt: serverTimestamp()},
+    {merge: true},
+  );
+}
+
+/**
+ * Soft-delete — sets retired=true. The web UI also exposes the
+ * inverse (set false) so coaches can resurrect skis a user retired
+ * by mistake.
+ */
+export async function setSkiRetired(uid, skiId, retired) {
+  return updateSki(uid, skiId, {retired: !!retired});
+}
+
 export async function createSkisBatch(uid, skiInputs) {
   if (!uid) {
     throw new Error('createSkisBatch: uid is required');

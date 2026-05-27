@@ -70,11 +70,18 @@ function HomeInner() {
             Your fleet
           </h2>
           {loaded && skis.length > 0 && (
-            <Link
-              href="/import"
-              className="text-red text-sm hover:text-red-pressed">
-              + Import skis
-            </Link>
+            <div className="flex items-center gap-4">
+              <Link
+                href="/ski/new"
+                className="text-red text-sm hover:text-red-pressed">
+                + Add ski
+              </Link>
+              <Link
+                href="/import"
+                className="text-text-secondary text-sm hover:text-white">
+                Import
+              </Link>
+            </div>
           )}
         </div>
 
@@ -88,14 +95,21 @@ function HomeInner() {
           <Card>
             <h3 className="text-xl font-bold mb-2">No skis yet</h3>
             <p className="text-text-secondary text-sm mb-4">
-              Start your fleet by pasting a list from a spreadsheet, or add
-              them one-by-one in the iOS app.
+              Add your first ski, or paste a whole fleet from a
+              spreadsheet — both work from web.
             </p>
-            <Link href="/import">
-              <Button variant="primary" size="md">
-                Import skis →
-              </Button>
-            </Link>
+            <div className="flex flex-wrap gap-3">
+              <Link href="/ski/new">
+                <Button variant="primary" size="md">
+                  Add a ski
+                </Button>
+              </Link>
+              <Link href="/import">
+                <Button variant="secondary" size="md">
+                  Import from spreadsheet
+                </Button>
+              </Link>
+            </div>
           </Card>
         )}
 
@@ -130,13 +144,6 @@ function HomeInner() {
           ))}
         </ul>
 
-        <Card className="mt-8 border-dashed">
-          <p className="text-sm text-text-secondary">
-            Logging waxes, tests, and editing individual skis still lives in
-            the iOS app. The web app handles bulk imports — paste a fleet
-            from a spreadsheet to skip the manual entry.
-          </p>
-        </Card>
       </main>
     </div>
   );
