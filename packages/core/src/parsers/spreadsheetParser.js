@@ -654,7 +654,8 @@ function duplicateMappings(mapping) {
  * @property {Array<string|null>} mapping   column index → field name
  * @property {Array<{data: object, errors: object[], raw: string[]}>} rows
  * @property {boolean} needsManualMapping
- * @property {string[]} unmappedHeaders
+ * @property {string[]} unmappedHeaders   headers that didn't map AND weren't rescued
+ * @property {string[]} rescuedHeaders    headers folded into the row notes field
  */
 
 /**
@@ -679,6 +680,7 @@ function parseSpreadsheet(input) {
       rows: [],
       needsManualMapping: true,
       unmappedHeaders: [],
+      rescuedHeaders: [],
     };
   }
 
@@ -720,11 +722,26 @@ function parseSpreadsheet(input) {
   const haveTechnique = mappedFields.has('technique');
   const missingRequired = !haveName || !haveTechnique;
 
+  // Build the unmapped-headers list AFTER the rescue step — columns
+  // that get rescued into notes aren't "ignored", they just don't
+  // have a structural field. We surface those separately in
+  // `rescuedHeaders` so the UI can show "we folded these columns
+  // into notes" instead of misleading the user with "ignored".
+  const rescuedIndices = new Set(rescueColumns.map(c => c.index));
   const unmappedHeaders = [];
+  const rescuedHeaders = [];
   if (headerDetected) {
     for (let i = 0; i < headers.length; i += 1) {
-      if (!mapping[i]) {
-        unmappedHeaders.push(headers[i]);
+      if (mapping[i]) {
+        continue;
+      }
+      const label = (headers[i] || '').trim();
+      if (rescuedIndices.has(i)) {
+        rescuedHeaders.push(label);
+      } else if (label) {
+        // Only list headers that have a name — a blank header that
+        // didn't get auto-claimed as `name` isn't worth surfacing.
+        unmappedHeaders.push(label);
       }
     }
   }
@@ -795,6 +812,7 @@ function parseSpreadsheet(input) {
     needsManualMapping:
       !headerDetected || (!haveName || (!haveTechnique && !sectionTechniqueDetected)),
     unmappedHeaders,
+    rescuedHeaders,
   };
 }
 

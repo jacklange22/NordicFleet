@@ -355,6 +355,18 @@ function PreviewStep({
           </div>
         )}
 
+        {parsed.rescuedHeaders?.length > 0 && (
+          <div className="text-sm text-text-tertiary mb-4">
+            Folded into notes:{' '}
+            <span className="text-text-secondary">
+              {parsed.rescuedHeaders.join(', ')}
+            </span>
+            . These columns didn&apos;t map to a Ski field, but they had
+            data in most rows — we appended the per-row values to the
+            notes column so nothing is lost.
+          </div>
+        )}
+
         {parsed.needsManualMapping && (
           <div className="text-sm bg-bg border border-border rounded-2xl p-4 mb-4 flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
             <div className="text-text-secondary">

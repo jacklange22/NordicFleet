@@ -330,12 +330,22 @@ Fischer\tSpeedmax\t200`;
     });
   });
 
-  test('unmapped headers reported separately', () => {
-    const input = `Brand\tModel\tTechnique\tFavorite Color
-Fischer\tSpeedmax\tClassic\tred`;
+  test('unmapped headers split into "rescued" vs "ignored" buckets', () => {
+    // Two unmapped headers: one with data in every row (rescued
+    // into notes), one with sparse data (ignored).
+    const input = `Brand\tModel\tTechnique\tFavorite Color\tBlank Col
+Fischer\tSpeedmax\tClassic\tred\t
+Salomon\tS/Lab\tSkate\tblue\t
+Madshus\tRedline\tClassic\tgreen\t`;
     const out = parseSpreadsheet(input);
-    expect(out.unmappedHeaders).toEqual(['Favorite Color']);
+    // Favorite Color is rescued (3/3 = 100% populated).
+    expect(out.rescuedHeaders).toContain('Favorite Color');
+    expect(out.unmappedHeaders).not.toContain('Favorite Color');
+    // Blank Col has no data → stays in unmappedHeaders.
+    expect(out.unmappedHeaders).toContain('Blank Col');
     expect(out.rows[0].errors).toEqual([]);
+    // The rescued value lands in notes.
+    expect(out.rows[0].data.notes).toContain('favorite color: red');
   });
 
   test('per-row errors collected without short-circuiting', () => {
