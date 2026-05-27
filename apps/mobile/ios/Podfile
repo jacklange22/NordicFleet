@@ -44,6 +44,11 @@ target 'NordicFleet' do
   pod 'GoogleUtilities', :modular_headers => true
   pod 'RecaptchaInterop', :modular_headers => true
 
+  # Local native module: on-device OCR via Apple Vision. Source lives in
+  # ios/NFOCR/. No GoogleMLKit, no transitive Firebase conflicts — just a
+  # thin Obj-C wrapper around VNRecognizeTextRequest.
+  pod 'NFOCR', :path => './NFOCR'
+
   use_react_native!(
     :path => config[:reactNativePath],
     # An absolute path to your application root.

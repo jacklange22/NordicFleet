@@ -31,8 +31,12 @@
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
+	<key>NSCameraUsageDescription</key>
+	<string>NordicFleet uses the camera to scan ski stickers and auto-fill the brand, model, length, and flex when adding a ski.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>NordicFleet uses your location to tag where you tested your skis, so you can compare performance across different venues.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>NordicFleet reads photos you pick to scan ski stickers for auto-filling new ski details.</string>
 	<key>UIAppFonts</key>
 	<array>
 		<string>Ionicons.ttf</string>
