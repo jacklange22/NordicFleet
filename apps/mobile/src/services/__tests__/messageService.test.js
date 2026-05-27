@@ -1,6 +1,7 @@
 import firestoreMock from '@react-native-firebase/firestore';
 import {
   sendMessage,
+  sendAdvisory,
   markRead,
   subscribeMessagesForAthlete,
   subscribeMessagesFromCoach,
@@ -44,6 +45,78 @@ describe('messageService', () => {
         read: false,
       });
       expect(stored.createdAt).toBeDefined();
+    });
+  });
+
+  describe('sendAdvisory', () => {
+    it('persists an advisory doc with type=advisory and structured payload', async () => {
+      const id = await sendAdvisory({
+        fromUid: 'c1',
+        toUid: 'a1',
+        event: 'Birken 2026',
+        eventDate: '2026-03-15',
+        conditions: {
+          snowType: 'cold',
+          snowTemperature: -8,
+          airTemperature: -10,
+          newSnow: false,
+          notes: 'Groomed last night.',
+        },
+        skiRecommendations: [
+          {skiId: 'ski-a', role: 'primary', notes: 'Pure cold conditions'},
+          {skiId: 'ski-b', role: 'backup', notes: 'If it warms to -3'},
+        ],
+      });
+      const stored = firestoreMock.__getStore().get(`messages/${id}`);
+      expect(stored).toMatchObject({
+        fromUid: 'c1',
+        toUid: 'a1',
+        type: 'advisory',
+        read: false,
+        attachedSkiIds: ['ski-a', 'ski-b'],
+        advisory: {
+          event: 'Birken 2026',
+          eventDate: '2026-03-15',
+          conditions: {
+            snowType: 'cold',
+            snowTemperature: -8,
+            airTemperature: -10,
+            newSnow: false,
+            notes: 'Groomed last night.',
+          },
+          skiRecommendations: [
+            {skiId: 'ski-a', role: 'primary', notes: 'Pure cold conditions'},
+            {skiId: 'ski-b', role: 'backup', notes: 'If it warms to -3'},
+          ],
+        },
+      });
+      // Subject auto-falls-back to "Race plan: {event}" when not given.
+      expect(stored.subject).toBe('Race plan: Birken 2026');
+      expect(stored.createdAt).toBeDefined();
+    });
+
+    it('rejects when there is no primary ski', async () => {
+      await expect(
+        sendAdvisory({
+          fromUid: 'c1',
+          toUid: 'a1',
+          event: 'Birken 2026',
+          eventDate: '2026-03-15',
+          skiRecommendations: [{skiId: 'ski-a', role: 'backup'}],
+        }),
+      ).rejects.toThrow(/primary/);
+    });
+
+    it('rejects malformed dates', async () => {
+      await expect(
+        sendAdvisory({
+          fromUid: 'c1',
+          toUid: 'a1',
+          event: 'Birken 2026',
+          eventDate: 'next sunday',
+          skiRecommendations: [{skiId: 'ski-a', role: 'primary'}],
+        }),
+      ).rejects.toThrow(/YYYY-MM-DD/);
     });
   });
 
