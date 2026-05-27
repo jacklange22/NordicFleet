@@ -200,6 +200,34 @@ const AthleteDetailScreen = ({route}) => {
         </View>
       </View>
 
+      <Card
+        style={styles.advisoryCta}
+        padding={spacing.md}
+        onPress={() =>
+          navigation.navigate('ComposeAdvisory', {
+            athleteUid,
+            athleteName: athleteName || athleteEmail,
+          })
+        }
+        accessibilityLabel="Send a race-day plan">
+        <View style={styles.advisoryCtaRow}>
+          <View style={styles.advisoryIconWrap}>
+            <Ionicons name="flag-outline" size={22} color={colors.red} />
+          </View>
+          <View style={styles.advisoryText}>
+            <Text style={styles.advisoryTitle}>Send a race-day plan</Text>
+            <Text style={styles.advisorySubtitle}>
+              Pick the skis + conditions for an upcoming event.
+            </Text>
+          </View>
+          <Ionicons
+            name="chevron-forward"
+            size={20}
+            color={colors.textTertiary}
+          />
+        </View>
+      </Card>
+
       <SectionHeader title="Fleet" />
     </View>
   );
@@ -368,6 +396,35 @@ const styles = StyleSheet.create({
   },
   statCell: {flex: 1},
   statCellSpacer: {width: spacing.sm},
+
+  advisoryCta: {
+    marginBottom: spacing.lg,
+  },
+  advisoryCtaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  advisoryIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.md,
+    backgroundColor: colors.bg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.md,
+  },
+  advisoryText: {flex: 1},
+  advisoryTitle: {
+    ...typography.headingMd,
+    color: colors.textPrimary,
+  },
+  advisorySubtitle: {
+    ...typography.bodySm,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
 
   skiCardOuter: {overflow: 'hidden'},
   skiCardBody: {
