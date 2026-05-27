@@ -15,6 +15,7 @@ import TestingLogScreen from './src/screens/testinglog.js';
 import WaxLogScreen from './src/screens/waxinglog.js';
 import SkiInfo from './src/screens/skiInfo.js';
 import AddSkiForm from './src/screens/newSki.js';
+import ScanSkiScreen from './src/screens/scanSki.js';
 import RoleSelectScreen from './src/screens/roleSelect.js';
 import CoachDashboardScreen from './src/screens/coachDashboard.js';
 import AthleteDetailScreen from './src/screens/athleteDetail.js';
@@ -68,6 +69,7 @@ const App = () => {
               <Stack.Screen name="WaxLog" component={WaxLogScreen} />
               <Stack.Screen name="SkiInfo" component={SkiInfo} />
               <Stack.Screen name="newSki" component={AddSkiForm} />
+              <Stack.Screen name="ScanSki" component={ScanSkiScreen} />
               <Stack.Screen name="RoleSelect" component={RoleSelectScreen} />
               <Stack.Screen
                 name="CoachDashboard"
