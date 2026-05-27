@@ -739,6 +739,17 @@ function parseSpreadsheet(input) {
       sectionTechniqueDetected = true;
       continue;
     }
+    // Silently skip rows with 0 or 1 non-empty cells. These are
+    // visual separators in user spreadsheets, or sparse mistakes
+    // not worth flagging. tokenizeRows already drops pure-blank
+    // lines; this catches rows that got a stray cell value but
+    // otherwise have nothing to import.
+    const nonEmptyCount = row.filter(
+      c => typeof c === 'string' && c.trim().length > 0,
+    ).length;
+    if (nonEmptyCount <= 1) {
+      continue;
+    }
     const result = normalizeRow(row, mapping);
     if (!result.data.technique && currentTechnique) {
       result.data.technique = currentTechnique;

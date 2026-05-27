@@ -553,6 +553,20 @@ Speedmax\t190`;
     const out = parseSpreadsheet(input);
     expect(out.needsManualMapping).toBe(false);
   });
+
+  test('rows with 0-1 non-empty cells are silently skipped', () => {
+    const input = `name\ttechnique\tlength
+Speedmax\tclassic\t190
+stray
+\t\t
+S/Lab\tskate\t186`;
+    const out = parseSpreadsheet(input);
+    // "stray" is a 1-cell row that doesn't match a technique — skip.
+    // The blank line gets dropped by the tokenizer.
+    expect(out.rows.length).toBe(2);
+    expect(out.rows[0].data.name).toBe('Speedmax');
+    expect(out.rows[1].data.name).toBe('S/Lab');
+  });
 });
 
 describe('duplicateMappings', () => {
