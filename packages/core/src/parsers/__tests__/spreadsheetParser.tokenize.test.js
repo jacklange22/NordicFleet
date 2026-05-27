@@ -131,13 +131,15 @@ describe('tokenizeRows', () => {
   });
 });
 
-describe('parseSpreadsheet (1.1 — passthrough)', () => {
-  test('returns delimiter + rawRows', () => {
+describe('parseSpreadsheet (1.1 — minimal shape)', () => {
+  test('returns delimiter object on every parse', () => {
     const out = parseSpreadsheet('a,b\nc,d');
     expect(out.delimiter.kind).toBe('comma');
-    expect(out.rawRows).toEqual([
-      ['a', 'b'],
-      ['c', 'd'],
-    ]);
+    // Rich shape — headers/mapping/rows are exercised in
+    // spreadsheetParser.normalize.test.js.
+    expect(out).toHaveProperty('headers');
+    expect(out).toHaveProperty('mapping');
+    expect(out).toHaveProperty('rows');
+    expect(out).toHaveProperty('needsManualMapping');
   });
 });
