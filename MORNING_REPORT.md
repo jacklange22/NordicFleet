@@ -1,5 +1,125 @@
 # Morning report — autonomous NordicFleet rewrite
 
+## Web parity session (2026-05-27)
+
+The web app can now drive the daily-use routine end-to-end. Athletes
+add / edit / retire skis, log waxes + tests, edit profile, request a
+coach, and read messages — all without touching iOS. Coaches approve
+/ decline requests, browse athlete fleets, compose messages.
+
+### New routes (8 features → 8 sub-areas, 11 new pages)
+
+| Route | Who | What |
+|-------|-----|------|
+| `/ski/new` | athlete | Add a ski. SkiForm (shared component) → createSki via core's buildSkiCreatePayload. Brand is a chip row that opens an "Other" input on demand. |
+| `/ski/[id]/edit` | athlete | Edit a ski. Same SkiForm, prefilled with the existing doc. Saves via updateSki + buildSkiUpdatePayload. |
+| `/ski/[id]` (existing, extended) | athlete | Edit / Retire links + a confirmation modal for retire/unretire. Retired skis surface a solid pill in the header. |
+| `/log/wax` | athlete | Pick skis → per-ski binder + kick (classic only) + glide layers with a WAX_DICTIONARY typeahead picker. Batched write via Promise.allSettled. |
+| `/log/test` | athlete | Conditions card (temp / humidity / snow type / surface) → per-ski 1-10 ratings (glide + kick on classic, stability + climbing on skate). |
+| `/profile` (existing, extended) | both | New Edit modal updates display name, weight, height, team, location. CoachLinkCard renders the four states (none / pending / accepted / declined) below for athletes. |
+| `/coach/requests` | coach | Inbox of pending requests with Approve / Decline per row. Athlete client observes status and writes their own coachId via the existing sync hook. |
+| `/coach/[athleteId]` | coach | Read-only athlete fleet + profile snippet. Header link to Compose. |
+| `/coach/[athleteId]/compose` | coach | Subject + body + multi-select chips of athlete's skis → sendMessage. |
+| `/messages` | athlete | Inbox. Unread badge + 2-line body preview + "Race plan" + ski-count pills. |
+| `/messages/[messageId]` | athlete | Marks as read on open. Free-form messages render plain; `type === 'advisory'` triggers the structured race-day-plan view with event card, conditions tiles, role-coded ski recommendation cards. |
+
+### Architecture deltas
+
+- 11 reusable form atoms in `apps/web/src/components/forms/`:
+  FormInput, FormTextarea, FormSelect, FormPillSelector,
+  FormChipMultiselect, FormStepper, FormRating, WaxPicker. Plus a
+  Modal + Toast (`useToast()` returns success/error/info, mirrors
+  iOS' `Toast.show()` ergonomics).
+- `apps/web/src/lib/firestore.js` grew from 270 → ~620 lines.
+  Added: `updateProfile`, `findCoachByEmail`, the coach-request
+  CRUD set, `subscribePendingRequestsForCoach`,
+  `subscribeOutgoingRequestsForAthlete`, `syncCoachIdFromRequests`,
+  `sendMessage`, `markMessageRead`, `subscribeMessagesForAthlete`,
+  `subscribeUnreadCountForAthlete`, `getMessage`, plus
+  `createWaxLog`, `createTestLog`, `updateSki`, `setSkiRetired`.
+  Every writer goes through the corresponding `buildXPayload()` in
+  `@nordicfleet/core` so web and iOS produce structurally identical
+  Firestore docs.
+- `SiteHeader` now carries the full nav matrix (athlete: Fleet ·
+  Messages · Profile, coach: Athletes · Requests · Profile) with a
+  live unread badge on the Messages tab.
+
+### What's still iOS-only (deliberately deferred per brief)
+
+- Race-day advisory **compose** (athlete can read advisories on web;
+  composing them stays on iOS).
+- Share ski / share fleet (iOS native share-sheet doesn't translate
+  cleanly).
+- Delete account (App Store requirement; less relevant on web).
+- Change password (Forgot Password flow already on web covers most
+  users).
+- Photo OCR sticker scan (iOS-only by nature).
+- Browser geolocation tagging on test logs (only manual location
+  labels this session — they're prepended to notes).
+- Push notifications.
+
+### Known UX rough edges (honest)
+
+- **Coach-side ski detail is a stub.** Clicking a ski card on
+  `/coach/[athleteId]` opens `/ski/[id]` which reads from the
+  current user's (the coach's) Firestore tree — so the coach sees
+  an empty page. Mobile passes `ownerUid` as a route param;
+  threading that through the web ski detail is a follow-up. Note
+  surfaced on the athlete-detail page inline so the coach isn't
+  confused.
+- **The wax-log form gets tall with multiple skis selected.**
+  Picking 3+ classic skis stacks 3 binder + 3 kick + 3 glide
+  sub-forms. Fine on a desktop monitor; cramped at 1280px or below.
+  No collapsing affordance this session — Apple-quality polish item
+  for later.
+- **No live ski subscription on the message-detail page** — uses
+  `getSki()` once per attached id. Means if a coach attaches a ski
+  and the athlete renames it mid-session, the athlete's open
+  message view shows the old name until reload.
+- **Athletes only see their own messages**, even if a coach also
+  has an inbox (e.g. for two-way replies). This matches the
+  existing data model — coach→athlete messaging is one-way.
+
+### Verification at submit time
+
+```
+npm test --workspace=packages/core     17 / 17 suites, 261 / 261 tests
+npm test --workspace=apps/mobile       42 / 43 suites (1 skipped), 232 / 233 tests
+npm run web:build                      ✓ 19 routes
+vercel --prod                          dpl_EMAWyY7kYsTvP5vR9nQk82DcUfqz READY
+                                       https://nordicfleet-web.vercel.app
+```
+
+### Manual verification you should still do
+
+The brief's two-browser flow, transposed to what's now possible on
+web:
+
+1. **Athlete (browser 1):** sign up → /home → Add ski (form) →
+   /log/wax (pick the new ski, fill binder + glide layer, save) →
+   /log/test (set conditions, give it a glide rating, save) →
+   /profile → Add a coach (your coach's email).
+2. **Coach (browser 2):** sign up as coach → /coach → see "1
+   pending request" banner → /coach/requests → Approve. Click the
+   athlete who just showed up → see their ski + wax + test counts →
+   Compose message → attach the same ski → Send.
+3. **Athlete (browser 1):** see new unread message badge in the nav
+   → /messages → open the message → attached-ski card links to the
+   ski detail.
+
+If anything in that loop breaks, dump the path and what the toast /
+error said — that's enough for next session to start from.
+
+### Test coverage
+
+- Web pages: 0 component tests this session (deliberate; the
+  business logic going through core helpers stays covered there).
+- Core: **261 / 261** (unchanged from last session — no new core
+  paths added).
+- Mobile: **232 / 233** (1 pre-existing skip; unchanged).
+
+---
+
 ## Spreadsheet import fix session (2026-05-27)
 
 Real user paste hit the import flow and 0 of 32 rows survived
