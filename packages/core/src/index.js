@@ -9,10 +9,12 @@
 //   constants/    wax dictionary, ski brands, snow / surface / binder enums,
 //                 seed data JSON
 //   services/     payload builders (no Firestore — just shaping)
+//   parsers/      deterministic input parsers (spreadsheets, OCR text)
 
 module.exports = {
   ...require('./types'),
   ...require('./validation'),
   ...require('./constants'),
   ...require('./services'),
+  ...require('./parsers'),
 };
