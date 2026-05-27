@@ -9,6 +9,7 @@ import {SiteHeader} from '@/components/SiteHeader';
 import {Card} from '@/components/Card';
 import {Pill} from '@/components/Pill';
 import {StatCard} from '@/components/StatCard';
+import {Button} from '@/components/Button';
 import {subscribeProfile, subscribeSkis} from '@/lib/firestore';
 
 export default function HomePage() {
@@ -64,9 +65,18 @@ function HomeInner() {
           <StatCard value="—" label="Tests logged" />
         </div>
 
-        <h2 className="text-xs uppercase tracking-wider text-text-tertiary mb-3">
-          Your fleet
-        </h2>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-xs uppercase tracking-wider text-text-tertiary">
+            Your fleet
+          </h2>
+          {loaded && skis.length > 0 && (
+            <Link
+              href="/import"
+              className="text-red text-sm hover:text-red-pressed">
+              + Import skis
+            </Link>
+          )}
+        </div>
 
         {!loaded && (
           <p className="text-text-tertiary text-sm py-12 text-center">
@@ -77,10 +87,15 @@ function HomeInner() {
         {loaded && skis.length === 0 && (
           <Card>
             <h3 className="text-xl font-bold mb-2">No skis yet</h3>
-            <p className="text-text-secondary text-sm">
-              Add your first ski from the iOS app to start tracking waxes and
-              tests. The web preview is read-only for now.
+            <p className="text-text-secondary text-sm mb-4">
+              Start your fleet by pasting a list from a spreadsheet, or add
+              them one-by-one in the iOS app.
             </p>
+            <Link href="/import">
+              <Button variant="primary" size="md">
+                Import skis →
+              </Button>
+            </Link>
           </Card>
         )}
 
@@ -117,8 +132,9 @@ function HomeInner() {
 
         <Card className="mt-8 border-dashed">
           <p className="text-sm text-text-secondary">
-            Logging waxes, tests, and editing skis lives in the iOS app for
-            now. Web is a read-only preview while the platform matures.
+            Logging waxes, tests, and editing individual skis still lives in
+            the iOS app. The web app handles bulk imports — paste a fleet
+            from a spreadsheet to skip the manual entry.
           </p>
         </Card>
       </main>
