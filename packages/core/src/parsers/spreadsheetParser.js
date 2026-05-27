@@ -566,6 +566,41 @@ function applyMapping(rawRows, mapping) {
   }));
 }
 
+const REQUIRED_FIELDS = Object.freeze(['brand', 'model', 'technique']);
+
+/**
+ * Required ski fields not yet present in the column→field mapping.
+ * The manual-mapping UI uses this to gate the "Apply" button.
+ *
+ * @param {Array<string|null>} mapping
+ * @returns {string[]}  the missing field names, in canonical order
+ */
+function missingRequiredFields(mapping) {
+  const present = new Set((mapping || []).filter(Boolean));
+  return REQUIRED_FIELDS.filter(f => !present.has(f));
+}
+
+/**
+ * Fields mapped to more than one column. The UI uses this to surface
+ * "you mapped two columns to 'brand'" errors before letting the user
+ * apply their mapping.
+ *
+ * @param {Array<string|null>} mapping
+ * @returns {string[]}  duplicate field names (each appears once in the result)
+ */
+function duplicateMappings(mapping) {
+  const counts = new Map();
+  for (const f of mapping || []) {
+    if (!f) continue;
+    counts.set(f, (counts.get(f) || 0) + 1);
+  }
+  const dupes = [];
+  for (const [f, n] of counts.entries()) {
+    if (n > 1) dupes.push(f);
+  }
+  return dupes;
+}
+
 /**
  * @typedef {Object} ParsedSheet
  * @property {ReturnType<typeof detectDelimiter>} delimiter
@@ -648,5 +683,8 @@ module.exports = {
   mapHeadersToFields,
   normalizeRow,
   applyMapping,
+  missingRequiredFields,
+  duplicateMappings,
   HEADER_ALIASES,
+  REQUIRED_FIELDS,
 };

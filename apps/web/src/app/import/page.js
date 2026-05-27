@@ -2,7 +2,12 @@
 
 import {useMemo, useState} from 'react';
 import Link from 'next/link';
-import {parseSpreadsheet} from '@nordicfleet/core';
+import {
+  parseSpreadsheet,
+  applyMapping,
+  missingRequiredFields,
+  duplicateMappings,
+} from '@nordicfleet/core';
 import {SignedInGuard} from '@/components/SignedInGuard';
 import {SiteHeader} from '@/components/SiteHeader';
 import {Card} from '@/components/Card';
@@ -14,14 +19,14 @@ import {Button} from '@/components/Button';
 // because typing 30 skis manually is unbearable. The UI surface needs
 // to be calm, informative, and forgiving.
 //
-// Three steps:
+// Stages:
 //   1. paste     — large textarea + Parse button
 //   2. preview   — summary card + per-row table with inline error
 //                  tags
+//   2b. mapping  — manual column→field assignment when auto-detection
+//                  couldn't recognize a required field, or when the
+//                  paste had no header row.
 //   3. confirm   — after save (1.5)
-//
-// 1.4 will add the manual-mapping fallback when auto-detection misses
-// a required column.
 
 const EXAMPLE = `Brand\tModel\tTechnique\tType\tLength\tFlex
 Fischer\tSpeedmax\tClassic\tCold\t200\t90
@@ -43,6 +48,25 @@ const FIELD_ORDER = [
   'notes',
 ];
 
+// Order + labels surfaced in the manual-mapping dropdown. Required
+// fields are marked inline so users see why a save is blocked without
+// having to read the footer status line.
+const MAPPING_OPTIONS = [
+  {value: '', label: '— Skip column —'},
+  {value: 'name', label: 'Name'},
+  {value: 'brand', label: 'Brand (required)'},
+  {value: 'model', label: 'Model (required)'},
+  {value: 'technique', label: 'Technique (required)'},
+  {value: 'type', label: 'Snow type'},
+  {value: 'length', label: 'Length'},
+  {value: 'flex', label: 'Flex'},
+  {value: 'build', label: 'Build'},
+  {value: 'base', label: 'Base'},
+  {value: 'grind', label: 'Grind / structure'},
+  {value: 'year', label: 'Year'},
+  {value: 'notes', label: 'Notes'},
+];
+
 export default function ImportPage() {
   return (
     <SignedInGuard>
@@ -52,7 +76,7 @@ export default function ImportPage() {
 }
 
 function Inner() {
-  const [stage, setStage] = useState('paste'); // 'paste' | 'preview'
+  const [stage, setStage] = useState('paste'); // 'paste' | 'preview' | 'mapping'
   const [raw, setRaw] = useState('');
   const [parsed, setParsed] = useState(null);
 
@@ -71,6 +95,42 @@ function Inner() {
     setRaw(EXAMPLE);
   };
 
+  const handleEnterMapping = () => {
+    setStage('mapping');
+  };
+
+  const handleApplyMapping = newMapping => {
+    const rawRows = parsed.rows.map(r => r.raw);
+    const rows = applyMapping(rawRows, newMapping);
+    const unmapped = [];
+    if (parsed.headers && parsed.headers.length > 0) {
+      for (let i = 0; i < parsed.headers.length; i += 1) {
+        if (!newMapping[i]) {
+          unmapped.push(parsed.headers[i]);
+        }
+      }
+    }
+    setParsed({
+      ...parsed,
+      mapping: newMapping,
+      rows,
+      needsManualMapping: false,
+      unmappedHeaders: unmapped,
+    });
+    setStage('preview');
+  };
+
+  const handleCancelMapping = () => {
+    setStage('preview');
+  };
+
+  const stepLabel =
+    stage === 'paste'
+      ? 'Step 1 of 2'
+      : stage === 'mapping'
+        ? 'Step 2 of 2 · mapping'
+        : 'Step 2 of 2';
+
   return (
     <div>
       <SiteHeader role="athlete" />
@@ -79,20 +139,30 @@ function Inner() {
           <Link href="/home" className="text-text-secondary text-sm hover:text-white">
             ← Back to fleet
           </Link>
-          <span className="text-text-tertiary text-sm">
-            {stage === 'paste' ? 'Step 1 of 2' : 'Step 2 of 2'}
-          </span>
+          <span className="text-text-tertiary text-sm">{stepLabel}</span>
         </div>
 
-        {stage === 'paste' ? (
+        {stage === 'paste' && (
           <PasteStep
             raw={raw}
             setRaw={setRaw}
             onParse={handleParse}
             onUseExample={useExample}
           />
-        ) : (
-          <PreviewStep parsed={parsed} onStartOver={handleStartOver} />
+        )}
+        {stage === 'preview' && (
+          <PreviewStep
+            parsed={parsed}
+            onStartOver={handleStartOver}
+            onEnterMapping={handleEnterMapping}
+          />
+        )}
+        {stage === 'mapping' && (
+          <MappingStep
+            parsed={parsed}
+            onApply={handleApplyMapping}
+            onCancel={handleCancelMapping}
+          />
         )}
       </main>
     </div>
@@ -157,7 +227,7 @@ function PasteStep({raw, setRaw, onParse, onUseExample}) {
   );
 }
 
-function PreviewStep({parsed, onStartOver}) {
+function PreviewStep({parsed, onStartOver, onEnterMapping}) {
   const rows = parsed.rows || [];
   const validRowCount = useMemo(
     () => rows.filter(r => r.errors.length === 0).length,
@@ -165,6 +235,9 @@ function PreviewStep({parsed, onStartOver}) {
   );
   const errorRowCount = rows.length - validRowCount;
   const delim = parsed.delimiter?.kind || 'tab';
+  const saveTitle = parsed.needsManualMapping
+    ? 'Map your columns first'
+    : 'Save action lands in Feature 1.5';
 
   return (
     <>
@@ -208,17 +281,40 @@ function PreviewStep({parsed, onStartOver}) {
             <span className="text-text-secondary">
               {parsed.unmappedHeaders.join(', ')}
             </span>
-            . They&apos;ll be ignored — use manual mapping (coming next)
-            if any of these should map to a Ski field.
+            . They&apos;ll be ignored — open the mapping editor if any of
+            these should map to a Ski field.
           </div>
         )}
 
         {parsed.needsManualMapping && (
-          <div className="text-sm text-text-secondary bg-bg border border-border rounded-2xl p-4 mb-4">
-            <span className="font-semibold text-white">Heads up:</span> at
-            least one required field (brand, model, or technique)
-            wasn&apos;t recognized from your headers. The save action will
-            unlock once manual column mapping is wired up (next commit).
+          <div className="text-sm bg-bg border border-border rounded-2xl p-4 mb-4 flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
+            <div className="text-text-secondary">
+              <span className="font-semibold text-white">
+                Map columns to continue.
+              </span>{' '}
+              We couldn&apos;t auto-detect every required field (brand,
+              model, technique) — pick the columns by hand.
+            </div>
+            <Button variant="primary" size="sm" onClick={onEnterMapping}>
+              Map columns →
+            </Button>
+          </div>
+        )}
+
+        {!parsed.needsManualMapping && parsed.mapping?.some(m => m) && (
+          <div className="text-sm text-text-tertiary flex items-center justify-between gap-3">
+            <span>
+              Auto-detected the column mapping.{' '}
+              {parsed.unmappedHeaders?.length > 0
+                ? 'Unrecognized columns will be skipped.'
+                : ''}
+            </span>
+            <button
+              type="button"
+              onClick={onEnterMapping}
+              className="text-text-secondary hover:text-white underline whitespace-nowrap">
+              Edit mapping
+            </button>
           </div>
         )}
       </Card>
@@ -243,11 +339,7 @@ function PreviewStep({parsed, onStartOver}) {
         <Button variant="ghost" size="md" onClick={onStartOver}>
           ← Edit paste
         </Button>
-        <Button
-          variant="primary"
-          size="md"
-          disabled
-          title="Save action lands in Feature 1.5">
+        <Button variant="primary" size="md" disabled title={saveTitle}>
           Save {validRowCount} {validRowCount === 1 ? 'ski' : 'skis'}
         </Button>
       </div>
@@ -296,6 +388,150 @@ function RowCard({row, index}) {
         </div>
       </div>
     </Card>
+  );
+}
+
+function MappingStep({parsed, onApply, onCancel}) {
+  const rawRows = useMemo(() => parsed.rows.map(r => r.raw), [parsed]);
+  const headers = parsed.headers || [];
+
+  // Column count is the widest row (or the header row if it's wider).
+  // Lets us render a dropdown for every column the user actually
+  // pasted, even if some data rows came up short.
+  const colCount = useMemo(() => {
+    let max = headers.length;
+    for (const r of rawRows) {
+      if (r.length > max) max = r.length;
+    }
+    return max;
+  }, [headers, rawRows]);
+
+  const [draft, setDraft] = useState(() => {
+    const base = (parsed.mapping || []).slice();
+    while (base.length < colCount) {
+      base.push(null);
+    }
+    return base;
+  });
+
+  const missing = missingRequiredFields(draft);
+  const dupes = duplicateMappings(draft);
+  const canApply = missing.length === 0 && dupes.length === 0;
+
+  const update = (idx, value) => {
+    setDraft(prev => {
+      const next = prev.slice();
+      next[idx] = value || null;
+      return next;
+    });
+  };
+
+  const sampleFor = idx =>
+    rawRows
+      .slice(0, 3)
+      .map(r => r[idx])
+      .map(v => (typeof v === 'string' ? v.trim() : ''))
+      .filter(v => v.length > 0);
+
+  return (
+    <>
+      <h1 className="text-4xl font-bold tracking-tight mb-3">Map columns</h1>
+      <p className="text-text-secondary text-lg mb-6 max-w-2xl">
+        For each column from your paste, choose which ski field it
+        represents. Brand, model, and technique are required — the rest
+        are optional.
+      </p>
+
+      <Card className="mb-6">
+        <div className="space-y-0">
+          {Array.from({length: colCount}).map((_, idx) => {
+            const samples = sampleFor(idx);
+            const headerLabel = headers[idx];
+            const selected = draft[idx] || '';
+            const isDup = selected && dupes.includes(selected);
+            return (
+              <div
+                key={idx}
+                className="grid grid-cols-1 md:grid-cols-[120px_1fr_220px] gap-3 md:gap-5 md:items-start py-4 border-t border-border first:border-0 first:pt-0">
+                <div>
+                  <span className="text-text-tertiary uppercase text-[10px] tracking-wider block">
+                    Column {idx + 1}
+                  </span>
+                  {headerLabel && (
+                    <span className="text-white font-medium text-sm block mt-1 truncate">
+                      {headerLabel}
+                    </span>
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <span className="text-text-tertiary text-[10px] uppercase tracking-wider block mb-1">
+                    Examples
+                  </span>
+                  {samples.length > 0 ? (
+                    <span className="text-text-secondary text-sm block truncate font-mono">
+                      {samples.join(' · ')}
+                    </span>
+                  ) : (
+                    <span className="text-text-tertiary text-sm italic">
+                      (empty)
+                    </span>
+                  )}
+                </div>
+                <div>
+                  <label className="sr-only" htmlFor={`map-col-${idx}`}>
+                    Map column {idx + 1}
+                  </label>
+                  <select
+                    id={`map-col-${idx}`}
+                    value={selected}
+                    onChange={e => update(idx, e.target.value)}
+                    className={
+                      'w-full bg-bg border rounded-2xl px-3 py-2 text-white text-sm focus:border-red outline-none appearance-none ' +
+                      (isDup ? 'border-red/60' : 'border-border')
+                    }>
+                    {MAPPING_OPTIONS.map(opt => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="mt-2 pt-4 border-t border-border text-sm">
+          {missing.length > 0 ? (
+            <p className="text-red">
+              Still missing required field{missing.length === 1 ? '' : 's'}:{' '}
+              <span className="font-semibold">{missing.join(', ')}</span>
+            </p>
+          ) : dupes.length > 0 ? (
+            <p className="text-red">
+              {dupes.join(', ')}{' '}
+              {dupes.length === 1 ? 'is mapped' : 'are mapped'} to more than
+              one column. Pick one.
+            </p>
+          ) : (
+            <p className="text-success">All required fields mapped ✓</p>
+          )}
+        </div>
+      </Card>
+
+      <div className="flex flex-wrap gap-3 justify-end">
+        <Button variant="ghost" size="md" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button
+          variant="primary"
+          size="md"
+          disabled={!canApply}
+          onClick={() => onApply(draft)}>
+          Apply mapping
+        </Button>
+      </div>
+    </>
   );
 }
 

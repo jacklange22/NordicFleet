@@ -5,6 +5,8 @@ const {
   normalizeRow,
   parseSpreadsheet,
   applyMapping,
+  missingRequiredFields,
+  duplicateMappings,
 } = require('../spreadsheetParser');
 
 describe('fieldForHeader', () => {
@@ -321,5 +323,68 @@ describe('applyMapping', () => {
       length: 200,
     });
     expect(out[0].errors).toEqual([]);
+  });
+});
+
+describe('missingRequiredFields', () => {
+  test('all three required fields present → empty', () => {
+    expect(missingRequiredFields(['brand', 'model', 'technique'])).toEqual([]);
+  });
+
+  test('mapping with extras still has no missing', () => {
+    expect(
+      missingRequiredFields([
+        'brand',
+        'model',
+        'technique',
+        'length',
+        'notes',
+      ]),
+    ).toEqual([]);
+  });
+
+  test('partial mapping → returns the missing ones in canonical order', () => {
+    expect(missingRequiredFields(['brand', null, 'technique'])).toEqual(['model']);
+    expect(missingRequiredFields(['brand'])).toEqual(['model', 'technique']);
+    expect(missingRequiredFields([null, null, null])).toEqual([
+      'brand',
+      'model',
+      'technique',
+    ]);
+  });
+
+  test('empty / falsy input → all three missing', () => {
+    expect(missingRequiredFields([])).toEqual(['brand', 'model', 'technique']);
+    expect(missingRequiredFields(null)).toEqual(['brand', 'model', 'technique']);
+    expect(missingRequiredFields(undefined)).toEqual([
+      'brand',
+      'model',
+      'technique',
+    ]);
+  });
+});
+
+describe('duplicateMappings', () => {
+  test('no duplicates → empty', () => {
+    expect(duplicateMappings(['brand', 'model', 'technique'])).toEqual([]);
+  });
+
+  test('one field used twice → reported once', () => {
+    expect(duplicateMappings(['brand', 'model', 'brand'])).toEqual(['brand']);
+  });
+
+  test('multiple duplicates each reported once', () => {
+    const dupes = duplicateMappings(['brand', 'brand', 'model', 'model']);
+    expect(dupes.sort()).toEqual(['brand', 'model']);
+  });
+
+  test('nulls in mapping are ignored', () => {
+    expect(duplicateMappings(['brand', null, null])).toEqual([]);
+  });
+
+  test('falsy input → empty', () => {
+    expect(duplicateMappings(null)).toEqual([]);
+    expect(duplicateMappings(undefined)).toEqual([]);
+    expect(duplicateMappings([])).toEqual([]);
   });
 });
