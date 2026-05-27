@@ -91,7 +91,9 @@ const ComposeAdvisoryScreen = () => {
           setError("Couldn't load athlete's fleet — try again.");
         }
       } finally {
-        if (!cancelled) setLoadingSkis(false);
+        if (!cancelled) {
+          setLoadingSkis(false);
+        }
       }
     })();
     return () => {
@@ -130,7 +132,9 @@ const ComposeAdvisoryScreen = () => {
 
   const updateSkiNotes = (skiId, notes) => {
     setSkiPicks(prev => {
-      if (!prev[skiId]) return prev;
+      if (!prev[skiId]) {
+        return prev;
+      }
       return {...prev, [skiId]: {...prev[skiId], notes}};
     });
   };
@@ -459,8 +463,8 @@ const SkiPickerRow = ({ski, pick, onPress, onChangeNotes}) => {
             multiline
             placeholder={
               role === 'primary'
-                ? "Why this is the call"
-                : "When to swap to this one"
+                ? 'Why this is the call'
+                : 'When to swap to this one'
             }
           />
         </>
@@ -470,8 +474,12 @@ const SkiPickerRow = ({ski, pick, onPress, onChangeNotes}) => {
 };
 
 function isValidISODate(s) {
-  if (typeof s !== 'string') return false;
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
+  if (typeof s !== 'string') {
+    return false;
+  }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+    return false;
+  }
   const d = new Date(s);
   return !Number.isNaN(d.getTime());
 }

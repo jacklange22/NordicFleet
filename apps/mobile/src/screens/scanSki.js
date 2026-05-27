@@ -66,7 +66,9 @@ const CONFIDENCE_LABEL = {
 
 // ─── Confidence chip — small dot + word, sits next to a field label ───
 const ConfidenceChip = ({confidence}) => {
-  if (!confidence) return null;
+  if (!confidence) {
+    return null;
+  }
   return (
     <View style={styles.confChip}>
       <View
@@ -150,7 +152,9 @@ const ScanSkiScreen = () => {
         return;
       }
       const uri = result.assets[0].uri;
-      if (!uri) return;
+      if (!uri) {
+        return;
+      }
       await startWithImage(uri);
     } catch (err) {
       Toast.show({
@@ -175,7 +179,9 @@ const ScanSkiScreen = () => {
         return;
       }
       const uri = result.assets[0].uri;
-      if (!uri) return;
+      if (!uri) {
+        return;
+      }
       await startWithImage(uri);
     } catch (err) {
       Toast.show({

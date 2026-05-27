@@ -6,7 +6,6 @@ import {
   ScrollView,
   ActivityIndicator,
   StatusBar,
-  Pressable,
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useNavigation} from '@react-navigation/native';
@@ -378,9 +377,13 @@ function hasAnyCondition(c) {
 }
 
 function formatEventDate(iso) {
-  if (typeof iso !== 'string') return '';
+  if (typeof iso !== 'string') {
+    return '';
+  }
   const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return iso;
+  if (Number.isNaN(d.getTime())) {
+    return iso;
+  }
   return d.toLocaleDateString(undefined, {
     weekday: 'short',
     month: 'short',
@@ -390,9 +393,13 @@ function formatEventDate(iso) {
 }
 
 function daysFromTodayTo(iso) {
-  if (typeof iso !== 'string') return null;
+  if (typeof iso !== 'string') {
+    return null;
+  }
   const event = new Date(iso);
-  if (Number.isNaN(event.getTime())) return null;
+  if (Number.isNaN(event.getTime())) {
+    return null;
+  }
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   event.setHours(0, 0, 0, 0);
