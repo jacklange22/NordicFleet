@@ -12,16 +12,19 @@ import {
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useNavigation} from '@react-navigation/native';
 import Toast from 'react-native-toast-message';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 import {useAuth} from '../context/AuthContext';
 import {createSki} from '../services/skiService';
+import {isOCRAvailable} from '../services/ocrService';
 import {
   Header,
   Input,
   Button,
   Pill,
+  Card,
   SectionHeader,
 } from '../components/ui';
-import {colors, spacing, typography} from '../theme';
+import {colors, spacing, typography, radius} from '../theme';
 
 const BRAND_OPTIONS = [
   'Fischer',
@@ -160,6 +163,30 @@ const AddSkiForm = () => {
         <ScrollView
           contentContainerStyle={styles.scroll}
           keyboardShouldPersistTaps="handled">
+          {isOCRAvailable() && (
+            <Card
+              style={styles.scanCard}
+              padding={spacing.md}
+              onPress={() => navigation.navigate('ScanSki')}
+              accessibilityLabel="Scan ski sticker with the camera">
+              <View style={styles.scanRow}>
+                <View style={styles.scanIconWrap}>
+                  <Ionicons name="scan-outline" size={24} color={colors.red} />
+                </View>
+                <View style={styles.scanText}>
+                  <Text style={styles.scanTitle}>Scan the sticker</Text>
+                  <Text style={styles.scanSubtitle}>
+                    Auto-fill brand, model, length, and flex from a photo.
+                  </Text>
+                </View>
+                <Ionicons
+                  name="chevron-forward"
+                  size={20}
+                  color={colors.textTertiary}
+                />
+              </View>
+            </Card>
+          )}
           <SectionHeader title="Identity" />
           <Input
             label="Ski name"
@@ -318,6 +345,35 @@ const styles = StyleSheet.create({
   scroll: {
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing['4xl'],
+  },
+  scanCard: {
+    marginTop: spacing.lg,
+    marginBottom: spacing.md,
+  },
+  scanRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  scanIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.md,
+    backgroundColor: colors.bg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.md,
+  },
+  scanText: {flex: 1},
+  scanTitle: {
+    ...typography.headingMd,
+    color: colors.textPrimary,
+  },
+  scanSubtitle: {
+    ...typography.bodySm,
+    color: colors.textSecondary,
+    marginTop: 2,
   },
   headerSave: {
     paddingHorizontal: spacing.sm,

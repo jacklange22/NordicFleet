@@ -3,14 +3,23 @@ import {render, fireEvent, act} from '@testing-library/react-native';
 import authMock from '@react-native-firebase/auth';
 import firestoreMock from '@react-native-firebase/firestore';
 
+// Mock the OCR availability hook so we can flip the Scan entry point
+// on / off independently of the test environment. Jest allows
+// variables prefixed with `mock` to leak into the module factory.
+let mockOcrAvailable = false;
+jest.mock('../../services/ocrService', () => ({
+  isOCRAvailable: () => mockOcrAvailable,
+}));
+
 import AddSkiForm from '../newSki';
 import {AuthProvider} from '../../context/AuthContext';
 
 const mockReplace = jest.fn();
+const mockNavigate = jest.fn();
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({
     replace: mockReplace,
-    navigate: jest.fn(),
+    navigate: mockNavigate,
   }),
 }));
 
@@ -20,6 +29,8 @@ beforeEach(() => {
   authMock.__resetAuthMock();
   firestoreMock.__resetFirestoreMock();
   mockReplace.mockClear();
+  mockNavigate.mockClear();
+  mockOcrAvailable = false;
 });
 
 describe('AddSkiForm', () => {
@@ -54,6 +65,23 @@ describe('AddSkiForm', () => {
     fireEvent.press(tree.getByLabelText('Save'));
     await act(async () => {});
     expect(mockReplace).not.toHaveBeenCalled();
+  });
+
+  describe('Scan-sticker entry point', () => {
+    it('is hidden when OCR is unavailable', () => {
+      mockOcrAvailable = false;
+      const tree = renderWithAuth(<AddSkiForm />);
+      expect(tree.queryByLabelText('Scan ski sticker with the camera')).toBeNull();
+    });
+
+    it('appears when OCR is available and navigates to ScanSki on press', () => {
+      mockOcrAvailable = true;
+      const tree = renderWithAuth(<AddSkiForm />);
+      const card = tree.getByLabelText('Scan ski sticker with the camera');
+      expect(card).toBeTruthy();
+      fireEvent.press(card);
+      expect(mockNavigate).toHaveBeenCalledWith('ScanSki');
+    });
   });
 
   it('saves and navigates when name, brand, technique, and type are all set', async () => {
