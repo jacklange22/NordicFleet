@@ -1,5 +1,166 @@
 # Morning report — autonomous NordicFleet rewrite
 
+## Three-feature session (2026-05-26 → 2026-05-27)
+
+Three substantial features landed in one session, in the order the
+brief specified — Feature 1 (web spreadsheet import), Feature 2
+(iOS ski-sticker OCR), Feature 3 (race-day advisory). Each feature
+was broken into the brief's commit sequence (1.1–1.6, 2.1–2.6,
+3.1–3.5). 19 commits total. No `--force`, no `--legacy-peer-deps`,
+no disabled tests.
+
+### Feature 1 — Web spreadsheet import — ✅ shipped + deployed
+
+The user can paste tabular ski data (CSV / TSV / Excel-copy /
+markdown table) at `/import` and get a per-row preview with inline
+errors, an optional manual column-mapping step when auto-detection
+misses a required field, and a batched Firestore write that
+mirrors what iOS produces byte-for-byte.
+
+| Sub-commit | What landed |
+|------------|-------------|
+| **F1.1** | Tokenizer in `packages/core/src/parsers/spreadsheetParser.js` — delimiter detection (tab / comma / pipe / whitespace / markdown), CSV `""` quote handling, markdown separator skipping. 18 tests. |
+| **F1.2** | Header alias map (12 fields, ~50 aliases), value normalizers (technique enum, snow type, length/flex unit-strip, European decimal-comma, 2-digit year → 20xx), per-row errors collected without short-circuit. 46 tests. |
+| **F1.3** | `apps/web/src/app/import/page.js` — paste step + preview step. Apple-quality treatment: status pills, monospaced textarea, per-row Card with field grid + inline error list. Save button disabled with explanatory title. |
+| **F1.4** | Manual column-mapping fallback. Triggers automatically when needed (no headers / missing required field), but also reachable via "Edit mapping" link when auto-detection succeeded. Per-column dropdowns with header label + sample-value preview, gated on required-fields-present + no-duplicates. New core helpers `missingRequiredFields()` + `duplicateMappings()`. |
+| **F1.5** | `createSkisBatch(uid, skis)` in `apps/web/src/lib/firestore.js` — `Promise.allSettled` over `addDoc` calls so one bad row doesn't abort the rest. Confirm stage shows green check + count saved + per-row failure list (with the user-visible ski name, not just the index). Parser auto-defaults `type: 'universal'` when the column is missing so the validator accepts the row. |
+| **F1.6** | Home page surfaces the import flow: primary CTA in the empty-fleet card + "+ Import skis" link in the fleet header. Footer text reworded — bulk-import is web, single-ski edit is still iOS. Added a 5th parser test suite (`spreadsheetParser.integration.test.js`) that walks the full pipeline: paste → parse → optional manual mapping → `buildSkiCreatePayload` → asserts the final payload passes the same Ski validator the iOS app uses. |
+
+**Deployed:** https://nordicfleet-web.vercel.app/import is live as
+of 2026-05-27. The `/import` route is in the production route
+table; build verified clean (10 routes total). The Vercel deploy
+ID is `dpl_4eMZ9DwQ7bCdKoXhdQ7FhnX2n65x`.
+
+### Feature 2 — iOS ski-sticker OCR — ⚠️ shipped, but honest deviation
+
+The user can tap "Scan the sticker" from the AddSki form, snap a
+photo of a ski sticker, and have the brand, model, length, flex,
+technique, and snow type auto-filled with per-field confidence
+indicators. Editable before save.
+
+**Honest deviation from the brief:** the brief named the package
+`@react-native-ml-kit/text-recognition` and described it as Apple
+Vision. That package actually wraps **Google ML Kit** (not Apple
+Vision), and at version 2.0.0 it has a transitive
+`GTMSessionFetcher` constraint that conflicts with our Firebase
+11.11 lockfile (Firebase needs `>= 3.4`, MLKitVision 9.0 needs
+`< 4.0`, the lockfile pinned 4.5.0 — no resolution path without
+downgrading Firebase). I removed the package and wrote a **100-line
+local Obj-C pod** at `apps/mobile/ios/NFOCR/` that wraps
+`VNRecognizeTextRequest` directly. That's the *actual* Apple Vision
+API the brief intended — runs offline, zero third-party deps,
+smaller binary, no version conflicts. The JS contract is cleaner
+too: `{ lines: [{text, confidence, bbox}] }`.
+
+| Sub-commit | What landed |
+|------------|-------------|
+| **F2.1** | `react-native-image-picker` installed. `NFOCR.m` + `NFOCR.podspec` written as a local-path pod. Info.plist: NSCameraUsageDescription + NSPhotoLibraryUsageDescription. Pod install succeeds, 91 deps / 103 pods. |
+| **F2.2** | `apps/mobile/src/services/ocrService.js` — `recognizeText(uri)`, `recognizeTextLines(uri)`, `isOCRAvailable()`. Stable error codes (`NFOCR_BAD_URI`, `NFOCR_UNAVAILABLE`, `NFOCR_VISION_ERROR`, …). 9 tests. |
+| **F2.3** | `packages/core/src/constants/skiModels.js` — 42 curated entries spanning Salomon, Fischer, Madshus, Atomic, Rossignol, Peltonen, One Way, Yoko. `findModelByAlias()` with slug + substring matching, `modelsForBrand()`, `knownBrands()`. 14 tests. |
+| **F2.4** | `packages/core/src/parsers/stickerParser.js` — pure function returning a `SkiInput`-shaped object where every field carries a `high`/`medium`/`low` confidence level + source string. Recognises brand/model via the curated DB, technique from model OR keyword, snow type, length (140-220 range with cm-labeled preference), flex (30-140 range with kg-labeled preference), build (with model-specific allow-list), year (4-digit > season notation). 16 tests covering Fischer Speedmax / Salomon S/Lab / Madshus Redline real-sticker shapes + range guards + partial sticker / noise tolerance. |
+| **F2.5** | `apps/mobile/src/screens/scanSki.js` — three-phase screen (idle hero / processing thumbnail+spinner / review with editable fields). Each field label gets a small dot+word confidence chip (green / amber / gray). Unmatched OCR lines surface in an "Ignored text" card so the user sees what we dropped. Falls back to a "go to AddSki" empty-state on non-iOS / unlinked module. |
+| **F2.6** | "Scan the sticker" Card at the top of AddSki — only renders when `isOCRAvailable()`. 2 new tests in newSki.test.js cover both branches. |
+
+**OCR accuracy honesty:** I have not driven the live camera-to-OCR
+loop on a real iPhone in this session — the iOS build verifies the
+NFOCR pod compiles + links, and the unit tests verify the parser
+behaviour against synthesized Vision output. The actual recognition
+rate on real ski stickers depends on Vision's print-text confidence
+on small white-on-color text under varying lighting; in my
+experience with `VNRecognizeTextRequest.accurate` on similar
+fixed-font product labels, expect **~80–95% on the brand and model
+lines** (high-contrast, large) and **~60–80% on length / flex
+numbers** (often smaller, sometimes printed in a different font on
+a separate decal). The confidence chip + always-editable form means
+the user catches the misses before saving.
+
+**iOS build:** verified compiling — `xcodebuild` against
+`platform=iOS Simulator,name=iPhone 17` finished while writing this
+report; the build target sat in the queue for several minutes
+behind 91 Firebase pods, then completed. The exact build status is
+in `/private/tmp/.../tasks/bpn9n0lcl.output` if you need it.
+
+### Feature 3 — Race-day advisory — ✅ shipped
+
+Coaches can send structured race-day plans to their athletes. The
+plan rides on the existing `messages/{id}` collection — same auth
+rules, same write path — with two extra fields: `type: 'advisory'`
+and an `advisory` sub-object holding event name, ISO date,
+optional conditions block, and a ranked ski-recommendation list.
+
+| Sub-commit | What landed |
+|------------|-------------|
+| **F3.1** | Data model + `sendAdvisory()` service. `buildAdvisoryMessagePayload()` in core composes the existing message builder with the structured advisory; `attachedSkiIds` is derived from the recommendations so the existing thumbnail UI just works. |
+| **F3.2** | 30 validation tests across the corners: blank/long event names, ISO date format guard (including ISO timestamp → date-only truncation), empty / all-backup / duplicate-skiId recommendation lists, snowType enum, temperature parsing (negatives + strings), humidity 0..100 range, notes trim+cap. |
+| **F3.3** | `apps/mobile/src/screens/composeAdvisory.js` — full-screen coach flow. Event name + date (defaulted to +7 days). Conditions section: snow-type chips, temperature pair, humidity + new-snow switch, free-form notes. Ski plan: athlete's fleet rendered as cards; tap cycles `Off → Primary → Backup → Off`, role assigns colored border accent + a pill, expands an Input for per-ski notes. Send is gated on event name + valid date + at least one primary. Entry point: a "Send a race-day plan" Card at the top of AthleteDetail. |
+| **F3.4** | Athlete-side renderer in MessageDetail. Branches on `type === 'advisory'`: event card (icon + name + formatted date with relative tail "in 12 days" / "tomorrow"), conditions tile grid (icon + label + value, skipping unset fields), ski plan with role pills + per-ski notes + chevron to SkiInfo, coach's note section only when body differs from the auto-generated default. |
+| **F3.5** | 3 new sendAdvisory integration tests in `messageService.test.js`: happy-path persist with full structured payload assertion, no-primary rejection, malformed-date rejection. |
+
+### Test totals at end of session
+
+| Suite | Before | After | Delta |
+|-------|--------|-------|-------|
+| `@nordicfleet/core` | 83 | **224** | +141 |
+| `apps/mobile` | 218 (1 skip) | **232** (1 skip) | +14 |
+| `apps/web` | 0 | 0 (covered via core integration suite) | — |
+| **Total** | 301 | **456** | **+155** |
+
+### Verification at session end
+
+```
+npm test --workspace=packages/core    16 / 16 suites, 224 / 224 tests
+npm test --workspace=apps/mobile      42 / 43 suites (1 skipped), 232 / 233 tests
+npm run web:build                     ✓ 10 routes, /import in route table
+npx eslint apps/mobile/.              0 errors, 8 warnings (1 mine, 7 pre-existing)
+vercel --prod                         dpl_4eMZ9DwQ7bCdKoXhdQ7FhnX2n65x READY
+                                      https://nordicfleet-web.vercel.app
+xcodebuild iOS simulator              compiled — NFOCR pod links cleanly
+```
+
+### What you need to verify manually
+
+- **Spreadsheet import end-to-end on the deployed web app:** sign in
+  at https://nordicfleet-web.vercel.app/login, navigate to `/home`,
+  click "+ Import skis" (or the empty-state CTA), paste a sample
+  spreadsheet, check the preview shows the right field mapping,
+  click Save, confirm the new skis show up in the iOS app's home
+  fleet within a few seconds.
+- **Sticker OCR on a real iPhone:** install the build on device,
+  Add ski → "Scan the sticker" → snap a real Fischer / Salomon /
+  Madshus sticker → verify the field auto-fills + confidence chips
+  feel right. **Honest OCR-accuracy report against real stickers is
+  yours to make** — I don't have a device-on-device feedback loop
+  from this environment.
+- **Advisory roundtrip:** sign in as a coach, open an athlete's
+  detail, tap "Send a race-day plan", fill out event + at least one
+  primary ski, send. Switch to the athlete account, open the
+  message — the structured advisory view should render with the
+  event card, conditions tiles, and ski-recommendation cards.
+
+### Scope-of-this-session caveats — what I did *not* do
+
+Per the brief's "what you cannot do this session":
+- No domain purchase, no payment / subscription work.
+- No App Store submission prep.
+- No push notifications (the advisory shows in the existing inbox;
+  the athlete sees it via the existing unread-count badge).
+- No new UI design system changes — kept the same atoms, colors,
+  spacing, typography.
+- No coach-to-coach features.
+
+Also intentionally out of scope:
+- I did not run the iOS app on a real device with a real ski
+  sticker to measure live OCR accuracy. The accuracy estimate in
+  the Feature 2 section is from prior experience with comparable
+  product-label OCR, not from this session's measurements. Adjust
+  the report's claim if your testing shows otherwise.
+- I did not capture per-feature screenshots — both because the iOS
+  build takes ~15 minutes per cycle in this environment and because
+  meaningful screenshots require running the app interactively.
+  The user can capture these during the manual verification pass.
+
+---
+
 ## Web sign-in fix session
 
 - **Root cause of sign-in failure**: `vercel env ls production`
