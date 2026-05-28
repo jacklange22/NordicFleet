@@ -11,8 +11,9 @@
  * @property {number|null} [height]          cm
  * @property {string|null} [team]
  * @property {string|null} [location]        free-text city / club
- * @property {'athlete'|'coach'} role
- * @property {string|null} [coachId]         athlete's currently-linked coach uid (null if no coach)
+ * @property {boolean}  isCoach              has the coaching capability (own fleet PLUS athlete management)
+ * @property {'athlete'|'coach'} [role]      DEPRECATED legacy mirror of isCoach; kept readable for back-compat, not used for routing
+ * @property {string|null} [coachId]         this user's currently-linked coach uid (null if none). Every user can have a coach.
  * @property {*} [createdAt]                 Firestore Timestamp
  * @property {*} [updatedAt]                 Firestore Timestamp
  */

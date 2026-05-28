@@ -1,3 +1,9 @@
+import {
+  buildProfileCreatePayload,
+  buildCoachCapabilityPayload,
+  needsCoachBackfill,
+  deriveIsCoach,
+} from '@nordicfleet/core';
 import {auth, db, firestore} from './firebase';
 
 const userDoc = uid => db.collection('users').doc(uid);
@@ -30,27 +36,99 @@ export async function createProfile(uid, data = {}) {
   if (!uid) {
     throw new Error('createProfile: uid is required');
   }
-  // Initial profile write: every field exists with a default if not supplied.
-  // Use updateProfile for subsequent merges that should preserve existing values.
-  const role = data.role === 'coach' ? 'coach' : 'athlete';
+  // Capability model: every user gets a personal fleet; isCoach is an
+  // added capability. buildProfileCreatePayload normalizes the fields
+  // and keeps a legacy `role` mirror for back-compat. The platform
+  // layer (here) attaches the server timestamps.
   await userDoc(uid).set(
     {
-      email: data.email || null,
-      displayName: data.displayName || null,
-      weight: data.weight ?? null,
-      height: data.height ?? null,
-      team: data.team || null,
-      location: data.location || null,
-      role,
-      // Athletes track their chosen coach (uid). Null until they set one.
-      // (Coach side isn't denormalized — see listAthletesForCoach for the
-      // reverse query.)
-      coachId: role === 'athlete' ? data.coachId || null : null,
+      ...buildProfileCreatePayload(data),
       createdAt: firestore.FieldValue.serverTimestamp(),
       updatedAt: firestore.FieldValue.serverTimestamp(),
     },
     {merge: true},
   );
+}
+
+/**
+ * Migrate-on-read: when the app loads a profile that predates the
+ * isCoach field, derive it from the legacy role and write it back
+ * once. Safe to call on every login — it no-ops when isCoach already
+ * exists. Returns the derived isCoach so the caller can use it
+ * immediately without waiting for the write.
+ *
+ * @param {string} uid
+ * @param {object|null} profile  the just-loaded profile doc
+ * @returns {Promise<boolean>} the effective isCoach value
+ */
+export async function backfillCoachCapability(uid, profile) {
+  const isCoach = deriveIsCoach(profile);
+  if (uid && needsCoachBackfill(profile)) {
+    try {
+      await userDoc(uid).set(
+        {isCoach, updatedAt: firestore.FieldValue.serverTimestamp()},
+        {merge: true},
+      );
+    } catch {
+      // Backfill is best-effort. deriveIsCoach already gave us the
+      // right value to use this session; the write will retry next
+      // login if it failed.
+    }
+  }
+  return isCoach;
+}
+
+/**
+ * Toggle the coaching capability on or off.
+ *
+ * Turning it ON just flips the flag. Turning it OFF additionally runs
+ * the athlete cascade: every athlete with coachId == this uid gets
+ * cleared (same logic as account deletion's coach-unlink step), so we
+ * don't leave athletes pointing at someone who's no longer coaching.
+ *
+ * @param {string} uid
+ * @param {boolean} isCoach
+ * @returns {Promise<{clearedAthletes: number}>}
+ */
+export async function setCoachCapability(uid, isCoach) {
+  if (!uid) {
+    throw new Error('setCoachCapability: uid is required');
+  }
+  let clearedAthletes = 0;
+  if (!isCoach) {
+    // Cascade: unlink athletes before dropping the capability.
+    try {
+      const athletes = await usersCollection()
+        .where('coachId', '==', uid)
+        .get();
+      if (!athletes.empty) {
+        const batch = db.batch();
+        athletes.forEach(doc => {
+          batch.set(
+            doc.ref,
+            {
+              coachId: null,
+              updatedAt: firestore.FieldValue.serverTimestamp(),
+            },
+            {merge: true},
+          );
+        });
+        await batch.commit();
+        clearedAthletes = athletes.size;
+      }
+    } catch {
+      // Tolerate — if there are no athletes or the query fails, we
+      // still drop the capability below.
+    }
+  }
+  await userDoc(uid).set(
+    {
+      ...buildCoachCapabilityPayload(isCoach),
+      updatedAt: firestore.FieldValue.serverTimestamp(),
+    },
+    {merge: true},
+  );
+  return {clearedAthletes};
 }
 
 /**

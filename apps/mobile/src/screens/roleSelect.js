@@ -7,79 +7,48 @@ import {
   KeyboardAvoidingView,
   Platform,
   StatusBar,
+  Switch,
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import {useAuth} from '../context/AuthContext';
-import {updateProfile, setCoachByEmail} from '../services/userService';
+import {
+  updateProfile,
+  setCoachByEmail,
+  setCoachCapability,
+} from '../services/userService';
 import {Header, Card, Button, Input} from '../components/ui';
 import {isValidEmail} from '@nordicfleet/core';
-import {colors, spacing, typography} from '../theme';
+import {colors, spacing, typography, radius} from '../theme';
 
-const RoleCard = ({icon, title, description, selected, onPress}) => (
-  <Card
-    onPress={onPress}
-    accessibilityLabel={title}
-    padding={spacing['2xl']}
-    style={[
-      styles.roleCard,
-      selected && {
-        borderColor: colors.red,
-        backgroundColor: 'rgba(229, 57, 53, 0.06)',
-      },
-    ]}>
-    <View style={styles.roleHeader}>
-      <View
-        style={[
-          styles.roleIcon,
-          selected && {backgroundColor: 'rgba(229, 57, 53, 0.16)'},
-        ]}>
-        <Ionicons name={icon} size={28} color={colors.red} />
-      </View>
-      <View style={styles.roleCheck}>
-        {selected ? (
-          <Ionicons name="checkmark-circle" size={26} color={colors.red} />
-        ) : (
-          <View style={styles.checkRing} />
-        )}
-      </View>
-    </View>
-    <Text style={styles.roleTitle}>{title}</Text>
-    <Text style={styles.roleDescription}>{description}</Text>
-  </Card>
-);
-
-const RoleSelectScreen = ({navigation}) => {
+// Onboarding after signup. The capability model means there's no
+// athlete-vs-coach fork: everyone is a skier with a personal fleet.
+// We ask the one thing that actually branches the experience — "do
+// you coach a team?" — defaulting to no, and offer the optional
+// coach link that every user can set.
+const OnboardingScreen = ({navigation}) => {
   const {user} = useAuth();
-  const [role, setRole] = useState(null);
+  const [coachesTeam, setCoachesTeam] = useState(false);
   const [coachEmail, setCoachEmail] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = async () => {
+  const finish = async () => {
     setError('');
     if (!user) {
       setError('Not signed in');
       return;
     }
-    if (!role) {
-      setError('Pick athlete or coach');
-      return;
-    }
     setSubmitting(true);
     try {
-      if (role === 'coach') {
-        await updateProfile(user.uid, {role: 'coach'});
-        navigation.replace('CoachDashboard');
-        return;
-      }
+      // Set the coaching capability (default off).
+      await setCoachCapability(user.uid, coachesTeam);
 
-      await updateProfile(user.uid, {role: 'athlete'});
-
+      // Optional coach link — available to everyone, coach or not.
       const trimmed = coachEmail.trim();
       if (trimmed) {
         if (!isValidEmail(trimmed)) {
-          setError('Please enter a valid email');
+          setError('Please enter a valid coach email');
           setSubmitting(false);
           return;
         }
@@ -100,21 +69,8 @@ const RoleSelectScreen = ({navigation}) => {
           return;
         }
       }
-      navigation.replace('Home');
-    } catch (err) {
-      setError(String(err.message || err));
-      setSubmitting(false);
-    }
-  };
-
-  const handleSkipCoach = async () => {
-    setError('');
-    if (!user) {
-      return;
-    }
-    setSubmitting(true);
-    try {
-      await updateProfile(user.uid, {role: 'athlete'});
+      // Everyone lands in their personal fleet first. Coaches can
+      // switch to coaching mode from the toggle once they're in.
       navigation.replace('Home');
     } catch (err) {
       setError(String(err.message || err));
@@ -125,7 +81,7 @@ const RoleSelectScreen = ({navigation}) => {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <StatusBar barStyle="light-content" />
-      <Header title="Choose your role" />
+      <Header title="Get started" />
       <KeyboardAvoidingView
         style={{flex: 1}}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -133,42 +89,48 @@ const RoleSelectScreen = ({navigation}) => {
           contentContainerStyle={styles.scroll}
           keyboardShouldPersistTaps="handled">
           <Text style={styles.intro}>
-            How will you use NordicFleet?
+            NordicFleet starts with your own fleet — your skis, your wax
+            and test logs. A couple of quick things to set up.
           </Text>
 
-          <RoleCard
-            icon="person-outline"
-            title="Athlete"
-            description="Track your fleet, log wax and test sessions, share with your coach."
-            selected={role === 'athlete'}
-            onPress={() => setRole('athlete')}
-          />
-          <View style={{height: spacing.md}} />
-          <RoleCard
-            icon="people-outline"
-            title="Coach"
-            description="Review your athletes' fleets and waxing history."
-            selected={role === 'coach'}
-            onPress={() => setRole('coach')}
-          />
-
-          {role === 'athlete' && (
-            <View style={styles.coachBlock}>
-              <Text style={styles.coachLabel}>Link a coach (optional)</Text>
-              <Input
-                label="Coach email"
-                icon="mail-outline"
-                value={coachEmail}
-                onChangeText={setCoachEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                editable={!submitting}
+          <Card padding={spacing.xl} style={styles.coachToggleCard}>
+            <View style={styles.toggleRow}>
+              <View style={styles.toggleIcon}>
+                <Ionicons name="people-outline" size={24} color={colors.red} />
+              </View>
+              <View style={styles.toggleText}>
+                <Text style={styles.toggleTitle}>Do you coach a team?</Text>
+                <Text style={styles.toggleDesc}>
+                  Turn this on if you also manage other skiers&apos; fleets.
+                  You&apos;ll get a coaching mode you can switch into. You
+                  can change this anytime in Profile.
+                </Text>
+              </View>
+              <Switch
+                value={coachesTeam}
+                onValueChange={setCoachesTeam}
+                trackColor={{true: colors.red, false: colors.border}}
+                accessibilityLabel="Coach a team"
               />
-              <Text style={styles.coachHint}>
-                You can add or change your coach later in Profile.
-              </Text>
             </View>
-          )}
+          </Card>
+
+          <View style={styles.coachBlock}>
+            <Text style={styles.coachLabel}>Link a coach (optional)</Text>
+            <Input
+              label="Coach email"
+              icon="mail-outline"
+              value={coachEmail}
+              onChangeText={setCoachEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              editable={!submitting}
+            />
+            <Text style={styles.coachHint}>
+              If a coach uses NordicFleet, link them now to share your
+              fleet. You can add or change this later in Profile.
+            </Text>
+          </View>
 
           {!!error && <Text style={styles.error}>{error}</Text>}
         </ScrollView>
@@ -178,26 +140,12 @@ const RoleSelectScreen = ({navigation}) => {
             variant="primary"
             size="lg"
             fullWidth
-            disabled={!role}
             loading={submitting}
             icon="arrow-forward"
             iconRight
-            onPress={handleSubmit}>
-            Continue
+            onPress={finish}>
+            Continue to my fleet
           </Button>
-          {role === 'athlete' && !!coachEmail && (
-            <>
-              <View style={{height: spacing.sm}} />
-              <Button
-                variant="ghost"
-                size="md"
-                fullWidth
-                onPress={handleSkipCoach}
-                disabled={submitting}>
-                Skip — add a coach later
-              </Button>
-            </>
-          )}
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -216,49 +164,31 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     marginBottom: spacing.xl,
     paddingHorizontal: spacing.xs,
+    lineHeight: 24,
   },
-  roleCard: {},
-  roleHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.md,
-  },
-  roleIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+  coachToggleCard: {marginBottom: spacing.xl},
+  toggleRow: {flexDirection: 'row', alignItems: 'flex-start'},
+  toggleIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: 'rgba(229, 57, 53, 0.08)',
     alignItems: 'center',
     justifyContent: 'center',
+    marginRight: spacing.md,
   },
-  roleCheck: {
-    width: 26,
-    height: 26,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  checkRing: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    borderWidth: 2,
-    borderColor: colors.borderStrong,
-  },
-  roleTitle: {
-    ...typography.displayMd,
+  toggleText: {flex: 1, marginRight: spacing.md},
+  toggleTitle: {
+    ...typography.headingMd,
     color: colors.textPrimary,
     marginBottom: spacing.xs,
   },
-  roleDescription: {
-    ...typography.body,
+  toggleDesc: {
+    ...typography.bodySm,
     color: colors.textSecondary,
-    lineHeight: 20,
+    lineHeight: 18,
   },
-  coachBlock: {
-    marginTop: spacing.xl,
-    paddingHorizontal: spacing.xs,
-  },
+  coachBlock: {paddingHorizontal: spacing.xs},
   coachLabel: {
     ...typography.caption,
     color: colors.textTertiary,
@@ -268,6 +198,7 @@ const styles = StyleSheet.create({
     ...typography.bodySm,
     color: colors.textTertiary,
     marginTop: spacing.sm,
+    lineHeight: 18,
   },
   error: {
     ...typography.body,
@@ -283,4 +214,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default RoleSelectScreen;
+export default OnboardingScreen;

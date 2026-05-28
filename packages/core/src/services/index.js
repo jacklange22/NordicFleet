@@ -17,4 +17,5 @@ module.exports = {
   ...require('./coachOperations'),
   ...require('./messageOperations'),
   ...require('./advisoryOperations'),
+  ...require('./profileOperations'),
 };
