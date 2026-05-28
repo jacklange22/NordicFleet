@@ -23,6 +23,7 @@ import MessagesScreen from './src/screens/messages.js';
 import MessageDetailScreen from './src/screens/messageDetail.js';
 import ComposeAdvisoryScreen from './src/screens/composeAdvisory.js';
 import {AuthProvider} from './src/context/AuthContext';
+import {ModeProvider} from './src/context/ModeContext';
 import ErrorBoundary from './src/components/ErrorBoundary';
 import Toast from 'react-native-toast-message';
 import {toastConfig} from './src/components/ui/toastConfig';
@@ -49,6 +50,7 @@ const App = () => {
       <SafeAreaProvider>
         <StatusBar barStyle="light-content" backgroundColor={colors.bg} />
         <AuthProvider>
+          <ModeProvider>
           <NavigationContainer theme={navTheme}>
             <Stack.Navigator
               initialRouteName="AuthLoading"
@@ -91,6 +93,7 @@ const App = () => {
               />
             </Stack.Navigator>
           </NavigationContainer>
+          </ModeProvider>
         </AuthProvider>
         <Toast config={toastConfig} />
       </SafeAreaProvider>

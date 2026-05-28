@@ -15,6 +15,13 @@ export const colors = {
   redPressed: '#C62828',
   redDim: '#7F1D1D',
 
+  // Coaching-mode accent. A calm steel-blue — clearly distinct from
+  // the brand red so the user always knows which mode they're in,
+  // but harmonious on the near-black surfaces (not garish).
+  coaching: '#4F8EF7',
+  coachingPressed: '#3B6FD4',
+  coachingDim: '#1E2F4F',
+
   textPrimary: '#FFFFFF',
   textSecondary: '#A3A3A3',
   textTertiary: '#737373',

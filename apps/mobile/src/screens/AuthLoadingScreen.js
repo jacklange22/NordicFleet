@@ -1,8 +1,12 @@
 // src/screens/AuthLoadingScreen.js
 import React, {useEffect, useState} from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import {deriveIsCoach} from '@nordicfleet/core';
 import {useAuth} from '../context/AuthContext';
 import LoadingScreen from '../components/LoadingScreen';
 import {getProfile} from '../services/userService';
+
+const MODE_KEY = 'nordicfleet.mode';
 
 const AuthLoadingScreen = ({navigation}) => {
   const {user, loading} = useAuth();
@@ -16,15 +20,19 @@ const AuthLoadingScreen = ({navigation}) => {
       navigation.replace('Welcome');
       return;
     }
-    // Authenticated. Look up the profile to decide where to send them:
-    //   coach   → CoachDashboard
-    //   athlete → Home
-    //   (no profile yet — first run of a partially-created account) → Welcome
+    // Authenticated. Decide the landing screen from the capability +
+    // the last-used mode (capability model — see ModeContext):
+    //   coach who last used coaching mode → CoachDashboard
+    //   everyone else                     → Home (personal fleet)
+    //   no profile yet                    → Welcome
     setResolving(true);
     let cancelled = false;
     (async () => {
       try {
-        const profile = await getProfile(user.uid);
+        const [profile, storedMode] = await Promise.all([
+          getProfile(user.uid),
+          AsyncStorage.getItem(MODE_KEY).catch(() => null),
+        ]);
         if (cancelled) {
           return;
         }
@@ -32,7 +40,8 @@ const AuthLoadingScreen = ({navigation}) => {
           navigation.replace('Welcome');
           return;
         }
-        if (profile.role === 'coach') {
+        const isCoach = deriveIsCoach(profile);
+        if (isCoach && storedMode === 'coaching') {
           navigation.replace('CoachDashboard');
         } else {
           navigation.replace('Home');
