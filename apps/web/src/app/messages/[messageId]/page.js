@@ -15,7 +15,7 @@ import {Card} from '@/components/Card';
 import {Pill} from '@/components/Pill';
 import {
   getMessage,
-  getSki,
+  subscribeSki,
   markMessageRead,
 } from '@/lib/firestore';
 
@@ -89,24 +89,17 @@ function Inner() {
     };
   }, [user, messageId]);
 
-  // Load attached ski docs. They live under the athlete (m.toUid).
+  // Live-subscribe to each attached ski (they live under the athlete,
+  // m.toUid) so a rename shows up without a reload.
   useEffect(() => {
     if (!msg) return undefined;
     const ids = msg.attachedSkiIds || [];
-    let cancelled = false;
-    Promise.all(ids.map(id => getSki(msg.toUid, id))).then(skis => {
-      if (cancelled) return;
-      const map = {};
-      ids.forEach((id, i) => {
-        if (skis[i]) {
-          map[id] = skis[i];
-        }
-      });
-      setAttachedSkis(map);
-    });
-    return () => {
-      cancelled = true;
-    };
+    const unsubs = ids.map(id =>
+      subscribeSki(msg.toUid, id, ski => {
+        setAttachedSkis(prev => ({...prev, [id]: ski}));
+      }),
+    );
+    return () => unsubs.forEach(u => u && u());
   }, [msg]);
 
   if (!msg) {

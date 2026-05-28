@@ -94,6 +94,28 @@ export async function getSki(uid, skiId) {
   return snap.exists() ? {id: snap.id, ...snap.data()} : null;
 }
 
+/**
+ * Live subscription to a single ski doc. Used where a one-shot read
+ * would go stale — e.g. the message-detail attached-ski cards should
+ * reflect a rename without a page reload.
+ */
+export function subscribeSki(uid, skiId, cb) {
+  if (!uid || !skiId) {
+    cb(null);
+    return noop;
+  }
+  const db = getDbClient();
+  if (!db) {
+    cb(null);
+    return noop;
+  }
+  return onSnapshot(
+    doc(db, 'users', uid, 'skis', skiId),
+    snap => cb(snap.exists() ? {id: snap.id, ...snap.data()} : null),
+    () => cb(null),
+  );
+}
+
 export function subscribeWaxLogsForSki(uid, skiId, cb) {
   if (!uid || !skiId) {
     cb([]);

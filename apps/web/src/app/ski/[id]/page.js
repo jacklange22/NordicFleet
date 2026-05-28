@@ -2,7 +2,7 @@
 
 import {useEffect, useState} from 'react';
 import Link from 'next/link';
-import {useParams, useRouter} from 'next/navigation';
+import {useParams, useRouter, useSearchParams} from 'next/navigation';
 import {useAuth} from '../../providers';
 import {SignedInGuard} from '@/components/SignedInGuard';
 import {SiteHeader} from '@/components/SiteHeader';
@@ -48,6 +48,15 @@ function Inner() {
   const router = useRouter();
   const toast = useToast();
   const {id: skiId} = useParams();
+  const searchParams = useSearchParams();
+  // `?owner=<uid>` lets a coach view an athlete's ski. When absent
+  // (or equal to the current user), this is the owner's own ski and
+  // the Edit / Retire controls show. Firestore rules permit a linked
+  // coach to read users/{athleteUid}/skis/*.
+  const ownerParam = searchParams.get('owner');
+  const ownerUid = ownerParam || user?.uid;
+  const isOwnSki = !ownerParam || ownerParam === user?.uid;
+
   const [ski, setSki] = useState(null);
   const [profile, setProfile] = useState(null);
   const [waxLogs, setWaxLogs] = useState([]);
@@ -56,17 +65,18 @@ function Inner() {
   const [retiring, setRetiring] = useState(false);
 
   useEffect(() => {
-    if (!user || !skiId) return;
+    if (!user || !skiId || !ownerUid) return;
+    // Profile drives the header role; always the viewer's own.
     const unsubP = subscribeProfile(user.uid, setProfile);
-    getSki(user.uid, skiId).then(setSki);
-    const unsubW = subscribeWaxLogsForSki(user.uid, skiId, setWaxLogs);
-    const unsubT = subscribeTestLogsForSki(user.uid, skiId, setTestLogs);
+    getSki(ownerUid, skiId).then(setSki);
+    const unsubW = subscribeWaxLogsForSki(ownerUid, skiId, setWaxLogs);
+    const unsubT = subscribeTestLogsForSki(ownerUid, skiId, setTestLogs);
     return () => {
       unsubP();
       unsubW();
       unsubT();
     };
-  }, [user, skiId]);
+  }, [user, skiId, ownerUid]);
 
   if (!ski) {
     return (
@@ -108,23 +118,25 @@ function Inner() {
       <main className="max-w-3xl mx-auto px-6 py-8">
         <div className="flex items-center justify-between mb-4">
           <Link
-            href="/home"
+            href={isOwnSki ? '/home' : `/coach/${ownerUid}`}
             className="text-text-secondary text-sm hover:text-white">
-            ← Back to fleet
+            {isOwnSki ? '← Back to fleet' : '← Back to athlete'}
           </Link>
-          <div className="flex items-center gap-3">
-            <Link
-              href={`/ski/${skiId}/edit`}
-              className="text-red text-sm hover:text-red-pressed">
-              Edit
-            </Link>
-            <button
-              type="button"
-              onClick={() => setRetireOpen(true)}
-              className="text-text-secondary text-sm hover:text-white">
-              {ski.retired ? 'Unretire' : 'Retire'}
-            </button>
-          </div>
+          {isOwnSki && (
+            <div className="flex items-center gap-3">
+              <Link
+                href={`/ski/${skiId}/edit`}
+                className="text-red text-sm hover:text-red-pressed">
+                Edit
+              </Link>
+              <button
+                type="button"
+                onClick={() => setRetireOpen(true)}
+                className="text-text-secondary text-sm hover:text-white">
+                {ski.retired ? 'Unretire' : 'Retire'}
+              </button>
+            </div>
+          )}
         </div>
 
         <Card className="mb-6">
