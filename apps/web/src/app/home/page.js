@@ -2,7 +2,6 @@
 
 import {useEffect, useState} from 'react';
 import Link from 'next/link';
-import {useRouter} from 'next/navigation';
 import {useAuth} from '../providers';
 import {SignedInGuard} from '@/components/SignedInGuard';
 import {SiteHeader} from '@/components/SiteHeader';
@@ -22,7 +21,6 @@ export default function HomePage() {
 
 function HomeInner() {
   const {user} = useAuth();
-  const router = useRouter();
   const [profile, setProfile] = useState(null);
   const [skis, setSkis] = useState([]);
   const [loaded, setLoaded] = useState(false);
@@ -40,19 +38,16 @@ function HomeInner() {
     };
   }, [user]);
 
-  // Coach accounts get their own dashboard; bounce them there.
-  useEffect(() => {
-    if (profile && profile.role === 'coach') {
-      router.replace('/coach');
-    }
-  }, [profile, router]);
+  // Capability model: coaches have their own fleet too. /home is the
+  // personal-mode surface for everyone — no auto-bounce to /coach.
+  // Coaches reach the dashboard via the mode switcher in the header.
 
   const firstName = profile?.name?.split(/\s+/)?.[0];
   const greeting = firstName ? `Hi, ${firstName}` : 'Welcome back';
 
   return (
     <div>
-      <SiteHeader role={profile?.role === 'coach' ? 'coach' : 'athlete'} />
+      <SiteHeader />
       <main className="max-w-5xl mx-auto px-6 py-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold">{greeting}</h1>

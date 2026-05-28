@@ -112,7 +112,7 @@ function Inner() {
   if (!msg) {
     return (
       <div>
-        <SiteHeader role="athlete" />
+        <SiteHeader />
         <main className="max-w-2xl mx-auto px-6 py-8">
           <p className="text-text-tertiary">Loading…</p>
         </main>
@@ -124,7 +124,7 @@ function Inner() {
 
   return (
     <div>
-      <SiteHeader role="athlete" />
+      <SiteHeader />
       <main className="max-w-2xl mx-auto px-6 py-8">
         <div className="mb-6">
           <Link

@@ -34,7 +34,7 @@ function Inner() {
 
   return (
     <div>
-      <SiteHeader role="athlete" />
+      <SiteHeader />
       <main className="max-w-2xl mx-auto px-6 py-8">
         <div className="mb-6">
           <Link

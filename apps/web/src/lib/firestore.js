@@ -24,6 +24,9 @@ import {
   buildMarkReadPayload,
   buildCoachRequestCreatePayload,
   buildCoachRequestStatusPayload,
+  buildCoachCapabilityPayload,
+  needsCoachBackfill,
+  deriveIsCoach,
 } from '@nordicfleet/core';
 import {getDbClient} from './firebase';
 
@@ -208,6 +211,71 @@ export async function findCoachByEmail(email) {
   }
   const d = snap.docs[0];
   return {uid: d.id, ...d.data()};
+}
+
+/**
+ * Migrate-on-read: backfill the isCoach field on a legacy profile.
+ * Returns the effective isCoach. Mirror of the mobile helper.
+ */
+export async function backfillCoachCapability(uid, profile) {
+  const isCoach = deriveIsCoach(profile);
+  if (uid && needsCoachBackfill(profile)) {
+    const db = getDbClient();
+    if (db) {
+      try {
+        await setDoc(
+          doc(db, 'users', uid),
+          {isCoach, updatedAt: serverTimestamp()},
+          {merge: true},
+        );
+      } catch {
+        // best-effort
+      }
+    }
+  }
+  return isCoach;
+}
+
+/**
+ * Toggle the coaching capability. Disabling cascades: clears coachId
+ * on every athlete linked to this coach. Returns {clearedAthletes}.
+ */
+export async function setCoachCapability(uid, isCoach) {
+  if (!uid) {
+    throw new Error('setCoachCapability: uid is required');
+  }
+  const db = getDbClient();
+  if (!db) {
+    throw new Error('Firestore is not configured');
+  }
+  let clearedAthletes = 0;
+  if (!isCoach) {
+    try {
+      const snap = await getDocs(
+        query(collection(db, 'users'), where('coachId', '==', uid)),
+      );
+      const writes = [];
+      snap.forEach(d => {
+        writes.push(
+          setDoc(
+            d.ref,
+            {coachId: null, updatedAt: serverTimestamp()},
+            {merge: true},
+          ),
+        );
+      });
+      await Promise.all(writes);
+      clearedAthletes = snap.size;
+    } catch {
+      // tolerate — drop the capability anyway
+    }
+  }
+  await setDoc(
+    doc(db, 'users', uid),
+    {...buildCoachCapabilityPayload(isCoach), updatedAt: serverTimestamp()},
+    {merge: true},
+  );
+  return {clearedAthletes};
 }
 
 // ─── Coach-request flow ──────────────────────────────────────────────

@@ -3,7 +3,11 @@
 import {useState} from 'react';
 import {useRouter} from 'next/navigation';
 import Link from 'next/link';
-import {isValidEmail, validatePassword} from '@nordicfleet/core';
+import {
+  isValidEmail,
+  validatePassword,
+  buildProfileCreatePayload,
+} from '@nordicfleet/core';
 import {doc, setDoc, serverTimestamp} from 'firebase/firestore';
 import {getDbClient} from '@/lib/firebase';
 import {useAuth} from '../providers';
@@ -52,19 +56,14 @@ export default function SignupPage() {
     setSubmitting(true);
     try {
       const cred = await signUp(email.trim(), password);
-      // Create the profile doc. Default to athlete; user can pick coach
-      // on iOS during the role-select flow.
+      // Capability model: everyone starts as a non-coach skier. They
+      // can enable "Coach a team" later from Profile. buildProfileCreatePayload
+      // sets isCoach:false + the legacy role mirror.
       const db = getDbClient();
       await setDoc(
         doc(db, 'users', cred.user.uid),
         {
-          email: cred.user.email,
-          role: 'athlete',
-          weight: null,
-          height: null,
-          team: null,
-          location: null,
-          coachId: null,
+          ...buildProfileCreatePayload({email: cred.user.email}),
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         },

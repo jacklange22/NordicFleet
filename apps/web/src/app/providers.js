@@ -10,6 +10,7 @@ import {
 } from 'firebase/auth';
 import {getAuthClient, isFirebaseConfigured} from '@/lib/firebase';
 import {ToastProvider} from '@/components/Toast';
+import {ModeProvider} from '@/components/ModeProvider';
 
 const AuthContext = createContext(null);
 
@@ -51,7 +52,9 @@ export function Providers({children}) {
 
   return (
     <AuthContext.Provider value={value}>
-      <ToastProvider>{children}</ToastProvider>
+      <ToastProvider>
+        <ModeProvider>{children}</ModeProvider>
+      </ToastProvider>
     </AuthContext.Provider>
   );
 }

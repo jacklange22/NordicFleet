@@ -21,6 +21,11 @@
   --color-red-pressed: #c62828;
   --color-red-dim: #7f1d1d;
 
+  /* coaching-mode accent — calm steel-blue, mirrors apps/mobile */
+  --color-coaching: #4f8ef7;
+  --color-coaching-pressed: #3b6fd4;
+  --color-coaching-dim: #1e2f4f;
+
   /* text */
   --color-text-primary: #ffffff;
   --color-text-secondary: #a3a3a3;

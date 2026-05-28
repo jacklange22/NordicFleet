@@ -4,39 +4,63 @@ import {useEffect, useState} from 'react';
 import Link from 'next/link';
 import {usePathname, useRouter} from 'next/navigation';
 import {useAuth} from '@/app/providers';
+import {useMode} from '@/components/ModeProvider';
 import {subscribeUnreadCountForAthlete} from '@/lib/firestore';
 
-const NAV = [
-  {href: '/home', label: 'Fleet', roles: ['athlete']},
-  {href: '/messages', label: 'Messages', roles: ['athlete'], showUnread: true},
-  {href: '/coach', label: 'Athletes', roles: ['coach']},
-  {href: '/coach/requests', label: 'Requests', roles: ['coach']},
-  {href: '/profile', label: 'Profile', roles: ['athlete', 'coach']},
+// Nav per mode. Personal = the skier surface; coaching = the
+// athlete-management surface. The mode prop on the old API is gone —
+// the header reads mode straight from ModeProvider now.
+const PERSONAL_NAV = [
+  {href: '/home', label: 'Fleet'},
+  {href: '/messages', label: 'Messages', showUnread: true},
+  {href: '/profile', label: 'Profile'},
 ];
+const COACHING_NAV = [
+  {href: '/coach', label: 'Athletes'},
+  {href: '/coach/requests', label: 'Requests'},
+  {href: '/profile', label: 'Profile'},
+];
+const MODE_HOME = {personal: '/home', coaching: '/coach'};
 
-export function SiteHeader({role = 'athlete'}) {
+export function SiteHeader() {
   const {user, signOut} = useAuth();
+  const {mode, setMode, isCoach} = useMode();
   const pathname = usePathname();
   const router = useRouter();
   const [unread, setUnread] = useState(0);
-  const items = NAV.filter(item => item.roles.includes(role));
 
   useEffect(() => {
-    if (!user || role !== 'athlete') {
+    if (!user || mode !== 'personal') {
+      setUnread(0);
       return undefined;
     }
-    const unsub = subscribeUnreadCountForAthlete(user.uid, setUnread);
-    return unsub;
-  }, [user, role]);
+    return subscribeUnreadCountForAthlete(user.uid, setUnread);
+  }, [user, mode]);
+
+  const items = mode === 'coaching' ? COACHING_NAV : PERSONAL_NAV;
+  const accentText = mode === 'coaching' ? 'text-coaching' : 'text-red';
+
+  const switchMode = next => {
+    if (next === mode) return;
+    setMode(next);
+    router.push(MODE_HOME[next]);
+  };
 
   return (
     <header className="bg-surface border-b border-border">
       <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between gap-4 flex-wrap">
-        <Link
-          href={role === 'coach' ? '/coach' : '/home'}
-          className="flex items-center gap-2">
-          <span className="text-xl font-bold tracking-tight">NordicFleet</span>
-        </Link>
+        <div className="flex items-center gap-4">
+          <Link
+            href={mode === 'coaching' ? '/coach' : '/home'}
+            className="flex items-center gap-2">
+            <span className="text-xl font-bold tracking-tight">
+              NordicFleet
+            </span>
+          </Link>
+          {isCoach && (
+            <ModeSwitcher mode={mode} onSwitch={switchMode} />
+          )}
+        </div>
         <nav className="flex items-center gap-5 sm:gap-6 flex-wrap">
           {items.map(item => {
             const active =
@@ -45,8 +69,7 @@ export function SiteHeader({role = 'athlete'}) {
                 : item.href === '/coach'
                   ? pathname === '/coach'
                   : pathname.startsWith(item.href);
-            const badge =
-              item.showUnread && unread > 0 ? unread : null;
+            const badge = item.showUnread && unread > 0 ? unread : null;
             return (
               <Link
                 key={item.href}
@@ -54,7 +77,7 @@ export function SiteHeader({role = 'athlete'}) {
                 className={
                   'relative text-sm transition-colors ' +
                   (active
-                    ? 'text-red font-semibold'
+                    ? `${accentText} font-semibold`
                     : 'text-text-secondary hover:text-white')
                 }>
                 {item.label}
@@ -80,5 +103,39 @@ export function SiteHeader({role = 'athlete'}) {
         </nav>
       </div>
     </header>
+  );
+}
+
+function ModeSwitcher({mode, onSwitch}) {
+  return (
+    <div className="inline-flex items-center rounded-full border border-border bg-bg p-0.5">
+      <SegmentButton
+        label="My Fleet"
+        active={mode === 'personal'}
+        activeClass="bg-red text-white"
+        onClick={() => onSwitch('personal')}
+      />
+      <SegmentButton
+        label="Coaching"
+        active={mode === 'coaching'}
+        activeClass="bg-coaching text-white"
+        onClick={() => onSwitch('coaching')}
+      />
+    </div>
+  );
+}
+
+function SegmentButton({label, active, activeClass, onClick}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={active}
+      onClick={onClick}
+      className={
+        'px-3 py-1 rounded-full text-xs font-semibold tracking-wide transition-colors ' +
+        (active ? activeClass : 'text-text-secondary hover:text-white')
+      }>
+      {label}
+    </button>
   );
 }

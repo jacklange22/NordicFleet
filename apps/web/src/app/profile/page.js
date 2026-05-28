@@ -10,10 +10,13 @@ import {Modal} from '@/components/Modal';
 import {FormInput} from '@/components/forms/FormInput';
 import {useToast} from '@/components/Toast';
 import {CoachLinkCard} from '@/components/CoachLinkCard';
+import {useMode} from '@/components/ModeProvider';
+import {deriveIsCoach} from '@nordicfleet/core';
 import {
   subscribeProfile,
   subscribeSkis,
   updateProfile,
+  setCoachCapability,
 } from '@/lib/firestore';
 
 export default function ProfilePage() {
@@ -27,9 +30,11 @@ export default function ProfilePage() {
 function Inner() {
   const {user} = useAuth();
   const toast = useToast();
+  const {setMode} = useMode();
   const [profile, setProfile] = useState(null);
   const [skis, setSkis] = useState([]);
   const [editing, setEditing] = useState(false);
+  const [coachingBusy, setCoachingBusy] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -43,11 +48,43 @@ function Inner() {
     };
   }, [user]);
 
-  const isCoach = profile?.role === 'coach';
+  const isCoach = deriveIsCoach(profile);
+
+  const toggleCoaching = async next => {
+    if (!user) return;
+    if (!next) {
+      const ok = window.confirm(
+        'Stop coaching? Your athletes will be unlinked from you and you’ll lose access to their fleets. Your own fleet stays.',
+      );
+      if (!ok) return;
+    }
+    setCoachingBusy(true);
+    try {
+      const {clearedAthletes} = await setCoachCapability(user.uid, next);
+      if (!next) {
+        setMode('personal');
+      }
+      toast.success({
+        title: next ? 'Coaching enabled' : 'Coaching turned off',
+        body: next
+          ? 'Use the My Fleet / Coaching switcher in the header.'
+          : clearedAthletes > 0
+            ? `Unlinked ${clearedAthletes} athlete${clearedAthletes === 1 ? '' : 's'}.`
+            : '',
+      });
+    } catch (err) {
+      toast.error({
+        title: 'Update failed',
+        body: String((err && err.message) || err),
+      });
+    } finally {
+      setCoachingBusy(false);
+    }
+  };
 
   return (
     <div>
-      <SiteHeader role={isCoach ? 'coach' : 'athlete'} />
+      <SiteHeader />
       <main className="max-w-2xl mx-auto px-6 py-8">
         <h1 className="text-3xl font-bold mb-6">Profile</h1>
 
@@ -88,13 +125,47 @@ function Inner() {
           />
           <Row label="Team" value={profile?.team || '—'} />
           <Row label="Location" value={profile?.location || '—'} />
-          {!isCoach && <Row label="Skis" value={`${skis.length}`} />}
+          <Row label="Skis" value={`${skis.length}`} />
         </Card>
 
-        {!isCoach && profile && (
+        <h3 className="text-xs uppercase tracking-wider text-text-tertiary mb-3">
+          Coaching
+        </h3>
+        <Card className="mb-8">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-white font-semibold">Coach a team</p>
+              <p className="text-text-secondary text-sm mt-1 max-w-prose">
+                {isCoach
+                  ? 'Use the My Fleet / Coaching switcher in the header to manage your athletes.'
+                  : 'Turn on to manage other skiers’ fleets. Adds a coaching mode you can switch into.'}
+              </p>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={isCoach}
+              disabled={coachingBusy}
+              onClick={() => toggleCoaching(!isCoach)}
+              className={
+                'relative w-12 h-7 rounded-full transition-colors flex-shrink-0 ' +
+                (isCoach ? 'bg-coaching' : 'bg-border') +
+                (coachingBusy ? ' opacity-50' : '')
+              }>
+              <span
+                className={
+                  'absolute top-1 w-5 h-5 rounded-full bg-white transition-all ' +
+                  (isCoach ? 'left-6' : 'left-1')
+                }
+              />
+            </button>
+          </div>
+        </Card>
+
+        {profile && (
           <>
             <h3 className="text-xs uppercase tracking-wider text-text-tertiary mb-3">
-              Coach
+              My coach
             </h3>
             <CoachLinkCard profile={profile} />
           </>

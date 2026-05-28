@@ -62,7 +62,7 @@ function Inner() {
 
   return (
     <div>
-      <SiteHeader role="coach" />
+      <SiteHeader />
       <main className="max-w-3xl mx-auto px-6 py-8">
         <div className="flex items-center justify-between mb-4">
           <Link

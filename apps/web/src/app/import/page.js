@@ -182,7 +182,7 @@ function Inner() {
 
   return (
     <div>
-      <SiteHeader role="athlete" />
+      <SiteHeader />
       <main className="max-w-4xl mx-auto px-6 py-8">
         <div className="mb-6 flex items-center justify-between">
           <Link href="/home" className="text-text-secondary text-sm hover:text-white">

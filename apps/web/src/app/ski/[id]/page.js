@@ -71,7 +71,7 @@ function Inner() {
   if (!ski) {
     return (
       <div>
-        <SiteHeader role={profile?.role === 'coach' ? 'coach' : 'athlete'} />
+        <SiteHeader />
         <main className="max-w-3xl mx-auto px-6 py-8">
           <p className="text-text-tertiary">Loading ski…</p>
         </main>
@@ -104,7 +104,7 @@ function Inner() {
 
   return (
     <div>
-      <SiteHeader role={profile?.role === 'coach' ? 'coach' : 'athlete'} />
+      <SiteHeader />
       <main className="max-w-3xl mx-auto px-6 py-8">
         <div className="flex items-center justify-between mb-4">
           <Link

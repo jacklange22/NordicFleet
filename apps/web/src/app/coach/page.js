@@ -45,7 +45,7 @@ function Inner() {
 
   return (
     <div>
-      <SiteHeader role="coach" />
+      <SiteHeader />
       <main className="max-w-5xl mx-auto px-6 py-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold">My athletes</h1>
