@@ -21,12 +21,15 @@ const SA_METRICS = {
   insets: {top: 0, left: 0, right: 0, bottom: 0},
 };
 
-const renderSkiInfo = skiId =>
+const renderSkiInfo = (skiId, params = {}) =>
   render(
     <SafeAreaProvider initialMetrics={SA_METRICS}>
       <NavigationContainer>
         <AuthProvider>
-          <SkiInfo route={{params: {skiId}}} navigation={navProp} />
+          <SkiInfo
+            route={{params: {skiId, ...params}}}
+            navigation={navProp}
+          />
         </AuthProvider>
       </NavigationContainer>
     </SafeAreaProvider>,
@@ -76,6 +79,24 @@ describe('SkiInfo', () => {
     const tree = renderSkiInfo('abc');
     await waitFor(() => tree.getByText('No wax logs yet'));
     expect(tree.getByText('No tests yet')).toBeTruthy();
+  });
+
+  it('coach view reads the ATHLETE’s ski (ownerUid), not the coach’s own tree', async () => {
+    // Signed in as the coach…
+    authMock.__setCurrentUser({uid: 'coach1'});
+    // …the athlete owns the ski under their own uid.
+    firestoreMock.__seedDoc('users/ath1/skis/s9', {
+      name: 'Athlete Redline',
+      brand: 'Madshus',
+      technique: 'skate',
+      type: 'cold',
+    });
+    // The coach has NO ski s9 in their own tree — if the screen read
+    // from the coach uid it'd show "not found".
+    const tree = renderSkiInfo('s9', {ownerUid: 'ath1'});
+    await waitFor(() => {
+      expect(tree.getAllByText('Athlete Redline').length).toBeGreaterThan(0);
+    });
   });
 
   it('renders wax log rows when present', async () => {
