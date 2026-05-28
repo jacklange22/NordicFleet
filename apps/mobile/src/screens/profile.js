@@ -9,6 +9,7 @@ import {
   StatusBar,
   KeyboardAvoidingView,
   Platform,
+  Switch,
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useNavigation} from '@react-navigation/native';
@@ -27,7 +28,10 @@ import {
   removeCoach,
   getProfile,
   deleteAccount,
+  setCoachCapability,
 } from '../services/userService';
+import {deriveIsCoach} from '@nordicfleet/core';
+import {useMode} from '../context/ModeContext';
 import {
   requestCoach,
   cancelRequest,
@@ -78,11 +82,14 @@ const fieldDisplay = (def, profile) => {
 const ProfileScreen = () => {
   const navigation = useNavigation();
   const {user, signOut} = useAuth();
+  const {setMode} = useMode();
   const uid = user?.uid;
 
   const {profile, loading} = useProfile(uid);
   const {skis} = useSkis(uid);
   const {totalWaxes, totalTests} = useDashboardStats(uid);
+
+  const [coachingBusy, setCoachingBusy] = useState(false);
 
   const [editField, setEditField] = useState(null);
   const [tempValue, setTempValue] = useState('');
@@ -454,12 +461,69 @@ const ProfileScreen = () => {
     }
   }, [currentPw, newPw]);
 
+  const enableCoaching = useCallback(async () => {
+    if (!uid) {
+      return;
+    }
+    setCoachingBusy(true);
+    try {
+      await setCoachCapability(uid, true);
+      Alert.alert(
+        'Coaching enabled',
+        'Switch to Coaching mode anytime from the toggle above the tab bar to manage your athletes.',
+      );
+    } catch (err) {
+      Alert.alert('Could not enable coaching', String(err.message || err));
+    } finally {
+      setCoachingBusy(false);
+    }
+  }, [uid]);
+
+  const disableCoaching = useCallback(() => {
+    if (!uid) {
+      return;
+    }
+    Alert.alert(
+      'Stop coaching?',
+      'Your athletes will be unlinked from you and you’ll lose access to their fleets. Your own fleet and history stay exactly as they are.',
+      [
+        {text: 'Cancel', style: 'cancel'},
+        {
+          text: 'Stop coaching',
+          style: 'destructive',
+          onPress: async () => {
+            setCoachingBusy(true);
+            try {
+              const {clearedAthletes} = await setCoachCapability(uid, false);
+              // Drop back to personal mode — coaching surface is gone.
+              setMode('personal');
+              Alert.alert(
+                'Coaching turned off',
+                clearedAthletes > 0
+                  ? `Unlinked ${clearedAthletes} athlete${
+                      clearedAthletes === 1 ? '' : 's'
+                    }.`
+                  : 'You can turn coaching back on anytime.',
+              );
+            } catch (err) {
+              Alert.alert(
+                'Could not stop coaching',
+                String(err.message || err),
+              );
+            } finally {
+              setCoachingBusy(false);
+            }
+          },
+        },
+      ],
+    );
+  }, [uid, setMode]);
+
   if (loading) {
     return <LoadingScreen label="Loading profile…" />;
   }
 
-  const isCoach = profile?.role === 'coach';
-  const role = isCoach ? 'coach' : 'athlete';
+  const isCoach = deriveIsCoach(profile);
   const displayName =
     profile?.name ||
     profile?.displayName ||
@@ -487,22 +551,20 @@ const ProfileScreen = () => {
           </Text>
         </View>
 
-        {/* Stat row — athlete only */}
-        {!isCoach && (
-          <View style={styles.statRow}>
-            <View style={styles.statCell}>
-              <StatCard compact value={skis.length} label="Skis" />
-            </View>
-            <View style={styles.statCellSpacer} />
-            <View style={styles.statCell}>
-              <StatCard compact value={totalWaxes} label="Wax logs" />
-            </View>
-            <View style={styles.statCellSpacer} />
-            <View style={styles.statCell}>
-              <StatCard compact value={totalTests} label="Tests" />
-            </View>
+        {/* Stat row — everyone has a personal fleet now */}
+        <View style={styles.statRow}>
+          <View style={styles.statCell}>
+            <StatCard compact value={skis.length} label="Skis" />
           </View>
-        )}
+          <View style={styles.statCellSpacer} />
+          <View style={styles.statCell}>
+            <StatCard compact value={totalWaxes} label="Wax logs" />
+          </View>
+          <View style={styles.statCellSpacer} />
+          <View style={styles.statCell}>
+            <StatCard compact value={totalTests} label="Tests" />
+          </View>
+        </View>
 
         {/* Personal info */}
         <SectionHeader title="Personal info" />
@@ -530,10 +592,33 @@ const ProfileScreen = () => {
           ))}
         </Card>
 
-        {/* Coach section — athletes only */}
-        {!isCoach && (
-          <>
-            <SectionHeader title="Coach" />
+        {/* Coaching capability toggle — every user can become a coach. */}
+        <SectionHeader title="Coaching" />
+        <Card padding={spacing.lg} style={styles.coachingCard}>
+          <View style={styles.coachingRow}>
+            <View style={styles.coachingText}>
+              <Text style={styles.coachingTitle}>Coach a team</Text>
+              <Text style={styles.coachingDesc}>
+                {isCoach
+                  ? 'You can switch to Coaching mode from the toggle above the tab bar.'
+                  : 'Turn on to manage other skiers’ fleets. Adds a coaching mode you can switch into.'}
+              </Text>
+            </View>
+            <Switch
+              value={isCoach}
+              disabled={coachingBusy}
+              onValueChange={next =>
+                next ? enableCoaching() : disableCoaching()
+              }
+              trackColor={{true: colors.coaching, false: colors.border}}
+              accessibilityLabel="Coach a team"
+            />
+          </View>
+        </Card>
+
+        {/* Coach link — every user can have a coach. */}
+        <>
+            <SectionHeader title="My coach" />
             <Card padding={0}>
               {profile?.coachId ? (
                 <>
@@ -626,8 +711,7 @@ const ProfileScreen = () => {
                 </View>
               )}
             </Card>
-          </>
-        )}
+        </>
 
         {/* Account */}
         <SectionHeader title="Account" />
@@ -641,18 +725,16 @@ const ProfileScreen = () => {
               showDivider
             />
           </View>
-          {!isCoach && (
-            <View style={styles.rowOuter}>
-              <ListItem
-                icon="share-outline"
-                title="Share my fleet"
-                subtitle={sharing ? 'Preparing image…' : 'Send a snapshot of your skis'}
-                onPress={handleShareFleet}
-                accessibilityLabel="Share my fleet"
-                showDivider
-              />
-            </View>
-          )}
+          <View style={styles.rowOuter}>
+            <ListItem
+              icon="share-outline"
+              title="Share my fleet"
+              subtitle={sharing ? 'Preparing image…' : 'Send a snapshot of your skis'}
+              onPress={handleShareFleet}
+              accessibilityLabel="Share my fleet"
+              showDivider
+            />
+          </View>
           <View style={styles.rowOuter}>
             <ListItem
               icon="log-out-outline"
@@ -973,6 +1055,23 @@ const styles = StyleSheet.create({
   },
   statCell: {flex: 1},
   statCellSpacer: {width: spacing.sm},
+
+  coachingCard: {marginBottom: spacing.sm},
+  coachingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  coachingText: {flex: 1, marginRight: spacing.md},
+  coachingTitle: {
+    ...typography.headingMd,
+    color: colors.textPrimary,
+  },
+  coachingDesc: {
+    ...typography.bodySm,
+    color: colors.textSecondary,
+    marginTop: 2,
+    lineHeight: 18,
+  },
 
   rowOuter: {
     paddingHorizontal: spacing.lg,
