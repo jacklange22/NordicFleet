@@ -355,7 +355,7 @@ const HomeScreen = () => {
         />
       )}
 
-      <TabBar role="athlete" />
+      <TabBar />
     </SafeAreaView>
   );
 };

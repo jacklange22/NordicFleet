@@ -2,6 +2,58 @@
 
 Decisions made during autonomous overnight rewrite — see commit log for context.
 
+## Coach/personal mode session decisions
+
+### Capability model replaces the role binary
+
+`role: 'athlete' | 'coach'` is deprecated in favor of
+`isCoach: boolean`. Every user has a personal fleet; isCoach is an
+added capability. `role` is kept as a derived mirror (written
+alongside isCoach) so any not-yet-migrated reader keeps working, and
+`deriveIsCoach()` reads isCoach-or-falls-back-to-role.
+
+**Migration = migrate-on-read**, not a firebase-admin script. The
+app's ModeContext loads the profile, derives isCoach, and if the doc
+predates the field (`needsCoachBackfill`) writes `isCoach` back once.
+Chosen over an admin script because it needs no service-account
+credentials, runs incrementally as users log in, and can't corrupt
+data it doesn't touch. Downside: a user who never logs in again keeps
+a doc without isCoach — harmless, since every reader falls back to
+role.
+
+### Mode toggle placement — in the tab bar, not the header
+
+The app has no shared header (each screen renders its own `Header`),
+but the **TabBar is the one persistent element** rendered on every
+primary screen. So the mode switcher lives as a segmented control in
+a strip directly above the tab icons, visible only when `isCoach`.
+This keeps it always-visible without retrofitting a shared header
+onto 8 screens. A coach sees "My Fleet | Coaching"; tapping a segment
+switches mode AND navigates to that mode's home (Home /
+CoachDashboard) so they're never stranded on a screen that doesn't
+belong to the new mode. Non-coaches never see the strip — the
+TabBar renders exactly as before for them.
+
+### Visual distinction — calm steel-blue accent for coaching
+
+Personal mode keeps the brand red. Coaching mode shifts the accent to
+`colors.coaching` (#4F8EF7, a steel-blue) — active tab color, badge
+color, the active segment, and a hairline on the tab-bar top border.
+Deliberately harmonious (not garish) per the brief: the user always
+knows which mode they're in without it feeling like a different app.
+
+### Coaching-mode tabs on iOS — Athletes + Profile only
+
+The brief lists coaching tabs as Athletes / Requests / Messages /
+Profile. On iOS the CoachDashboard already surfaces pending requests
+inline (it subscribes to them), and there's no coach-side
+sent-messages screen (messaging is one-way coach→athlete with no sent
+view). Rather than build new screens (out of scope this session —
+"no new features beyond the coach mode restructure"), iOS coaching
+mode is **Athletes + Profile**, with requests living inside the
+Athletes dashboard. Web, which already has a standalone
+`/coach/requests`, gets the fuller switcher.
+
 ## Platform foundation session decisions
 
 ### Coach-acceptance flow — client-side cross-doc compensation

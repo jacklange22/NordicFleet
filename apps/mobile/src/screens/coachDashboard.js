@@ -271,7 +271,7 @@ const CoachDashboardScreen = () => {
           }
         />
       )}
-      <TabBar role="coach" />
+      <TabBar />
     </SafeAreaView>
   );
 };

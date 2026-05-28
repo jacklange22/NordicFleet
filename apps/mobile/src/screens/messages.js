@@ -137,7 +137,7 @@ const MessagesScreen = () => {
           }
         />
       )}
-      <TabBar role="athlete" />
+      <TabBar />
     </SafeAreaView>
   );
 };

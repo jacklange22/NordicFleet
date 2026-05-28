@@ -941,7 +941,7 @@ const ProfileScreen = () => {
         </View>
       )}
 
-      <TabBar role={role} />
+      <TabBar />
     </SafeAreaView>
   );
 };
