@@ -1,5 +1,85 @@
 # Morning report — autonomous NordicFleet rewrite
 
+## Coach/personal mode + readiness audit session (2026-05-28)
+
+Two deliverables: restructured coaching from a rigid role binary into
+a capability + mode model, and produced an honest **`READINESS_AUDIT.md`**
+at the repo root. Read the audit — the short version is "ready for a
+small private beta, not public launch; stop building and get 5 real
+users."
+
+### Coach mode — the capability model
+
+`role: 'athlete' | 'coach'` is deprecated. Every user now has a
+personal fleet; `isCoach: boolean` is an added capability. `role` is
+kept as a derived mirror for back-compat. Migration is
+**migrate-on-read**: the app derives `isCoach` from the legacy `role`
+and backfills the field on next load (no admin script, no
+credentials, incremental).
+
+8 commits:
+
+| # | What |
+|---|------|
+| 1 | `isCoach` capability model in core (deriveIsCoach / needsCoachBackfill / buildProfileCreatePayload / buildCoachCapabilityPayload) + migrate-on-read + setCoachCapability with athlete cascade. Onboarding reframed to "do you coach a team?" (default no). |
+| 2 | ModeContext (mobile) — {mode, setMode, isCoach}, AsyncStorage persistence, locked-to-personal for non-coaches. AuthLoadingScreen routes on capability + last mode. |
+| 3+4 | TabBar is mode-driven: personal = Fleet/Add/Wax/Test/Messages/Profile, coaching = Athletes/Profile. A "My Fleet \| Coaching" segmented switcher sits above the tabs (coaches only) and reframes navigation. Coaching mode shifts the accent to a calm steel-blue. |
+| 5 | Profile "Coach a team" switch — become/stop coaching; stopping confirms + cascades athlete unlink + drops to personal mode. Personal stats + coach-link now show for everyone. |
+| 6 | Web mirror: ModeProvider + localStorage, header mode switcher, /home no longer auto-bounces coaches, profile coaching toggle, coaching accent token. |
+| 7 | Fixed the two deferred web bugs: coach-side ski detail reads `?owner=<athleteUid>` (sees the athlete's data, hides edit controls); message detail uses a live ski subscription so renames update. |
+| 8 | Tests: ModeContext (6), TabBar conditional nav (4), setCoachCapability cascade + createProfile + backfill (8), skiInfo coach-view (1), profileOperations (15 in commit 1). |
+
+The toggle-placement decision (tab-bar strip, since there's no shared
+header), the migrate-on-read rationale, the accent choice, and the
+iOS coaching-tabs scope are all documented in `NOTES.md`.
+
+### Visual distinction
+
+Personal = brand red. Coaching = steel-blue (`#4F8EF7` /
+`--color-coaching`). Applied to: the active mode segment, active tab
+color, unread badge, a hairline on the tab-bar top border (iOS), and
+the active nav link + switcher (web). Calm, not garish — the user
+always knows which mode they're in.
+
+### Verification at submit time
+
+```
+npm test --workspace=packages/core    18/18 suites, 276/276 tests
+npm test --workspace=apps/mobile       45/46 suites (1 skipped), 251/252 tests
+npm run web:build                      ✓ 19 routes
+xcodebuild iOS simulator               ** BUILD SUCCEEDED **
+npx eslint apps/mobile/.               0 errors (8 pre-existing warnings)
+vercel --prod                          READY → https://nordicfleet-web.vercel.app
+```
+
+Test totals: 276 core + 251 mobile = **527** (+34 this session).
+
+### Screenshots — not captured
+
+Per the same constraint as prior sessions, I can't drive an
+interactive simulator or browser to capture live screenshots
+(`verification-screenshots/coach-mode-*.png` is empty). The mode
+toggle, become-a-coach setting, and per-mode homes are verified at
+build + test level and on the deployed URL's render, but a human
+should capture the screenshots while doing the manual verification
+below.
+
+### Manual verification you should do
+
+On https://nordicfleet-web.vercel.app with a coach account:
+1. Sign in → Profile → toggle "Coach a team" on.
+2. The header gains a "My Fleet | Coaching" switcher. You're in My
+   Fleet — your own fleet shows.
+3. Switch to Coaching → the dashboard (athletes + pending requests)
+   shows, accent goes blue, nav becomes Athletes/Requests/Profile.
+4. Switch back to My Fleet → your own fleet returns.
+5. Toggle "Coach a team" off in Profile → confirm the switcher
+   disappears and you're back to a plain skier experience.
+
+On iOS: same flow via the segmented control above the tab bar.
+
+---
+
 ## Web parity session (2026-05-27)
 
 The web app can now drive the daily-use routine end-to-end. Athletes

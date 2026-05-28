@@ -13,13 +13,12 @@ import {SafeAreaView} from 'react-native-safe-area-context';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import {useAuth} from '../context/AuthContext';
 import {
-  updateProfile,
   setCoachByEmail,
   setCoachCapability,
 } from '../services/userService';
 import {Header, Card, Button, Input} from '../components/ui';
 import {isValidEmail} from '@nordicfleet/core';
-import {colors, spacing, typography, radius} from '../theme';
+import {colors, spacing, typography} from '../theme';
 
 // Onboarding after signup. The capability model means there's no
 // athlete-vs-coach fork: everyone is a skier with a personal fleet.

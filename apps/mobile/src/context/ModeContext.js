@@ -69,13 +69,17 @@ export const ModeProvider = ({children}) => {
     let cancelled = false;
     AsyncStorage.getItem(STORAGE_KEY)
       .then(stored => {
-        if (cancelled) return;
+        if (cancelled) {
+          return;
+        }
         if (stored === 'coaching' || stored === 'personal') {
           setModeState(stored);
         }
       })
       .finally(() => {
-        if (!cancelled) setModeReady(true);
+        if (!cancelled) {
+          setModeReady(true);
+        }
       });
     return () => {
       cancelled = true;
