@@ -22,6 +22,9 @@ import AthleteDetailScreen from './src/screens/athleteDetail.js';
 import MessagesScreen from './src/screens/messages.js';
 import MessageDetailScreen from './src/screens/messageDetail.js';
 import ComposeAdvisoryScreen from './src/screens/composeAdvisory.js';
+import WaxTruckScreen from './src/screens/waxTruck.js';
+import WaxTestSetupScreen from './src/screens/waxTestSetup.js';
+import WaxTestRunnerScreen from './src/screens/waxTestRunner.js';
 import {AuthProvider} from './src/context/AuthContext';
 import {ModeProvider} from './src/context/ModeContext';
 import ErrorBoundary from './src/components/ErrorBoundary';
@@ -90,6 +93,15 @@ const App = () => {
               <Stack.Screen
                 name="ComposeAdvisory"
                 component={ComposeAdvisoryScreen}
+              />
+              <Stack.Screen name="WaxTruck" component={WaxTruckScreen} />
+              <Stack.Screen
+                name="WaxTestSetup"
+                component={WaxTestSetupScreen}
+              />
+              <Stack.Screen
+                name="WaxTestRunner"
+                component={WaxTestRunnerScreen}
               />
             </Stack.Navigator>
           </NavigationContainer>
