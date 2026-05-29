@@ -20,10 +20,18 @@ const mapAuthError = code => {
     case 'auth/wrong-password':
     case 'auth/user-not-found':
       return 'Wrong email or password';
+    case 'auth/invalid-email':
+      return 'Please enter a valid email';
     case 'auth/network-request-failed':
       return 'No connection — please try again';
     case 'auth/too-many-requests':
       return 'Too many attempts, try again in a minute';
+    case 'auth/user-disabled':
+      return 'This account has been disabled';
+    case 'auth/keychain-error':
+      // The device couldn't reach the secure keychain Firebase Auth uses
+      // to persist the session. Usually transient.
+      return "Couldn't access secure storage — restart the app and try again";
     default:
       return 'Sign-in failed, please try again';
   }
@@ -51,6 +59,10 @@ const LoginScreen = ({navigation}) => {
       await signIn(email.trim(), password);
       navigation.replace('Home');
     } catch (err) {
+      // Keep the real Firebase code visible in dev so a future failure
+      // isn't hidden behind the friendly copy (the bug this whole flow
+      // exists to prevent).
+      console.warn('[auth] sign-in failed:', err && err.code);
       setError(mapAuthError(err && err.code));
     } finally {
       setSubmitting(false);

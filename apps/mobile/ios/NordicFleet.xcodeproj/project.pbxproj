@@ -503,6 +503,7 @@
 					"-ObjC",
 					"-lc++",
 				);
+				CODE_SIGN_ENTITLEMENTS = NordicFleet/NordicFleet.entitlements;
 				PRODUCT_BUNDLE_IDENTIFIER = com.NordicFleet.app;
 				PRODUCT_NAME = NordicFleet;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
@@ -529,6 +530,7 @@
 					"-ObjC",
 					"-lc++",
 				);
+				CODE_SIGN_ENTITLEMENTS = NordicFleet/NordicFleet.entitlements;
 				PRODUCT_BUNDLE_IDENTIFIER = com.NordicFleet.app;
 				PRODUCT_NAME = NordicFleet;
 				SWIFT_VERSION = 5.0;
