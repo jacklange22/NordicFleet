@@ -13,6 +13,7 @@ import {
   orderBy,
   addDoc,
   setDoc,
+  deleteDoc,
   serverTimestamp,
 } from 'firebase/firestore';
 import {
@@ -27,6 +28,7 @@ import {
   buildCoachCapabilityPayload,
   needsCoachBackfill,
   deriveIsCoach,
+  buildWaxTestCreatePayload,
 } from '@nordicfleet/core';
 import {getDbClient} from './firebase';
 
@@ -557,6 +559,88 @@ export async function getMessage(messageId) {
   }
   const snap = await getDoc(doc(db, 'messages', messageId));
   return snap.exists() ? {id: snap.id, ...snap.data()} : null;
+}
+
+// ─── Wax Truck (users/{uid}/waxTests) ───────────────────────────────
+
+export async function createWaxTest(uid, data) {
+  if (!uid) {
+    throw new Error('createWaxTest: uid is required');
+  }
+  const db = getDbClient();
+  if (!db) {
+    throw new Error('Firestore is not configured');
+  }
+  const payload = {
+    ...buildWaxTestCreatePayload(data),
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  };
+  const ref = await addDoc(collection(db, 'users', uid, 'waxTests'), payload);
+  return ref.id;
+}
+
+export async function updateWaxTest(uid, testId, partial) {
+  if (!uid || !testId) {
+    throw new Error('updateWaxTest: uid and testId are required');
+  }
+  const db = getDbClient();
+  if (!db) {
+    throw new Error('Firestore is not configured');
+  }
+  await setDoc(
+    doc(db, 'users', uid, 'waxTests', testId),
+    {...partial, updatedAt: serverTimestamp()},
+    {merge: true},
+  );
+}
+
+export async function getWaxTest(uid, testId) {
+  if (!uid || !testId) {
+    return null;
+  }
+  const db = getDbClient();
+  if (!db) {
+    return null;
+  }
+  const snap = await getDoc(doc(db, 'users', uid, 'waxTests', testId));
+  return snap.exists() ? {id: snap.id, ...snap.data()} : null;
+}
+
+export async function deleteWaxTest(uid, testId) {
+  if (!uid || !testId) {
+    throw new Error('deleteWaxTest: uid and testId are required');
+  }
+  const db = getDbClient();
+  if (!db) {
+    throw new Error('Firestore is not configured');
+  }
+  await deleteDoc(doc(db, 'users', uid, 'waxTests', testId));
+}
+
+export function subscribeWaxTests(uid, cb) {
+  if (!uid) {
+    cb([]);
+    return noop;
+  }
+  const db = getDbClient();
+  if (!db) {
+    cb([]);
+    return noop;
+  }
+  const q = query(
+    collection(db, 'users', uid, 'waxTests'),
+    orderBy('createdAt', 'desc'),
+  );
+  return onSnapshot(
+    q,
+    snap => {
+      const out = [];
+      snap.forEach(d => out.push({id: d.id, ...d.data()}));
+      cb(out);
+    },
+    () => cb([]),
+  );
 }
 
 export async function listSkisForAthlete(athleteUid) {
