@@ -26,6 +26,11 @@
   --color-coaching-pressed: #3b6fd4;
   --color-coaching-dim: #1e2f4f;
 
+  /* wax-truck accent — calm amber (wax on the iron), mirrors apps/mobile */
+  --color-waxtruck: #e0a93b;
+  --color-waxtruck-pressed: #c68f26;
+  --color-waxtruck-dim: #3a2e12;
+
   /* text */
   --color-text-primary: #ffffff;
   --color-text-secondary: #a3a3a3;

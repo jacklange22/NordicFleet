@@ -20,7 +20,25 @@ const COACHING_NAV = [
   {href: '/coach/requests', label: 'Requests'},
   {href: '/profile', label: 'Profile'},
 ];
-const MODE_HOME = {personal: '/home', coaching: '/coach'};
+const WAXTRUCK_NAV = [
+  {href: '/wax-truck', label: 'Tests'},
+  {href: '/profile', label: 'Profile'},
+];
+const MODE_HOME = {
+  personal: '/home',
+  coaching: '/coach',
+  waxtruck: '/wax-truck',
+};
+const MODE_NAV = {
+  personal: PERSONAL_NAV,
+  coaching: COACHING_NAV,
+  waxtruck: WAXTRUCK_NAV,
+};
+const MODE_ACCENT_TEXT = {
+  personal: 'text-red',
+  coaching: 'text-coaching',
+  waxtruck: 'text-waxtruck',
+};
 
 export function SiteHeader() {
   const {user, signOut} = useAuth();
@@ -37,8 +55,8 @@ export function SiteHeader() {
     return subscribeUnreadCountForAthlete(user.uid, setUnread);
   }, [user, mode]);
 
-  const items = mode === 'coaching' ? COACHING_NAV : PERSONAL_NAV;
-  const accentText = mode === 'coaching' ? 'text-coaching' : 'text-red';
+  const items = MODE_NAV[mode] || PERSONAL_NAV;
+  const accentText = MODE_ACCENT_TEXT[mode] || 'text-red';
 
   const switchMode = next => {
     if (next === mode) return;
@@ -51,7 +69,7 @@ export function SiteHeader() {
       <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-4">
           <Link
-            href={mode === 'coaching' ? '/coach' : '/home'}
+            href={MODE_HOME[mode] || '/home'}
             className="flex items-center gap-2">
             <span className="text-xl font-bold tracking-tight">
               NordicFleet
@@ -120,6 +138,12 @@ function ModeSwitcher({mode, onSwitch}) {
         active={mode === 'coaching'}
         activeClass="bg-coaching text-white"
         onClick={() => onSwitch('coaching')}
+      />
+      <SegmentButton
+        label="Wax Truck"
+        active={mode === 'waxtruck'}
+        activeClass="bg-waxtruck text-black"
+        onClick={() => onSwitch('waxtruck')}
       />
     </div>
   );

@@ -18,6 +18,10 @@ import {subscribeProfile, backfillCoachCapability} from '@/lib/firestore';
 
 const STORAGE_KEY = 'nordicfleet.mode';
 
+// The three surfaces — personal is always on; coaching + waxtruck are
+// coach-only. Single source of truth for both guards below.
+const VALID_MODES = ['personal', 'coaching', 'waxtruck'];
+
 const ModeContext = createContext({
   mode: 'personal',
   setMode: () => {},
@@ -35,7 +39,7 @@ export function ModeProvider({children}) {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const stored = window.localStorage.getItem(STORAGE_KEY);
-    if (stored === 'coaching' || stored === 'personal') {
+    if (VALID_MODES.includes(stored)) {
       setModeState(stored);
     }
   }, []);
@@ -70,7 +74,7 @@ export function ModeProvider({children}) {
   const setMode = useCallback(
     next => {
       if (!isCoach) return;
-      if (next !== 'personal' && next !== 'coaching') return;
+      if (!VALID_MODES.includes(next)) return;
       setModeState(next);
       if (typeof window !== 'undefined') {
         window.localStorage.setItem(STORAGE_KEY, next);

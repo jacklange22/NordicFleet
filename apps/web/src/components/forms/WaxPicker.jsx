@@ -18,6 +18,7 @@ export function WaxPicker({
   onChange,
   placeholder = 'Type to search — e.g. VR40 or Marathon Yellow',
   type, // optional filter passed to searchWaxes (e.g. 'glide' / 'kick')
+  category, // optional category filter (kick/paraffin/topcoat/structure)
   disabled,
   className = '',
 }) {
@@ -47,8 +48,10 @@ export function WaxPicker({
   }, [open]);
 
   const suggestions = useMemo(() => {
-    return searchWaxes(query, {type, limit: MAX_SUGGESTIONS});
-  }, [query, type]);
+    return category
+      ? searchWaxes(query, {category, limit: MAX_SUGGESTIONS})
+      : searchWaxes(query, {type, limit: MAX_SUGGESTIONS});
+  }, [query, type, category]);
 
   const handlePick = wax => {
     setQuery(wax.fullName);
