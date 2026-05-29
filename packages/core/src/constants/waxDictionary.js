@@ -23,7 +23,7 @@ const C = 'C';
 
 const t = (min, max) => ({min, max, unit: C});
 
-const WAX_DICTIONARY = Object.freeze([
+const RAW_WAXES = [
   // ───────────────────────────────────────────────────────────────────
   // Swix — base preparation
   // ───────────────────────────────────────────────────────────────────
@@ -1056,7 +1056,137 @@ const WAX_DICTIONARY = Object.freeze([
     humidityRange: null,
     notes: null,
   },
-]);
+
+  // ───────────────────────────────────────────────────────────────────
+  // Topcoats / race-day overlays (powders + liquids applied over glide).
+  // Real product lines; fluoro powders (Cera F) are legacy / restricted
+  // in many race series now but remain real products coaches reference.
+  // ───────────────────────────────────────────────────────────────────
+  {
+    id: 'swix-cera-f-fc8x',
+    manufacturer: 'Swix',
+    product: 'Cera F FC8X',
+    variant: 'Cold',
+    type: 'topcoat',
+    fullName: 'Swix Cera F FC8X',
+    searchKeywords: ['fc8x', 'cera f', 'swix cera f', 'swix fc8x', 'cold powder'],
+    tempRange: t(-15, -4),
+    humidityRange: null,
+    notes: 'Fluorocarbon powder topcoat — restricted in FIS races.',
+  },
+  {
+    id: 'swix-cera-f-fc10x',
+    manufacturer: 'Swix',
+    product: 'Cera F FC10X',
+    variant: 'Universal',
+    type: 'topcoat',
+    fullName: 'Swix Cera F FC10X',
+    searchKeywords: ['fc10x', 'cera f', 'swix cera f', 'swix fc10x', 'universal powder'],
+    tempRange: t(-10, 0),
+    humidityRange: null,
+    notes: 'Fluorocarbon powder topcoat — restricted in FIS races.',
+  },
+  {
+    id: 'toko-helx-blue',
+    manufacturer: 'Toko',
+    product: 'HelX 3.0',
+    variant: 'Blue',
+    type: 'topcoat',
+    fullName: 'Toko HelX 3.0 Blue',
+    searchKeywords: ['helx', 'toko helx', 'helx blue', 'liquid topcoat'],
+    tempRange: t(-12, -2),
+    humidityRange: null,
+    notes: 'Liquid overlay applied over glide.',
+  },
+  {
+    id: 'toko-helx-red',
+    manufacturer: 'Toko',
+    product: 'HelX 3.0',
+    variant: 'Red',
+    type: 'topcoat',
+    fullName: 'Toko HelX 3.0 Red',
+    searchKeywords: ['helx', 'toko helx', 'helx red', 'liquid topcoat'],
+    tempRange: t(-4, 4),
+    humidityRange: null,
+    notes: 'Liquid overlay applied over glide.',
+  },
+
+  // ───────────────────────────────────────────────────────────────────
+  // Structure — base grind / rilling patterns. These are temperature
+  // CONVENTIONS, not branded products: structure naming is shop- and
+  // tool-specific, so this category is mostly free-text in practice.
+  // These three give the picker a starting suggestion per temp band;
+  // coaches type their own (e.g. "Red Creek 1mm", "SG1 broken").
+  // ───────────────────────────────────────────────────────────────────
+  {
+    id: 'structure-fine-cold',
+    manufacturer: 'Generic',
+    product: 'Fine linear',
+    variant: 'Cold',
+    type: 'structure',
+    fullName: 'Fine linear (cold)',
+    searchKeywords: ['fine', 'cold structure', 'linear', 'shallow'],
+    tempRange: t(-30, -8),
+    humidityRange: null,
+    notes: 'Convention, not a product — type your shop’s actual grind.',
+  },
+  {
+    id: 'structure-medium-universal',
+    manufacturer: 'Generic',
+    product: 'Medium',
+    variant: 'Universal',
+    type: 'structure',
+    fullName: 'Medium (universal)',
+    searchKeywords: ['medium', 'universal structure'],
+    tempRange: t(-8, -2),
+    humidityRange: null,
+    notes: 'Convention, not a product — type your shop’s actual grind.',
+  },
+  {
+    id: 'structure-coarse-warm',
+    manufacturer: 'Generic',
+    product: 'Coarse broken',
+    variant: 'Warm',
+    type: 'structure',
+    fullName: 'Coarse broken (warm)',
+    searchKeywords: ['coarse', 'warm structure', 'broken', 'deep'],
+    tempRange: t(-2, 10),
+    humidityRange: null,
+    notes: 'Convention, not a product — type your shop’s actual grind.',
+  },
+];
+
+// ─── Category model ──────────────────────────────────────────────────
+//
+// Wax Truck mode (and the wax log) filter suggestions by a coarse
+// category. The legacy per-entry `type` maps onto four categories:
+//   kick + klister + binder → 'kick'
+//   glide + base prep       → 'paraffin'
+//   topcoat                 → 'topcoat'
+//   structure               → 'structure'
+// The `category` field is the primary (used for sorting / the chip);
+// `categories` is the (currently single-element) list for the rare
+// entry that spans more than one. Derived here so we never hand-edit
+// every entry.
+
+const TYPE_TO_CATEGORY = Object.freeze({
+  kick: 'kick',
+  klister: 'kick',
+  binder: 'kick',
+  glide: 'paraffin',
+  base: 'paraffin',
+  topcoat: 'topcoat',
+  structure: 'structure',
+});
+
+const WAX_CATEGORIES = Object.freeze(['kick', 'paraffin', 'topcoat', 'structure']);
+
+const WAX_DICTIONARY = Object.freeze(
+  RAW_WAXES.map(w => {
+    const category = TYPE_TO_CATEGORY[w.type] || 'paraffin';
+    return Object.freeze({...w, category, categories: [category]});
+  }),
+);
 
 /**
  * Filter the dictionary for typeahead matches.
@@ -1071,8 +1201,18 @@ function searchWaxes(query, opts = {}) {
   const q = (query || '').trim().toLowerCase();
   const limit = opts.limit || 30;
   let candidates = WAX_DICTIONARY;
+  // Back-compat: `type` still filters on the legacy field.
   if (opts.type) {
     candidates = candidates.filter(w => w.type === opts.type);
+  }
+  // New: `category` filters on the coarse category. Matches either the
+  // primary category or any in the `categories` list.
+  if (opts.category) {
+    candidates = candidates.filter(
+      w =>
+        w.category === opts.category ||
+        (w.categories && w.categories.includes(opts.category)),
+    );
   }
   if (!q) {
     return candidates.slice(0, limit);
@@ -1090,6 +1230,18 @@ function searchWaxes(query, opts = {}) {
   return matches.slice(0, limit);
 }
 
+/**
+ * All waxes in a category, unfiltered by query. Convenience wrapper
+ * over searchWaxes for the Wax Truck combination builder, which shows
+ * the full category list before the user types.
+ *
+ * @param {'kick'|'paraffin'|'topcoat'|'structure'} category
+ * @param {number} [limit]
+ */
+function waxesByCategory(category, limit = 100) {
+  return searchWaxes('', {category, limit});
+}
+
 function getWaxById(id) {
   if (!id) {
     return null;
@@ -1097,4 +1249,10 @@ function getWaxById(id) {
   return WAX_DICTIONARY.find(w => w.id === id) || null;
 }
 
-module.exports = {WAX_DICTIONARY, searchWaxes, getWaxById};
+module.exports = {
+  WAX_DICTIONARY,
+  WAX_CATEGORIES,
+  searchWaxes,
+  waxesByCategory,
+  getWaxById,
+};
