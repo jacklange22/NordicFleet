@@ -1,5 +1,37 @@
 # Morning report — autonomous NordicFleet rewrite
 
+## iOS sign-in fix (2026-05-29)
+
+- **Symptom:** sign-in worked on the deployed web app but failed on the
+  iOS app, showing the generic catch-all "Sign-in failed, please try
+  again."
+- **Real error code (surfaced via a temporary native auth harness on the
+  simulator + Metro logging):** `auth/keychain-error` —
+  "An error occurred when accessing the keychain."
+- **Root cause:** the iOS app had **no entitlements file** and no
+  `CODE_SIGN_ENTITLEMENTS` build setting, so the built app carried no
+  `keychain-access-groups` entitlement. Firebase Auth persists its
+  session to the iOS Keychain; without the entitlement that write fails
+  on the simulator, so every `signInWithEmailAndPassword` threw. Web is
+  unaffected (it uses no keychain). The plist, bundle ID, project ID, and
+  `[FIRApp configure]` were all already correct — this was purely the
+  missing keychain entitlement.
+- **Fix:** added `ios/NordicFleet/NordicFleet.entitlements`
+  (`keychain-access-groups = $(AppIdentifierPrefix)com.NordicFleet.app`)
+  and set `CODE_SIGN_ENTITLEMENTS` on the app target's Debug + Release
+  configs.
+- **Verified:** rebuilt for the booted iPhone 17 simulator (entitlement
+  confirmed embedded in the binary) and drove `signInWithEmailAndPassword`
+  with a known-good account → **SIGN-IN OK**; a fresh
+  `createUserWithEmailAndPassword` → **SIGN-UP OK**, with the app
+  proceeding into Firestore. Evidence: `scripts/logs/ios-signin-verify.log`.
+- **Error handling:** `login.js` now maps `auth/keychain-error`,
+  `auth/invalid-email`, and `auth/user-disabled` to specific copy and
+  `console.warn`s the real code so a future failure is never silently
+  swallowed.
+- **Remaining user action:** none for this bug — the fix is in the repo
+  (entitlements file + project setting). A normal rebuild picks it up.
+
 ## Coach/personal mode + readiness audit session (2026-05-28)
 
 Two deliverables: restructured coaching from a rigid role binary into
