@@ -1,0 +1,20 @@
+=== NordicFleet Wax Truck + marketing-signups verification ===
+User A: wax-a-1780030941@nordicfleet.test
+User B: wax-b-1780030941@nordicfleet.test
+
+[setup] Creating two test users…
+  A uid=ZwDdDkoSODMbmjkZakHyb6FTeBc2
+  B uid=Q4hcyWxx83ZNRjMbxdnitg73nxx1
+
+[1/2] Wax Truck — users/{uid}/waxTests
+  ✓ owner can create a wax test
+  ✓ owner can read own wax test
+  ✓ other user blocked from reading the wax test (403)
+  ✓ other user blocked from writing the wax test (403)
+
+[2/2] marketingSignups — public create, no client read
+  ✓ anonymous can create a marketing signup
+  ✓ anonymous blocked from listing signups (403)
+  ✓ signed-in user blocked from listing signups (403)
+
+=== Summary: 7 passed, 0 failed ===
