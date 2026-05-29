@@ -49,6 +49,47 @@ function Inner() {
   const [snowType, setSnowType] = useState('');
   const [surface, setSurface] = useState('');
   const [locationLabel, setLocationLabel] = useState('');
+  // Browser geolocation: when granted, we attach real coordinates to the
+  // test log (the core validator drops a label-only location).
+  const [geo, setGeo] = useState(null); // {latitude, longitude, accuracy}
+  const [geoStatus, setGeoStatus] = useState('idle'); // idle|loading|ok|error
+  const [geoError, setGeoError] = useState('');
+
+  const captureLocation = () => {
+    setGeoError('');
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      setGeoStatus('error');
+      setGeoError("This browser can't share location.");
+      return;
+    }
+    setGeoStatus('loading');
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        const c = pos.coords;
+        setGeo({
+          latitude: c.latitude,
+          longitude: c.longitude,
+          accuracy: Number.isFinite(c.accuracy) ? c.accuracy : null,
+        });
+        setGeoStatus('ok');
+      },
+      err => {
+        setGeoStatus('error');
+        setGeoError(
+          err && err.code === 1
+            ? 'Location permission denied.'
+            : "Couldn't get your location — you can still type a label.",
+        );
+      },
+      {enableHighAccuracy: false, timeout: 15000, maximumAge: 60000},
+    );
+  };
+
+  const clearLocation = () => {
+    setGeo(null);
+    setGeoStatus('idle');
+    setGeoError('');
+  };
 
   const [selectedIds, setSelectedIds] = useState([]);
   const [entries, setEntries] = useState({});
@@ -109,19 +150,18 @@ function Inner() {
           ski && (ski.technique || '').toLowerCase() === 'classic';
         const isSkate =
           ski && (ski.technique || '').toLowerCase() === 'skate';
-        // The core TestLog validator drops a `location` object that
-        // doesn't carry valid lat/lng — and the web user only types a
-        // label (no browser geolocation in this session, deferred).
-        // Prepend the typed label to notes instead of fabricating a
-        // coordinate. Notes are the right home for a free-form
-        // venue tag.
+        // When the browser shared coordinates we attach a real location
+        // object (with the typed label). The core validator keeps it.
+        // Without coords, validateLocation would drop a label-only
+        // location, so we fall back to folding the label into notes.
+        const hasCoords = !!geo;
         const noteText = entry.notes;
         const notes =
-          locationLabel && noteText
-            ? `Location: ${locationLabel}\n${noteText}`
-            : locationLabel
-              ? `Location: ${locationLabel}`
-              : noteText;
+          !hasCoords && locationLabel
+            ? noteText
+              ? `Location: ${locationLabel}\n${noteText}`
+              : `Location: ${locationLabel}`
+            : noteText;
         return createTestLog(user.uid, {
           skiId,
           temperature,
@@ -133,6 +173,14 @@ function Inner() {
           stabilityRating: isSkate ? entry.stabilityRating : null,
           climbingRating: isSkate ? entry.climbingRating : null,
           notes,
+          location: hasCoords
+            ? {
+                latitude: geo.latitude,
+                longitude: geo.longitude,
+                accuracy: geo.accuracy,
+                label: locationLabel || null,
+              }
+            : undefined,
         });
       });
       const settled = await Promise.allSettled(writes);
@@ -211,6 +259,29 @@ function Inner() {
             onChange={setLocationLabel}
             placeholder="e.g. Silverstar morning loop"
           />
+          <div className="flex items-center gap-3 flex-wrap">
+            <Button
+              variant="secondary"
+              size="sm"
+              type="button"
+              onClick={geoStatus === 'ok' ? clearLocation : captureLocation}
+              disabled={geoStatus === 'loading'}>
+              {geoStatus === 'loading'
+                ? 'Locating…'
+                : geoStatus === 'ok'
+                  ? 'Clear coordinates'
+                  : 'Use my location'}
+            </Button>
+            {geoStatus === 'ok' && geo && (
+              <span className="text-success text-xs">
+                📍 {geo.latitude.toFixed(4)}, {geo.longitude.toFixed(4)}
+                {geo.accuracy ? ` (±${Math.round(geo.accuracy)}m)` : ''}
+              </span>
+            )}
+            {geoStatus === 'error' && (
+              <span className="text-text-tertiary text-xs">{geoError}</span>
+            )}
+          </div>
         </Card>
 
         <Card className="mb-6">
