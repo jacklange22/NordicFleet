@@ -3,6 +3,7 @@ import {View, Image, Text, StyleSheet, StatusBar} from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import {colors, spacing, typography, radius} from '../theme';
 import Button from './ui/Button';
+import {reportError} from '../services/reportError';
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -14,8 +15,14 @@ class ErrorBoundary extends React.Component {
     return {hasError: true, error};
   }
 
-  componentDidCatch() {
-    // In real life we'd ship to crash reporting. Here we just keep state.
+  componentDidCatch(error, info) {
+    // Route render-time errors through the PII-safe reporting funnel.
+    // (Console in dev today; Crashlytics/Sentry drop-in later — see
+    // OBSERVABILITY_PLAN.md.)
+    reportError(error, {
+      boundary: 'react',
+      component: info && info.componentStack ? 'tree' : undefined,
+    });
   }
 
   handleRestart = () => {
