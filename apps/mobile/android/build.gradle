@@ -15,6 +15,12 @@ buildscript {
         classpath("com.android.tools.build:gradle")
         classpath("com.facebook.react:react-native-gradle-plugin")
         classpath("org.jetbrains.kotlin:kotlin-gradle-plugin")
+        // Google Services — processes google-services.json into the
+        // Firebase config the @react-native-firebase modules read at
+        // runtime. The plugin is only *applied* in app/build.gradle when
+        // the json is present, so the project still builds before the
+        // file is added (see BLOCKERS.md).
+        classpath("com.google.gms:google-services:4.4.2")
     }
 }
 

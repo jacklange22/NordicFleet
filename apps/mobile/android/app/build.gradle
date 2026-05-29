@@ -2,20 +2,40 @@ apply plugin: "com.android.application"
 apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
 
+// Apply the Google Services plugin only once google-services.json is in
+// place. This keeps `./gradlew assembleDebug` working in CI / a fresh
+// checkout before the Firebase config file is added, while wiring up
+// Firebase fully the moment the file lands. See BLOCKERS.md for how to
+// obtain the file. The @react-native-firebase native modules still
+// compile without it; they simply have no config until the json exists.
+if (file("google-services.json").exists()) {
+    apply plugin: "com.google.gms.google-services"
+}
+
 /**
  * This is the configuration block to customize your React Native Android app.
  * By default you don't need to apply any configuration, just uncomment the lines you need.
  */
+// Monorepo-aware node_modules resolution — see android/settings.gradle.
+// react-native and friends are hoisted to the repo-root node_modules, so
+// the default ../node_modules/* paths below don't resolve. Ask Node.
+def nodeResolveDir = { pkg ->
+    new File(
+        ["node", "--print", "require.resolve('${pkg}/package.json')"]
+            .execute(null, rootDir).text.trim()
+    ).parentFile
+}
+
 react {
     /* Folders */
-    //   The root of your project, i.e. where "package.json" lives. Default is '..'
-    // root = file("../")
-    //   The folder where the react-native NPM package is. Default is ../node_modules/react-native
-    // reactNativeDir = file("../node_modules/react-native")
-    //   The folder where the react-native Codegen package is. Default is ../node_modules/@react-native/codegen
-    // codegenDir = file("../node_modules/@react-native/codegen")
-    //   The cli.js file which is the React Native CLI entrypoint. Default is ../node_modules/react-native/cli.js
-    // cliFile = file("../node_modules/react-native/cli.js")
+    //   The root of your project, i.e. where "package.json" lives.
+    root = file("../../")
+    //   The folder where the react-native NPM package is (hoisted to root).
+    reactNativeDir = nodeResolveDir("react-native")
+    //   The folder where the react-native Codegen package is (hoisted).
+    codegenDir = nodeResolveDir("@react-native/codegen")
+    //   The cli.js file which is the React Native CLI entrypoint (hoisted).
+    cliFile = new File(nodeResolveDir("react-native"), "cli.js")
 
     /* Variants */
     //   The list of variants to that are debuggable. For those we're going to
@@ -116,4 +136,8 @@ dependencies {
     }
 }
 
-apply from: file("../../node_modules/@react-native-community/cli-platform-android/native_modules.gradle"); applyNativeModulesAppBuildGradle(project)
+apply from: new File(
+    nodeResolveDir("@react-native-community/cli-platform-android"),
+    "native_modules.gradle"
+)
+applyNativeModulesAppBuildGradle(project)

@@ -1,4 +1,23 @@
 rootProject.name = 'NordicFleet'
-apply from: file("../node_modules/@react-native-community/cli-platform-android/native_modules.gradle"); applyNativeModulesSettingsGradle(settings)
+
+// Monorepo-aware node_modules resolution. This repo uses npm workspaces,
+// which hoist react-native and the @react-native* / @react-native-community
+// packages to the repo-root node_modules — NOT apps/mobile/node_modules.
+// Hard-coded ../node_modules paths therefore don't resolve, so we ask Node
+// where each package actually lives (require.resolve walks up the tree and
+// finds the hoisted copy). The iOS Podfile already resolves paths this way.
+def nodeResolve = { pkg ->
+    new File(
+        ["node", "--print", "require.resolve('${pkg}/package.json')"]
+            .execute(null, rootDir).text.trim()
+    ).parentFile
+}
+
+apply from: new File(
+    nodeResolve("@react-native-community/cli-platform-android"),
+    "native_modules.gradle"
+)
+applyNativeModulesSettingsGradle(settings)
+
 include ':app'
-includeBuild('../node_modules/@react-native/gradle-plugin')
+includeBuild(nodeResolve("@react-native/gradle-plugin"))

@@ -89,3 +89,79 @@ There are two Vercel projects in the user's account (`web` and
 the live URL and env vars. `web` is orphaned from an earlier
 attempt and can be deleted from the dashboard at the user's
 leisure (no functional impact).
+
+## Android — debug build (partially unblocked; two environment gaps remain)
+
+The Android project is now **correctly configured** for this monorepo, and
+`./gradlew :app:assembleDebug` progresses through Gradle bootstrap, the
+React Native gradle plugin compile, and project configuration. It stops at
+two **environment** gaps that can't be fixed from inside the repo. Both are
+machine setup, not code.
+
+### What was fixed in the repo (committed)
+
+1. **Monorepo node_modules resolution.** npm workspaces hoist `react-native`,
+   `@react-native/*`, and `@react-native-community/*` to the **repo-root**
+   `node_modules`, but the Android gradle files shipped with hard-coded
+   `../node_modules/...` paths that resolve to `apps/mobile/node_modules`
+   (which doesn't contain them). `settings.gradle` and `app/build.gradle`
+   now resolve every package via `node --print "require.resolve(...)"` — the
+   same approach the iOS Podfile already uses. The `react {}` block sets
+   `reactNativeDir`, `codegenDir`, and `cliFile` to the hoisted locations.
+2. **Gradle version.** Bumped the wrapper from 8.3 → 8.10.2 (AGP requires
+   8.7+; 8.10.2 matches the RN 0.76 template).
+3. **Google Services plugin.** Added the `com.google.gms:google-services`
+   classpath, and `app/build.gradle` applies the plugin **only when
+   `app/google-services.json` exists** — so the build doesn't hard-fail
+   before the Firebase config file is added.
+
+The OCR module needs **no** Android guarding: it's a local **iOS-only**
+native module (`ios/NFOCR/`, Apple Vision), not an npm package, so Android
+autolinking never sees it, and `ocrService.js` already returns
+`NFOCR_UNAVAILABLE` on non-iOS. There is nothing Android-side to break.
+
+### Remaining environment gaps (USER ACTION)
+
+The captured failure log is at `scripts/logs/android-assembleDebug.log`.
+
+1. **JDK 17 required (only JDK 11 installed).** AGP fails with:
+   `Android Gradle plugin requires Java 17 to run. You are currently using
+   Java 11.` Install a JDK 17 and point the build at it, e.g.:
+   ```bash
+   brew install openjdk@17
+   export JAVA_HOME="$(/usr/libexec/java_home -v 17)"
+   ```
+   (or set `org.gradle.java.home` in `android/gradle.properties`).
+
+2. **Android SDK not installed** (`ANDROID_HOME` unset, no
+   `~/Library/Android/sdk`). Install the command-line tools or Android
+   Studio, then create `apps/mobile/android/local.properties` with:
+   ```
+   sdk.dir=/Users/<you>/Library/Android/sdk
+   ```
+   and accept the SDK licenses (`sdkmanager --licenses`). The build needs
+   `platform-34`, `build-tools;34.0.0`, and NDK `25.1.8937393`
+   (see `android/build.gradle`). `local.properties` is intentionally git-
+   ignored (it's machine-specific).
+
+3. **`google-services.json` missing** (same gap as iOS' `GoogleService-Info.plist`).
+   Download it from the Firebase console (Project settings → Your apps →
+   Android app, package `com.nordicfleet`) and drop it at
+   `apps/mobile/android/app/google-services.json`. Until then the app
+   compiles but Firebase has no config at runtime.
+
+### To finish locally
+
+```bash
+export JAVA_HOME="$(/usr/libexec/java_home -v 17)"   # after installing JDK 17
+cd apps/mobile/android
+printf 'sdk.dir=%s/Library/Android/sdk\n' "$HOME" > local.properties
+./gradlew :app:assembleDebug
+```
+
+With JDK 17 + the SDK + `google-services.json` in place, the project is
+expected to build a debug APK — the repo-side configuration work is done.
+This could not be verified end-to-end in the build environment used for this
+session because installing a JDK 17 and the multi-GB Android SDK was out of
+scope; the progress and the exact stopping point are captured in the log
+above.
