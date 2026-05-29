@@ -19,6 +19,8 @@ import {
   Pressable,
   ActivityIndicator,
   Alert,
+  Modal,
+  FlatList,
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useNavigation, useRoute} from '@react-navigation/native';
@@ -36,8 +38,32 @@ import {
   updateWaxTest,
   deleteWaxTest,
 } from '../services/waxTestService';
+import {subscribeAthletesForCoach} from '../services/userService';
 import {Header, Card, Button, Input, SectionHeader} from '../components/ui';
 import {colors, radius, spacing, typography} from '../theme';
+
+// Turn a finished test + its winning combination into seed values for
+// the coach's race-day advisory composer. The advisory is the coaching
+// surface; this is the bridge from "what won" to "tell the athlete".
+function buildAdvisoryPrefill(test, winner) {
+  const c = test.conditions || {};
+  const layerLines = (winner?.layers || [])
+    .map(l => `  • ${l.category}: ${l.waxName}`)
+    .join('\n');
+  const bodyParts = [
+    `Wax Truck winner: ${winner?.label || 'fastest combination'}`,
+    layerLines ? `Layers:\n${layerLines}` : '',
+    `From test "${test.name}".`,
+  ].filter(Boolean);
+  const numOr = v => (v == null || v === '' ? '' : String(v));
+  return {
+    snowType: c.snowType || '',
+    snowTemp: numOr(c.temperature),
+    humidity: numOr(c.humidity),
+    conditionsNotes: c.locationLabel ? `Tested at ${c.locationLabel}.` : '',
+    body: bodyParts.join('\n\n'),
+  };
+}
 
 const WaxTestRunnerScreen = () => {
   const navigation = useNavigation();
@@ -50,6 +76,8 @@ const WaxTestRunnerScreen = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+  const [athletes, setAthletes] = useState([]);
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -77,6 +105,14 @@ const WaxTestRunnerScreen = () => {
       cancelled = true;
     };
   }, [uid, testId]);
+
+  // Linked athletes — only needed to offer "send winner as advisory".
+  useEffect(() => {
+    if (!uid) {
+      return undefined;
+    }
+    return subscribeAthletesForCoach(uid, setAthletes);
+  }, [uid]);
 
   const comboById = useMemo(() => {
     const map = {};
@@ -171,6 +207,16 @@ const WaxTestRunnerScreen = () => {
       text1: 'Numbers saved',
       position: 'top',
       visibilityTime: 1600,
+    });
+  };
+
+  const sendToAthlete = athlete => {
+    setPickerOpen(false);
+    const winner = comboById[test.bracket.winnerId];
+    navigation.navigate('ComposeAdvisory', {
+      athleteUid: athlete.uid || athlete.id,
+      athleteName: athlete.displayName || athlete.name || 'athlete',
+      prefill: buildAdvisoryPrefill(test, winner),
     });
   };
 
@@ -272,6 +318,8 @@ const WaxTestRunnerScreen = () => {
             test={test}
             labelFor={labelFor}
             comboById={comboById}
+            athleteCount={athletes.length}
+            onSendAdvisory={() => setPickerOpen(true)}
           />
         )}
 
@@ -323,6 +371,13 @@ const WaxTestRunnerScreen = () => {
           Delete test
         </Button>
       </ScrollView>
+
+      <AthletePicker
+        visible={pickerOpen}
+        athletes={athletes}
+        onPick={sendToAthlete}
+        onClose={() => setPickerOpen(false)}
+      />
     </SafeAreaView>
   );
 };
@@ -440,7 +495,7 @@ const CompetitorButton = ({label, onPress}) => (
 );
 
 // Winner + standings once complete.
-const Results = ({test, labelFor, comboById}) => {
+const Results = ({test, labelFor, comboById, athleteCount, onSendAdvisory}) => {
   const winnerId = test.bracket.winnerId;
   const ranked = [...test.combinations].sort((a, b) => {
     // Put the bracket winner first, then by performance number (desc),
@@ -467,6 +522,22 @@ const Results = ({test, labelFor, comboById}) => {
           </Text>
         )}
       </Card>
+      <View style={styles.sendWrap}>
+        <Button
+          variant="primary"
+          size="md"
+          icon="paper-plane-outline"
+          disabled={athleteCount === 0}
+          onPress={onSendAdvisory}>
+          Send winner as advisory
+        </Button>
+        {athleteCount === 0 && (
+          <Text style={styles.sendHint}>
+            Link an athlete in Coaching mode to send this as a race-day
+            advisory.
+          </Text>
+        )}
+      </View>
       <SectionHeader title="Standings" />
       {ranked.map((c, i) => (
         <View key={c.id} style={styles.standRow}>
@@ -485,6 +556,49 @@ const Results = ({test, labelFor, comboById}) => {
     </>
   );
 };
+
+// Bottom-sheet athlete picker for routing a winner into an advisory.
+const AthletePicker = ({visible, athletes, onPick, onClose}) => (
+  <Modal
+    visible={visible}
+    transparent
+    animationType="slide"
+    onRequestClose={onClose}>
+    <View style={styles.backdrop}>
+      <View style={styles.sheet}>
+        <View style={styles.sheetHeader}>
+          <Text style={styles.sheetTitle}>Send to…</Text>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Close"
+            onPress={onClose}
+            hitSlop={8}>
+            <Ionicons name="close" size={22} color={colors.textPrimary} />
+          </Pressable>
+        </View>
+        <FlatList
+          data={athletes}
+          keyExtractor={a => a.uid || a.id}
+          renderItem={({item}) => (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`Send to ${item.displayName || item.name || 'athlete'}`}
+              onPress={() => onPick(item)}
+              style={({pressed}) => [styles.athleteRow, pressed && {opacity: 0.7}]}>
+              <Ionicons name="person-circle-outline" size={28} color={colors.textTertiary} />
+              <Text style={styles.athleteName} numberOfLines={1}>
+                {item.displayName || item.name || item.email || 'Athlete'}
+              </Text>
+            </Pressable>
+          )}
+          ListEmptyComponent={
+            <Text style={styles.athleteEmpty}>No linked athletes yet.</Text>
+          }
+        />
+      </View>
+    </View>
+  </Modal>
+);
 
 const BracketOverview = ({bracket, labelFor}) => (
   <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -627,6 +741,54 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: colors.textSecondary,
     marginRight: spacing.sm,
+  },
+  sendWrap: {marginTop: spacing.lg, alignItems: 'flex-start'},
+  sendHint: {
+    ...typography.bodySm,
+    color: colors.textTertiary,
+    marginTop: spacing.sm,
+  },
+
+  // Athlete picker sheet
+  backdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'flex-end',
+  },
+  sheet: {
+    backgroundColor: colors.surfaceElevated,
+    borderTopLeftRadius: radius.xl,
+    borderTopRightRadius: radius.xl,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.xl,
+    paddingBottom: spacing['2xl'],
+    maxHeight: '70%',
+  },
+  sheetHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.lg,
+  },
+  sheetTitle: {...typography.displayMd, color: colors.textPrimary},
+  athleteRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  athleteName: {
+    ...typography.bodyLg,
+    color: colors.textPrimary,
+    marginLeft: spacing.md,
+    flex: 1,
+  },
+  athleteEmpty: {
+    ...typography.body,
+    color: colors.textTertiary,
+    textAlign: 'center',
+    paddingVertical: spacing['2xl'],
   },
 
   // Bracket overview

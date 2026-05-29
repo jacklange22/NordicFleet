@@ -54,6 +54,9 @@ const ComposeAdvisoryScreen = () => {
   const coachUid = user?.uid;
   const athleteUid = route.params?.athleteUid;
   const athleteName = route.params?.athleteName || 'athlete';
+  // Optional seed values — used when launching an advisory from a Wax
+  // Truck result so the winning wax + conditions carry over.
+  const prefill = route.params?.prefill || {};
 
   const [athleteSkis, setAthleteSkis] = useState([]);
   const [loadingSkis, setLoadingSkis] = useState(true);
@@ -61,13 +64,15 @@ const ComposeAdvisoryScreen = () => {
   // Form state.
   const [event, setEvent] = useState('');
   const [eventDate, setEventDate] = useState(defaultUpcomingDate());
-  const [snowType, setSnowType] = useState('');
-  const [snowTemp, setSnowTemp] = useState('');
+  const [snowType, setSnowType] = useState(prefill.snowType || '');
+  const [snowTemp, setSnowTemp] = useState(prefill.snowTemp || '');
   const [airTemp, setAirTemp] = useState('');
-  const [humidity, setHumidity] = useState('');
+  const [humidity, setHumidity] = useState(prefill.humidity || '');
   const [newSnow, setNewSnow] = useState(false);
-  const [conditionsNotes, setConditionsNotes] = useState('');
-  const [body, setBody] = useState('');
+  const [conditionsNotes, setConditionsNotes] = useState(
+    prefill.conditionsNotes || '',
+  );
+  const [body, setBody] = useState(prefill.body || '');
   // skiId → { role: 'primary' | 'backup', notes: string }
   const [skiPicks, setSkiPicks] = useState({});
   const [submitting, setSubmitting] = useState(false);
