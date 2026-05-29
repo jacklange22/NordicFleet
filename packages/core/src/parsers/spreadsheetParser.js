@@ -720,7 +720,6 @@ function parseSpreadsheet(input) {
     mappedFields.has('brand') ||
     mappedFields.has('model');
   const haveTechnique = mappedFields.has('technique');
-  const missingRequired = !haveName || !haveTechnique;
 
   // Build the unmapped-headers list AFTER the rescue step — columns
   // that get rescued into notes aren't "ignored", they just don't
