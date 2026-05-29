@@ -61,11 +61,21 @@ describe('TabBar — conditional tabs per mode', () => {
     expect(tree.queryByLabelText('Test')).toBeNull();
   });
 
-  it('shows the mode switcher only for coaches', () => {
+  it('wax-truck mode shows the tests + profile tabs', () => {
+    mockMode = {mode: 'waxtruck', setMode: jest.fn(), isCoach: true};
+    const tree = renderTabBar();
+    expect(tree.getByLabelText('Tests')).toBeTruthy();
+    expect(tree.getByLabelText('Profile')).toBeTruthy();
+    expect(tree.queryByLabelText('Athletes')).toBeNull();
+    expect(tree.queryByLabelText('Add')).toBeNull();
+  });
+
+  it('shows all three mode segments only for coaches', () => {
     mockMode = {mode: 'personal', setMode: jest.fn(), isCoach: true};
     const coachTree = renderTabBar();
     expect(coachTree.getByLabelText('My Fleet mode')).toBeTruthy();
     expect(coachTree.getByLabelText('Coaching mode')).toBeTruthy();
+    expect(coachTree.getByLabelText('Wax Truck mode')).toBeTruthy();
   });
 
   it('hides the switcher for non-coaches', () => {
@@ -73,5 +83,6 @@ describe('TabBar — conditional tabs per mode', () => {
     const tree = renderTabBar();
     expect(tree.queryByLabelText('My Fleet mode')).toBeNull();
     expect(tree.queryByLabelText('Coaching mode')).toBeNull();
+    expect(tree.queryByLabelText('Wax Truck mode')).toBeNull();
   });
 });

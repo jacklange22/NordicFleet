@@ -67,8 +67,31 @@ const COACHING_TABS = [
   {key: 'profile', label: 'Profile', icon: 'person-outline', activeIcon: 'person', route: 'Profile'},
 ];
 
+// Wax Truck mode: head-to-head wax testing. Tests list + profile —
+// you don't manage athletes or your own fleet from here.
+const WAXTRUCK_TABS = [
+  {key: 'tests', label: 'Tests', icon: 'git-network-outline', activeIcon: 'git-network', route: 'WaxTruck'},
+  {key: 'profile', label: 'Profile', icon: 'person-outline', activeIcon: 'person', route: 'Profile'},
+];
+
 // Home route for each mode — used when the toggle switches contexts.
-const MODE_HOME = {personal: 'Home', coaching: 'CoachDashboard'};
+const MODE_HOME = {
+  personal: 'Home',
+  coaching: 'CoachDashboard',
+  waxtruck: 'WaxTruck',
+};
+
+const MODE_ACCENT = {
+  personal: colors.red,
+  coaching: colors.coaching,
+  waxtruck: colors.waxtruck,
+};
+
+const MODE_TABS = {
+  personal: PERSONAL_TABS,
+  coaching: COACHING_TABS,
+  waxtruck: WAXTRUCK_TABS,
+};
 
 const TabBar = () => {
   const insets = useSafeAreaInsets();
@@ -86,8 +109,8 @@ const TabBar = () => {
     return subscribeUnreadCountForAthlete(user.uid, setUnread);
   }, [user?.uid, mode]);
 
-  const accent = mode === 'coaching' ? colors.coaching : colors.red;
-  const tabs = mode === 'coaching' ? COACHING_TABS : PERSONAL_TABS;
+  const accent = MODE_ACCENT[mode] || colors.red;
+  const tabs = MODE_TABS[mode] || PERSONAL_TABS;
 
   const switchMode = next => {
     if (next === mode) {
@@ -109,7 +132,9 @@ const TabBar = () => {
       style={[
         styles.container,
         {paddingBottom: Math.max(insets.bottom, spacing.sm)},
-        mode === 'coaching' && styles.containerCoaching,
+        // A hairline of the active mode's accent on top so the mode reads
+        // at a glance even before looking at the segmented control.
+        mode !== 'personal' && {borderTopColor: accent},
       ]}>
       {/* Mode switcher — only for users with the coaching capability. */}
       {isCoach && (
@@ -126,6 +151,12 @@ const TabBar = () => {
               active={mode === 'coaching'}
               accent={colors.coaching}
               onPress={() => switchMode('coaching')}
+            />
+            <ModeSegment
+              label="Wax Truck"
+              active={mode === 'waxtruck'}
+              accent={colors.waxtruck}
+              onPress={() => switchMode('waxtruck')}
             />
           </View>
         </View>
@@ -194,11 +225,6 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.border,
     paddingTop: spacing.sm,
-  },
-  containerCoaching: {
-    // A hairline of the coaching accent on top so the mode reads at a
-    // glance even before you look at the segmented control.
-    borderTopColor: colors.coaching,
   },
   switcherWrap: {
     paddingHorizontal: spacing.lg,

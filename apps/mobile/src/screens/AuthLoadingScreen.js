@@ -23,6 +23,7 @@ const AuthLoadingScreen = ({navigation}) => {
     // Authenticated. Decide the landing screen from the capability +
     // the last-used mode (capability model — see ModeContext):
     //   coach who last used coaching mode → CoachDashboard
+    //   coach who last used wax-truck mode → WaxTruck
     //   everyone else                     → Home (personal fleet)
     //   no profile yet                    → Welcome
     setResolving(true);
@@ -43,6 +44,8 @@ const AuthLoadingScreen = ({navigation}) => {
         const isCoach = deriveIsCoach(profile);
         if (isCoach && storedMode === 'coaching') {
           navigation.replace('CoachDashboard');
+        } else if (isCoach && storedMode === 'waxtruck') {
+          navigation.replace('WaxTruck');
         } else {
           navigation.replace('Home');
         }

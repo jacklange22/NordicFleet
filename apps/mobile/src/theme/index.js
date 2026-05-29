@@ -22,6 +22,13 @@ export const colors = {
   coachingPressed: '#3B6FD4',
   coachingDim: '#1E2F4F',
 
+  // Wax Truck accent. A calm amber — evokes wax/heat on the iron and
+  // reads clearly apart from the brand red and coaching blue without
+  // shouting. Same restraint as the coaching accent.
+  waxtruck: '#E0A93B',
+  waxtruckPressed: '#C68F26',
+  waxtruckDim: '#3A2E12',
+
   textPrimary: '#FFFFFF',
   textSecondary: '#A3A3A3',
   textTertiary: '#737373',

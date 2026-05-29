@@ -36,6 +36,9 @@ function Probe() {
       <Pressable testID="go-personal" onPress={() => setMode('personal')}>
         <Text>personal</Text>
       </Pressable>
+      <Pressable testID="go-waxtruck" onPress={() => setMode('waxtruck')}>
+        <Text>waxtruck</Text>
+      </Pressable>
     </>
   );
 }
@@ -83,6 +86,29 @@ describe('ModeContext', () => {
     const tree = renderProbe();
     await waitFor(() => {
       expect(tree.getByTestId('mode').props.children).toBe('coaching');
+    });
+  });
+
+  it('a coach can toggle to wax-truck mode and it persists', async () => {
+    const tree = renderProbe();
+    await act(async () => {});
+
+    await act(async () => {
+      fireEvent.press(tree.getByTestId('go-waxtruck'));
+    });
+    expect(tree.getByTestId('mode').props.children).toBe('waxtruck');
+
+    await waitFor(async () => {
+      const stored = await AsyncStorage.getItem(STORAGE_KEY);
+      expect(stored).toBe('waxtruck');
+    });
+  });
+
+  it('restores a persisted wax-truck mode on mount', async () => {
+    await AsyncStorage.setItem(STORAGE_KEY, 'waxtruck');
+    const tree = renderProbe();
+    await waitFor(() => {
+      expect(tree.getByTestId('mode').props.children).toBe('waxtruck');
     });
   });
 

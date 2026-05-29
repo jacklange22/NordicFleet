@@ -1,11 +1,12 @@
-// ModeContext — the personal / coaching mode switcher state.
+// ModeContext — the personal / coaching / wax-truck mode switcher.
 //
 // Every signed-in user has a personal fleet. Users with the coaching
-// capability (isCoach) can ADD a coaching surface and toggle between
-// the two modes. Non-coaches are locked to personal and never see the
-// toggle.
+// capability (isCoach) can ADD two more surfaces — Coaching (manage
+// athletes) and Wax Truck (head-to-head wax testing) — and toggle
+// among the three. Non-coaches are locked to personal and never see
+// the toggle.
 //
-//   mode        'personal' | 'coaching'
+//   mode        'personal' | 'coaching' | 'waxtruck'
 //   setMode     switch modes (no-op for non-coaches), persists choice
 //   isCoach     derived from the live profile
 //   profile     the live profile doc (so consumers don't re-subscribe)
@@ -31,6 +32,11 @@ import {
 } from '../services/userService';
 
 const STORAGE_KEY = 'nordicfleet.mode';
+
+// The three surfaces. Personal is always available; coaching + waxtruck
+// are coach-only extras. Keep this list as the single source of truth so
+// the restore guard and setMode guard never drift apart.
+const VALID_MODES = ['personal', 'coaching', 'waxtruck'];
 
 const ModeContext = createContext({
   mode: 'personal',
@@ -72,7 +78,7 @@ export const ModeProvider = ({children}) => {
         if (cancelled) {
           return;
         }
-        if (stored === 'coaching' || stored === 'personal') {
+        if (VALID_MODES.includes(stored)) {
           setModeState(stored);
         }
       })
@@ -100,7 +106,7 @@ export const ModeProvider = ({children}) => {
       if (!isCoach) {
         return; // non-coaches are locked to personal
       }
-      if (next !== 'personal' && next !== 'coaching') {
+      if (!VALID_MODES.includes(next)) {
         return;
       }
       setModeState(next);

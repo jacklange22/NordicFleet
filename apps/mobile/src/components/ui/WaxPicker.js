@@ -21,8 +21,15 @@ import Input from './Input';
  *   value         { id?: string|null, name: string }
  *   onChange      (next) => void
  *   type          'kick'|'glide'|'binder'|'klister'|'base' filters the dictionary
+ *   category      'kick'|'paraffin'|'topcoat'|'structure' filters by the
+ *                 derived wax category (used by the Wax Truck builder).
+ *                 When set, takes precedence over `type`.
  *   label         visible label (defaults to "Wax")
  *   placeholder   placeholder for the free-text fallback
+ *
+ * The dictionary only ever SUGGESTS — it never blocks. The "Use as
+ * typed" row always lets the coach commit a wax that exists nowhere in
+ * the database, in any category.
  *
  * Behavior:
  *   - The visible Input shows the resolved display string (the
@@ -38,7 +45,7 @@ import Input from './Input';
  *   with old logs) and `waxId` (the dictionary id, nullable).
  */
 const WaxPicker = forwardRef(function WaxPicker(
-  {value, onChange, type = 'glide', label = 'Wax', placeholder, icon},
+  {value, onChange, type = 'glide', category, label = 'Wax', placeholder, icon},
   _ref,
 ) {
   const [open, setOpen] = useState(false);
@@ -56,8 +63,11 @@ const WaxPicker = forwardRef(function WaxPicker(
   }, [v.id, v.name]);
 
   const results = useMemo(
-    () => searchWaxes(query, {type, limit: 40}),
-    [query, type],
+    () =>
+      category
+        ? searchWaxes(query, {category, limit: 40})
+        : searchWaxes(query, {type, limit: 40}),
+    [query, type, category],
   );
 
   const pick = wax => {
