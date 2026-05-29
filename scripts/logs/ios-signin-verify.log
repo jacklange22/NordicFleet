@@ -1,0 +1,16 @@
+iOS sign-in / sign-up verification — booted iPhone 17 simulator
+Captured: 2026-05-29T14:42:52Z
+Build: Debug-iphonesimulator, NordicFleet.app rebuilt WITH NordicFleet.entitlements
+(keychain-access-groups). Driven via a temporary native auth harness in App.tsx
+(removed after verification), logging through Metro.
+
+BEFORE the fix (no entitlement):
+  [DIAG][SIGNIN ERROR] code= auth/keychain-error
+
+AFTER the fix (entitlement embedded):
+  [DIAG] SIGN-IN OK uid= 3PTv379sh7fcTv00UBgnkumtDV83
+  [DIAG] SIGN-UP OK uid= LXFXU7AbFmhjzRRKtuDlcVUKiNz2
+  [DIAG] SIGN-UP OK uid= mUhy0PIeODU7acwK7ZTU46R558j2
+
+Sign-in uses an account that also signs in on web; sign-up creates a fresh
+account and the app proceeds into Firestore (profile write) without error.
