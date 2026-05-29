@@ -61,13 +61,16 @@ nordicfleet/
 │   │       │                    coachRequestService, messageService,
 │   │       │                    locationService, shareService, seed
 │   │       └── theme/           design tokens
-│   └── web/                     Next.js 16 web preview
-│       └── src/
-│           ├── app/             /, /login, /signup, /home, /coach,
-│           │                    /profile, /ski/[id]
-│           ├── components/      Card, Button, Pill, StatCard,
-│           │                    SignedInGuard, SiteHeader
-│           └── lib/             firebase.js (lazy init), firestore.js
+│   ├── web/                     Next.js 16 web app (app.nordicfleet.com)
+│   │   └── src/
+│   │       ├── app/             /, /login, /signup, /home, /coach,
+│   │       │                    /profile, /ski/[id], /wax-truck, /import
+│   │       ├── components/      Card, Button, Pill, StatCard,
+│   │       │                    SignedInGuard, SiteHeader
+│   │       └── lib/             firebase.js, firestore.js, reportError.js
+│   └── marketing/               Next.js 16 marketing site (nordicfleet.com)
+│       └── src/app/             landing, features, coaches, pricing,
+│                                about, privacy, terms
 ├── packages/
 │   └── core/                    @nordicfleet/core — shared logic
 │       └── src/
@@ -80,9 +83,11 @@ nordicfleet/
 ├── firestore.rules              shared security rules
 ├── firebase.json
 ├── verification-screenshots/    gitignored
-└── *.md                         BLOCKERS / MORNING_REPORT / NOTES /
-                                 LAUNCH_READINESS / DEVICE_INSTALL /
-                                 MANUAL_VERIFICATION
+└── *.md                         PRODUCT_COMMAND_CENTER (read first) /
+                                 BETA_READINESS_REPORT / BLOCKERS /
+                                 DEPLOYMENT_READINESS / OBSERVABILITY_PLAN /
+                                 ANALYTICS_PLAN / BETA_TESTER_GUIDE /
+                                 MORNING_REPORT / NOTES / others
 ```
 
 ## What's in `@nordicfleet/core`
