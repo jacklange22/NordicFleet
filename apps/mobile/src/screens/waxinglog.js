@@ -96,7 +96,24 @@ const resizeArr = (arr, n, fill = '') => {
   return out;
 };
 
-const WaxEntryCard = ({ski, entry, onChange}) => {
+// Short one-line summary of what's been entered — shown on a collapsed
+// accordion card so the coach can scan filled vs. empty without expanding.
+const summarizeEntry = entry => {
+  const parts = [];
+  if (entry.binder && entry.binder !== 'None') {
+    parts.push(entry.binder);
+  }
+  const glides = (entry.glideWaxes || []).filter(g => (g || '').trim());
+  if (glides.length) {
+    parts.push(glides.join(' + '));
+  }
+  if (entry.kickWax && (entry.kickWax || '').trim()) {
+    parts.push(`kick: ${entry.kickWax}`);
+  }
+  return parts.length ? parts.join(' · ') : 'Not filled in yet';
+};
+
+const WaxEntryCard = ({ski, entry, onChange, collapsible, expanded, onToggle}) => {
   const isClassic = (ski.technique || '').toLowerCase() === 'classic';
 
   const setBinder = b => onChange({binder: entry.binder === b ? '' : b});
@@ -112,9 +129,45 @@ const WaxEntryCard = ({ski, entry, onChange}) => {
     onChange({glideWaxes: next});
   };
 
+  // In accordion mode the title row toggles the body; otherwise it's a
+  // plain header and the body is always shown.
+  const TitleRow = (
+    <>
+      <View style={styles.entryHeaderRow}>
+        <Text style={styles.entryTitle}>{ski.name || ski.id}</Text>
+        {collapsible && (
+          <Ionicons
+            name={expanded ? 'chevron-up' : 'chevron-down'}
+            size={22}
+            color={colors.textSecondary}
+          />
+        )}
+      </View>
+      {collapsible && !expanded && (
+        <Text style={styles.entrySummary} numberOfLines={1}>
+          {summarizeEntry(entry)}
+        </Text>
+      )}
+    </>
+  );
+
   return (
     <Card style={styles.entryCard}>
-      <Text style={styles.entryTitle}>{ski.name || ski.id}</Text>
+      {collapsible ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`${ski.name || ski.id} wax entry, ${expanded ? 'expanded' : 'collapsed'}`}
+          accessibilityState={{expanded}}
+          onPress={onToggle}
+          style={({pressed}) => [pressed && {opacity: 0.7}]}>
+          {TitleRow}
+        </Pressable>
+      ) : (
+        TitleRow
+      )}
+
+      {!expanded ? null : (
+        <>
       <View style={styles.entryPillRow}>
         {!!ski.technique && (
           <View style={styles.entryPillWrap}>
@@ -217,6 +270,8 @@ const WaxEntryCard = ({ski, entry, onChange}) => {
         onChangeText={t => onChange({notes: t})}
         multiline
       />
+        </>
+      )}
     </Card>
   );
 };
@@ -232,6 +287,20 @@ const WaxLogScreen = () => {
 
   const [selectedSkis, setSelectedSkis] = useState([]);
   const [waxLog, setWaxLog] = useState({});
+  // With 3+ skis the per-ski forms become a wall, so we collapse them
+  // into an accordion and keep one open at a time.
+  const accordion = selectedSkis.length >= 3;
+  const [expandedSki, setExpandedSki] = useState(null);
+
+  useEffect(() => {
+    if (!accordion) {
+      return;
+    }
+    // Keep a valid ski expanded — default to the first selected.
+    setExpandedSki(prev =>
+      prev && selectedSkis.includes(prev) ? prev : selectedSkis[0],
+    );
+  }, [accordion, selectedSkis]);
 
   useEffect(() => {
     setWaxLog(prev => {
@@ -398,6 +467,13 @@ const WaxLogScreen = () => {
                         ski={ski}
                         entry={waxLog[skiId] || emptyWaxEntry()}
                         onChange={partial => handleEntryChange(skiId, partial)}
+                        collapsible={accordion}
+                        expanded={!accordion || expandedSki === skiId}
+                        onToggle={() =>
+                          setExpandedSki(prev =>
+                            prev === skiId ? null : skiId,
+                          )
+                        }
                       />
                     );
                   })}
@@ -455,10 +531,21 @@ const styles = StyleSheet.create({
   entryCard: {
     marginBottom: spacing.lg,
   },
+  entryHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
   entryTitle: {
     ...typography.headingLg,
     color: colors.textPrimary,
     marginBottom: spacing.sm,
+    flexShrink: 1,
+  },
+  entrySummary: {
+    ...typography.bodySm,
+    color: colors.textTertiary,
+    marginBottom: spacing.xs,
   },
   entryPillRow: {
     flexDirection: 'row',

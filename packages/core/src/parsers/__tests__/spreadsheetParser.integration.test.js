@@ -74,6 +74,46 @@ Salomon\tS/Lab\tSkate\t192`;
     }
   });
 
+  test('re-mapping preserves section-technique inheritance + rescue', () => {
+    // A header row, a JL-project rescue column, and two technique
+    // sections. The user re-maps in the UI (e.g. fixes the length
+    // column); the re-map must NOT lose the section technique or the
+    // rescued column.
+    const input = [
+      'Name\tLength\tProject',
+      'skate',
+      'Speedmax\t192\tSprint',
+      'Redline\t190\tSprint',
+      'classic',
+      'Carbonlite\t207\tDistance',
+    ].join('\n');
+    const parsed = parseSpreadsheet(input);
+    expect(parsed.dataRows.length).toBeGreaterThan(0);
+
+    // Sanity: the initial parse already inherited technique + rescued.
+    expect(parsed.rows.map(r => r.data.technique)).toEqual([
+      'skate',
+      'skate',
+      'classic',
+    ]);
+
+    // User keeps the same mapping but re-applies (simulating a manual
+    // tweak). Re-mapping from dataRows + headers must reproduce the
+    // inheritance and the rescued "project: ..." note.
+    const remapped = applyMapping(parsed.dataRows, parsed.mapping, {
+      headers: parsed.headers,
+    });
+    expect(remapped.map(r => r.data.technique)).toEqual([
+      'skate',
+      'skate',
+      'classic',
+    ]);
+    expect(remapped[0].data.notes).toMatch(/project: sprint/i);
+    expect(remapped[2].data.notes).toMatch(/project: distance/i);
+    // No section-header rows leaked into the output.
+    expect(remapped.length).toBe(3);
+  });
+
   test('mixed-quality paste — bad rows isolated, good rows still save', () => {
     const input = `Brand\tModel\tTechnique\tLength
 Fischer\tSpeedmax\tClassic\t200

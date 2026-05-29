@@ -110,8 +110,18 @@ function Inner() {
   };
 
   const handleApplyMapping = newMapping => {
-    const rawRows = parsed.rows.map(r => r.raw);
-    const rows = applyMapping(rawRows, newMapping);
+    // Re-map from the UNSTRIPPED data rows (with section headers) and
+    // pass the headers so applyMapping replays section-technique
+    // inheritance + rescue-column folding — same as the initial parse.
+    // Fall back to the stripped rows for pre-existing parses that lack
+    // dataRows.
+    const sourceRows =
+      parsed.dataRows && parsed.dataRows.length > 0
+        ? parsed.dataRows
+        : parsed.rows.map(r => r.raw);
+    const rows = applyMapping(sourceRows, newMapping, {
+      headers: parsed.headers,
+    });
     const unmapped = [];
     if (parsed.headers && parsed.headers.length > 0) {
       for (let i = 0; i < parsed.headers.length; i += 1) {

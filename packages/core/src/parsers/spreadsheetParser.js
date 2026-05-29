@@ -598,11 +598,86 @@ function normalizeRow(row, mapping) {
  * @param {Array<string|null>} mapping
  * @returns {Array<{data: object, errors: object[], raw: string[]}>}
  */
-function applyMapping(rawRows, mapping) {
-  return rawRows.map(row => ({
-    raw: row,
-    ...normalizeRow(row, mapping),
-  }));
+/**
+ * Process data rows under a mapping the same way parseSpreadsheet does:
+ *   - strip single-cell "section header" rows (e.g. a lone "skate") and
+ *     inherit their technique onto the rows that follow,
+ *   - skip visual-separator rows (0–1 non-empty cells),
+ *   - normalize each remaining row, and
+ *   - fold any rescue columns into the row's notes.
+ *
+ * Shared by parseSpreadsheet and applyMapping so a manual re-map in the
+ * UI produces exactly the same rows the initial parse would.
+ *
+ * @param {string[][]} dataRows
+ * @param {Array<string|null>} mapping
+ * @param {Array<{index: number, header: string}>} [rescueColumns]
+ * @returns {{rows: Array, sectionTechniqueDetected: boolean}}
+ */
+function processDataRows(dataRows, mapping, rescueColumns = []) {
+  let currentTechnique = null;
+  let sectionTechniqueDetected = false;
+  const rows = [];
+  for (const row of dataRows) {
+    const sectionTech = detectSectionTechnique(row);
+    if (sectionTech) {
+      currentTechnique = sectionTech;
+      sectionTechniqueDetected = true;
+      continue;
+    }
+    const nonEmptyCount = row.filter(
+      c => typeof c === 'string' && c.trim().length > 0,
+    ).length;
+    if (nonEmptyCount <= 1) {
+      continue;
+    }
+    const result = normalizeRow(row, mapping);
+    if (!result.data.technique && currentTechnique) {
+      result.data.technique = currentTechnique;
+      result.errors = result.errors.filter(e => e.field !== 'technique');
+    }
+    if (rescueColumns.length > 0) {
+      const extras = [];
+      for (const {index, header} of rescueColumns) {
+        const cell = typeof row[index] === 'string' ? row[index].trim() : '';
+        if (!cell) {
+          continue;
+        }
+        extras.push(`${header.toLowerCase()}: ${cell}`);
+      }
+      if (extras.length > 0) {
+        const rescueText = extras.join(' · ');
+        result.data.notes = result.data.notes
+          ? `${result.data.notes}\n${rescueText}`
+          : rescueText;
+      }
+    }
+    rows.push({raw: row, ...result});
+  }
+  return {rows, sectionTechniqueDetected};
+}
+
+/**
+ * Replay a (possibly user-edited) column→field mapping over data rows.
+ * Applies the full section-inheritance + rescue + blank-row-filtering
+ * pipeline so the manual-mapping preview matches the initial parse.
+ *
+ * Pass `options.headers` to enable rescue-column folding into notes
+ * (rescue needs header labels). Without headers, only section
+ * inheritance + filtering run. `dataRows` should be the UNSTRIPPED data
+ * rows (section headers included) — parseSpreadsheet returns these as
+ * `dataRows` for exactly this purpose.
+ *
+ * @param {string[][]} dataRows
+ * @param {Array<string|null>} mapping
+ * @param {{headers?: string[]}} [options]
+ * @returns {Array<{data: object, errors: object[], raw: string[]}>}
+ */
+function applyMapping(dataRows, mapping, options = {}) {
+  const headers = options.headers || [];
+  const rescueColumns =
+    headers.length > 0 ? findRescueColumns(mapping, headers, dataRows) : [];
+  return processDataRows(dataRows, mapping, rescueColumns).rows;
 }
 
 // What must be mappable (via a column header, an auto-detected first
@@ -676,6 +751,7 @@ function parseSpreadsheet(input) {
     return {
       delimiter,
       headers: [],
+      dataRows: [],
       mapping: [],
       rows: [],
       needsManualMapping: true,
@@ -752,60 +828,20 @@ function parseSpreadsheet(input) {
   // technique onto data rows that don't have one of their own.
   // sectionTechniqueDetected is also a signal to the manual-mapping
   // gate — pastes that get technique from sections shouldn't be told
-  // they're missing a technique column.
-  let currentTechnique = null;
-  let sectionTechniqueDetected = false;
-  const rows = [];
-  for (const row of dataRows) {
-    const sectionTech = detectSectionTechnique(row);
-    if (sectionTech) {
-      currentTechnique = sectionTech;
-      sectionTechniqueDetected = true;
-      continue;
-    }
-    // Silently skip rows with 0 or 1 non-empty cells. These are
-    // visual separators in user spreadsheets, or sparse mistakes
-    // not worth flagging. tokenizeRows already drops pure-blank
-    // lines; this catches rows that got a stray cell value but
-    // otherwise have nothing to import.
-    const nonEmptyCount = row.filter(
-      c => typeof c === 'string' && c.trim().length > 0,
-    ).length;
-    if (nonEmptyCount <= 1) {
-      continue;
-    }
-    const result = normalizeRow(row, mapping);
-    if (!result.data.technique && currentTechnique) {
-      result.data.technique = currentTechnique;
-      // Drop the "technique missing" error since the section header
-      // filled it in.
-      result.errors = result.errors.filter(e => e.field !== 'technique');
-    }
-    // Rescue unmapped columns: append per-row values into notes as
-    // "{header}: {value}", separated by " · ".
-    if (rescueColumns.length > 0) {
-      const extras = [];
-      for (const {index, header} of rescueColumns) {
-        const cell =
-          typeof row[index] === 'string' ? row[index].trim() : '';
-        if (!cell) {
-          continue;
-        }
-        extras.push(`${header.toLowerCase()}: ${cell}`);
-      }
-      if (extras.length > 0) {
-        const rescueText = extras.join(' · ');
-        result.data.notes = result.data.notes
-          ? `${result.data.notes}\n${rescueText}`
-          : rescueText;
-      }
-    }
-    rows.push({raw: row, ...result});
-  }
+  // they're missing a technique column. processDataRows is shared with
+  // applyMapping so a manual re-map produces identical rows.
+  const {rows, sectionTechniqueDetected} = processDataRows(
+    dataRows,
+    mapping,
+    rescueColumns,
+  );
 
   return {
     delimiter,
     headers,
+    // The unstripped data rows (section headers included) so the UI can
+    // re-map via applyMapping without losing section-technique context.
+    dataRows,
     mapping,
     rows,
     needsManualMapping:
