@@ -18,4 +18,5 @@ module.exports = {
   ...require('./messageOperations'),
   ...require('./advisoryOperations'),
   ...require('./profileOperations'),
+  ...require('./waxTestOperations'),
 };
