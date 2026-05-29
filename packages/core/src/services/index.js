@@ -20,4 +20,6 @@ module.exports = {
   ...require('./profileOperations'),
   ...require('./waxTestOperations'),
   ...require('./dataExport'),
+  ...require('./errorReport'),
+  ...require('./analytics'),
 };
