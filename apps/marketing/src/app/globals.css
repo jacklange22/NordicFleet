@@ -1,0 +1,98 @@
+@import 'tailwindcss';
+
+/*
+ * NordicFleet marketing — shares the app's near-black palette and red
+ * brand accent, with a couple of marketing-only extras (amber wax-truck
+ * accent, gradient text, reveal animation). Tailwind 4 @theme block.
+ */
+@theme {
+  --color-bg: #0a0a0a;
+  --color-surface: #161616;
+  --color-surface-elevated: #1f1f1f;
+  --color-border: #262626;
+  --color-border-strong: #404040;
+
+  --color-red: #e53935;
+  --color-red-pressed: #c62828;
+  --color-red-dim: #7f1d1d;
+
+  --color-coaching: #4f8ef7;
+  --color-waxtruck: #e0a93b;
+
+  --color-text-primary: #ffffff;
+  --color-text-secondary: #a3a3a3;
+  --color-text-tertiary: #737373;
+
+  --color-success: #22c55e;
+
+  --radius-card: 16px;
+  --radius-pill: 9999px;
+
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui,
+    'Segoe UI', Roboto, sans-serif;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+html,
+body {
+  background: var(--color-bg);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  min-height: 100vh;
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Brand gradient text used on hero headlines. */
+.text-gradient {
+  background: linear-gradient(120deg, #ffffff 0%, #ffffff 45%, #e0a93b 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Subtle radial glow behind the hero. */
+.hero-glow {
+  background:
+    radial-gradient(
+      60% 60% at 50% 0%,
+      rgba(229, 57, 53, 0.14) 0%,
+      rgba(10, 10, 10, 0) 70%
+    );
+}
+
+/* Scroll-reveal: fade + rise. Driven by IntersectionObserver toggling
+ * the `is-visible` class (see components/Reveal). Honors reduced motion. */
+.reveal {
+  opacity: 0;
+  transform: translateY(16px);
+  transition:
+    opacity 0.6s ease,
+    transform 0.6s ease;
+  will-change: opacity, transform;
+}
+.reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}

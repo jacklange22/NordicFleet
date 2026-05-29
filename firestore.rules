@@ -112,5 +112,18 @@ service cloud.firestore {
 
       allow delete: if false;
     }
+
+    // Marketing email signups from the public website. Anyone (signed in
+    // or not) can submit one, but nobody can read, update, or delete them
+    // from the client — they're an internal lead list. We require the doc
+    // to carry an `email` and a server `createdAt`, and forbid anything
+    // larger than the known shape.
+    match /marketingSignups/{signupId} {
+      allow create: if request.resource.data.email is string
+        && request.resource.data.email.size() > 3
+        && request.resource.data.email.size() < 320
+        && request.resource.data.keys().hasOnly(['email', 'source', 'role', 'createdAt']);
+      allow read, update, delete: if false;
+    }
   }
 }
