@@ -9,9 +9,30 @@ import firestoreMock from '@react-native-firebase/firestore';
 import ProfileScreen from '../profile';
 import {AuthProvider} from '../../context/AuthContext';
 
+// Stub navigation so navigation.reset() is a spy we can assert, instead
+// of warning "navigation object hasn't been initialized" when the screen
+// resets to Welcome after a successful delete (a bare NavigationContainer
+// has no mounted navigator). NavigationContainer stays real for the rest
+// of the navigation context. (`mockNav` is read lazily inside
+// useNavigation(), so there's no TDZ issue with the hoisted factory.)
+const mockNav = {
+  navigate: jest.fn(),
+  goBack: jest.fn(),
+  reset: jest.fn(),
+  replace: jest.fn(),
+  canGoBack: jest.fn(() => false),
+  addListener: jest.fn(() => jest.fn()),
+  setOptions: jest.fn(),
+};
+jest.mock('@react-navigation/native', () => {
+  const actual = jest.requireActual('@react-navigation/native');
+  return {...actual, useNavigation: () => mockNav};
+});
+
 beforeEach(() => {
   authMock.__resetAuthMock();
   firestoreMock.__resetFirestoreMock();
+  Object.values(mockNav).forEach(fn => fn.mockClear && fn.mockClear());
 });
 
 const SA_METRICS = {
@@ -107,5 +128,10 @@ describe('ProfileScreen — delete account', () => {
     // User doc + ski are gone.
     expect(firestoreMock.__getStore().has(`users/${aUid}`)).toBe(false);
     expect(firestoreMock.__getStore().has(`users/${aUid}/skis/s1`)).toBe(false);
+    // And the screen reset navigation to Welcome.
+    expect(mockNav.reset).toHaveBeenCalledWith({
+      index: 0,
+      routes: [{name: 'Welcome'}],
+    });
   });
 });

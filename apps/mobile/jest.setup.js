@@ -37,3 +37,33 @@ jest.mock('react-native-reanimated', () => {
     return {};
   }
 });
+
+// Make Animated.timing synchronous under Jest.
+//
+// The shared Input's floating label animates on mount/focus via
+// Animated.timing(...).start(). Its value updates fire asynchronously
+// (rAF), landing OUTSIDE React's act() window, which produced dozens of
+// "An update to Animated(Text) ... was not wrapped in act(...)" warnings
+// across every screen test that renders an Input. Snapping the value
+// straight to its target synchronously keeps the update inside the
+// render/act window, so the warnings disappear without changing what the
+// component renders. This affects ONLY the Jest environment — the real
+// Animated.timing (production animation behavior) is untouched.
+const RNAnimated = require('react-native').Animated;
+RNAnimated.timing = (value, config) => ({
+  start: callback => {
+    if (
+      config &&
+      config.toValue !== undefined &&
+      value &&
+      typeof value.setValue === 'function'
+    ) {
+      value.setValue(config.toValue);
+    }
+    if (typeof callback === 'function') {
+      callback({finished: true});
+    }
+  },
+  stop: () => {},
+  reset: () => {},
+});

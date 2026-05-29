@@ -53,6 +53,10 @@ describe('LoginScreen', () => {
   });
 
   it('maps invalid-credential to friendly error', async () => {
+    // login.js deliberately console.warns the real auth code on failure
+    // so it's never silently swallowed. That's expected here — assert it
+    // fired (and keep it out of the test output).
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
     const tree = renderScreen();
     fireEvent.changeText(tree.getByLabelText('Email'), 'nope@b.com');
     fireEvent.changeText(tree.getByLabelText('Password'), 'wrongpw');
@@ -60,6 +64,11 @@ describe('LoginScreen', () => {
       fireEvent.press(tree.getByLabelText('Sign in'));
     });
     expect(tree.getByText('Wrong email or password')).toBeTruthy();
+    expect(warnSpy).toHaveBeenCalledWith(
+      '[auth] sign-in failed:',
+      'auth/invalid-credential',
+    );
+    warnSpy.mockRestore();
   });
 
   it('signs in with valid creds and routes to Home', async () => {
