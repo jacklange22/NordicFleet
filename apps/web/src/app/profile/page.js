@@ -11,13 +11,22 @@ import {FormInput} from '@/components/forms/FormInput';
 import {useToast} from '@/components/Toast';
 import {CoachLinkCard} from '@/components/CoachLinkCard';
 import {useMode} from '@/components/ModeProvider';
-import {deriveIsCoach} from '@nordicfleet/core';
+import {
+  deriveIsCoach,
+  dataExportToJSON,
+  dataExportFilename,
+} from '@nordicfleet/core';
 import {
   subscribeProfile,
   subscribeSkis,
   updateProfile,
   setCoachCapability,
+  exportUserData,
+  deleteAccount,
 } from '@/lib/firestore';
+
+const MARKETING_URL =
+  process.env.NEXT_PUBLIC_MARKETING_URL || 'https://nordicfleet.com';
 
 export default function ProfilePage() {
   return (
@@ -28,13 +37,70 @@ export default function ProfilePage() {
 }
 
 function Inner() {
-  const {user} = useAuth();
+  const {user, signOut} = useAuth();
   const toast = useToast();
   const {setMode} = useMode();
   const [profile, setProfile] = useState(null);
   const [skis, setSkis] = useState([]);
   const [editing, setEditing] = useState(false);
   const [coachingBusy, setCoachingBusy] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleExport = async () => {
+    if (!user) return;
+    setExporting(true);
+    try {
+      const data = await exportUserData(user.uid);
+      const blob = new Blob([dataExportToJSON(data)], {
+        type: 'application/json',
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = dataExportFilename(data);
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast.success({title: 'Export ready', body: 'Your data was downloaded.'});
+    } catch (err) {
+      toast.error({
+        title: 'Export failed',
+        body: String((err && err.message) || err),
+      });
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!user) return;
+    setDeleting(true);
+    try {
+      await deleteAccount();
+      // Auth user is gone; the guard will bounce to /login.
+      toast.success({title: 'Account deleted'});
+    } catch (err) {
+      const code = err && err.code;
+      if (code === 'auth/requires-recent-login') {
+        toast.error({
+          title: 'Please sign in again',
+          body: 'For security, re-sign-in then retry deleting your account.',
+        });
+        setDeleteOpen(false);
+        await signOut();
+      } else {
+        toast.error({
+          title: 'Delete failed',
+          body: String((err && err.message) || err),
+        });
+      }
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -170,7 +236,95 @@ function Inner() {
             <CoachLinkCard profile={profile} />
           </>
         )}
+
+        <h3 className="text-xs uppercase tracking-wider text-text-tertiary mb-3 mt-8">
+          Privacy &amp; data
+        </h3>
+        <Card className="space-y-4 mb-8">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div>
+              <p className="text-white font-semibold">Export my data</p>
+              <p className="text-text-secondary text-sm mt-1 max-w-prose">
+                Download everything in your account — profile, skis, wax
+                logs, test logs, and wax tests — as a JSON file.
+              </p>
+            </div>
+            <Button
+              variant="secondary"
+              size="md"
+              onClick={handleExport}
+              loading={exporting}>
+              Download
+            </Button>
+          </div>
+          <div className="border-t border-border pt-4 flex flex-wrap gap-4 text-sm">
+            <a
+              href={`${MARKETING_URL}/privacy`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-text-secondary hover:text-white">
+              Privacy Policy ↗
+            </a>
+            <a
+              href={`${MARKETING_URL}/terms`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-text-secondary hover:text-white">
+              Terms of Service ↗
+            </a>
+            <a
+              href="mailto:support@nordicfleet.com?subject=NordicFleet%20issue%20report"
+              className="text-text-secondary hover:text-white">
+              Report a problem ↗
+            </a>
+          </div>
+          <div className="border-t border-border pt-4 flex items-center justify-between gap-4 flex-wrap">
+            <div>
+              <p className="text-red font-semibold">Delete account</p>
+              <p className="text-text-secondary text-sm mt-1 max-w-prose">
+                Permanently delete your account and all your data. This
+                cannot be undone.
+              </p>
+            </div>
+            <Button
+              variant="secondary"
+              size="md"
+              onClick={() => setDeleteOpen(true)}>
+              Delete…
+            </Button>
+          </div>
+        </Card>
       </main>
+
+      <Modal
+        open={deleteOpen}
+        onClose={() => !deleting && setDeleteOpen(false)}
+        title="Delete your account?"
+        footer={
+          <>
+            <Button
+              variant="ghost"
+              size="md"
+              onClick={() => setDeleteOpen(false)}
+              disabled={deleting}>
+              Cancel
+            </Button>
+            <Button
+              variant="danger"
+              size="md"
+              onClick={handleDelete}
+              loading={deleting}>
+              Delete everything
+            </Button>
+          </>
+        }>
+        <p className="text-text-secondary">
+          This permanently deletes your profile, fleet, and all logs and
+          tests. If you coach athletes, they&apos;ll be unlinked from you.
+          This <span className="text-white font-semibold">cannot be undone</span>
+          . Consider exporting your data first.
+        </p>
+      </Modal>
 
       <EditProfileModal
         open={editing}

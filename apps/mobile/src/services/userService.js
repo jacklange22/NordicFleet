@@ -376,7 +376,7 @@ export async function deleteAccount() {
   // 2. Batch-delete subcollections. Firestore doesn't auto-cascade,
   //    and a single batch can hold up to 500 ops, so we chunk just in
   //    case. Per-collection commit keeps memory low.
-  const subcollections = ['skis', 'waxLogs', 'testLogs'];
+  const subcollections = ['skis', 'waxLogs', 'testLogs', 'waxTests'];
   for (const sub of subcollections) {
     const snap = await db
       .collection('users')

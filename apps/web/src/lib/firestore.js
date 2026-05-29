@@ -14,9 +14,12 @@ import {
   addDoc,
   setDoc,
   deleteDoc,
+  writeBatch,
   serverTimestamp,
 } from 'firebase/firestore';
+import {deleteUser} from 'firebase/auth';
 import {
+  buildDataExport,
   buildSkiCreatePayload,
   buildSkiUpdatePayload,
   buildWaxLogCreatePayload,
@@ -30,7 +33,7 @@ import {
   deriveIsCoach,
   buildWaxTestCreatePayload,
 } from '@nordicfleet/core';
-import {getDbClient} from './firebase';
+import {getDbClient, getAuthClient} from './firebase';
 
 function noop() {}
 
@@ -817,4 +820,94 @@ export async function createSkisBatch(uid, skiInputs) {
     }
   });
   return {created, failed};
+}
+
+// ─── Compliance: data export + account deletion ─────────────────────
+
+async function readCollection(db, uid, sub) {
+  const snap = await getDocs(collection(db, 'users', uid, sub));
+  const out = [];
+  snap.forEach(d => out.push({id: d.id, ...d.data()}));
+  return out;
+}
+
+/**
+ * Read the user's full account data and shape it into a portable export
+ * envelope (see @nordicfleet/core buildDataExport). Returns a plain,
+ * JSON-serializable object. Throws if Firestore isn't configured.
+ */
+export async function exportUserData(uid) {
+  if (!uid) {
+    throw new Error('exportUserData: uid is required');
+  }
+  const db = getDbClient();
+  if (!db) {
+    throw new Error('Firestore is not configured.');
+  }
+  const profileSnap = await getDoc(doc(db, 'users', uid));
+  const profile = profileSnap.exists()
+    ? {uid: profileSnap.id, ...profileSnap.data()}
+    : null;
+  const [skis, waxLogs, testLogs, waxTests] = await Promise.all([
+    readCollection(db, uid, 'skis'),
+    readCollection(db, uid, 'waxLogs'),
+    readCollection(db, uid, 'testLogs'),
+    readCollection(db, uid, 'waxTests'),
+  ]);
+  return buildDataExport({uid, profile, skis, waxLogs, testLogs, waxTests});
+}
+
+/**
+ * Permanently delete the signed-in user's account: unlink any athletes,
+ * delete all subcollections, the user doc, then the auth user. Mirrors
+ * the mobile userService.deleteAccount. The auth deletion throws
+ * `auth/requires-recent-login` if the session is stale — the caller
+ * should prompt a fresh sign-in and retry.
+ */
+export async function deleteAccount() {
+  const auth = getAuthClient();
+  const db = getDbClient();
+  if (!auth || !db) {
+    throw new Error('Not configured.');
+  }
+  const user = auth.currentUser;
+  if (!user) {
+    throw new Error('Not signed in.');
+  }
+  const uid = user.uid;
+
+  // 1. Unlink athletes pointing at this user (if any / if a coach).
+  try {
+    const athletes = await getDocs(
+      query(collection(db, 'users'), where('coachId', '==', uid)),
+    );
+    if (!athletes.empty) {
+      const batch = writeBatch(db);
+      athletes.forEach(d =>
+        batch.set(
+          d.ref,
+          {coachId: null, updatedAt: serverTimestamp()},
+          {merge: true},
+        ),
+      );
+      await batch.commit();
+    }
+  } catch {
+    // Non-coach / no athletes — continue.
+  }
+
+  // 2. Delete subcollections in chunks (batch cap is 500).
+  for (const sub of ['skis', 'waxLogs', 'testLogs', 'waxTests']) {
+    const snap = await getDocs(collection(db, 'users', uid, sub));
+    const docs = snap.docs;
+    for (let i = 0; i < docs.length; i += 400) {
+      const batch = writeBatch(db);
+      docs.slice(i, i + 400).forEach(d => batch.delete(d.ref));
+      await batch.commit();
+    }
+  }
+
+  // 3. Delete the user doc, then the auth user.
+  await deleteDoc(doc(db, 'users', uid));
+  await deleteUser(user);
 }

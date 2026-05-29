@@ -10,6 +10,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Switch,
+  Linking,
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useNavigation} from '@react-navigation/native';
@@ -18,6 +19,7 @@ import Toast from 'react-native-toast-message';
 import {isValidEmail} from '@nordicfleet/core';
 import LoadingScreen from '../components/LoadingScreen';
 import {shareSnapshot} from '../services/shareService';
+import {exportAndShareUserData} from '../services/dataExportService';
 import FleetShareCard from '../components/share/FleetShareCard';
 import {useAuth} from '../context/AuthContext';
 import useProfile from '../hooks/useProfile';
@@ -140,7 +142,34 @@ const ProfileScreen = () => {
 
   // Share fleet flow.
   const [sharing, setSharing] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const fleetShareRef = useRef(null);
+
+  const handleExportData = useCallback(async () => {
+    if (!user?.uid) {
+      return;
+    }
+    setExporting(true);
+    try {
+      await exportAndShareUserData(user.uid);
+    } catch (err) {
+      Toast.show({
+        type: 'error',
+        text1: 'Export failed',
+        text2: String(err.message || err),
+        position: 'top',
+        visibilityTime: 2400,
+      });
+    } finally {
+      setExporting(false);
+    }
+  }, [user?.uid]);
+
+  const openLegal = useCallback(path => {
+    const base =
+      process.env.NORDICFLEET_MARKETING_URL || 'https://nordicfleet.com';
+    Linking.openURL(`${base}${path}`).catch(() => {});
+  }, []);
 
   const handleShareFleet = useCallback(async () => {
     setSharing(true);
@@ -743,6 +772,54 @@ const ProfileScreen = () => {
               destructive
               onPress={handleSignOut}
               accessibilityLabel="Sign out"
+              chevron={false}
+            />
+          </View>
+        </Card>
+
+        {/* Privacy & data — export + legal + issue reporting */}
+        <SectionHeader title="Privacy & data" />
+        <Card padding={0}>
+          <View style={styles.rowOuter}>
+            <ListItem
+              icon="download-outline"
+              title="Export my data"
+              subtitle={
+                exporting ? 'Preparing export…' : 'Download everything as JSON'
+              }
+              onPress={handleExportData}
+              accessibilityLabel="Export my data"
+              showDivider
+            />
+          </View>
+          <View style={styles.rowOuter}>
+            <ListItem
+              icon="shield-checkmark-outline"
+              title="Privacy Policy"
+              onPress={() => openLegal('/privacy')}
+              accessibilityLabel="Privacy Policy"
+              showDivider
+            />
+          </View>
+          <View style={styles.rowOuter}>
+            <ListItem
+              icon="document-text-outline"
+              title="Terms of Service"
+              onPress={() => openLegal('/terms')}
+              accessibilityLabel="Terms of Service"
+              showDivider
+            />
+          </View>
+          <View style={styles.rowOuter}>
+            <ListItem
+              icon="mail-outline"
+              title="Report a problem"
+              onPress={() =>
+                Linking.openURL(
+                  'mailto:support@nordicfleet.com?subject=NordicFleet%20issue%20report',
+                ).catch(() => {})
+              }
+              accessibilityLabel="Report a problem"
               chevron={false}
             />
           </View>
