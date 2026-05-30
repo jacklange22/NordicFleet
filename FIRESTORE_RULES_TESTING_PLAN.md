@@ -1,8 +1,24 @@
-# Firestore Rules Testing: Harness + Blocker
+# Firestore Rules Testing: Harness (UNBLOCKED)
 
-_2026-05-30. The rules-test harness is built and ready, but it cannot RUN in
-this environment because of a Java version requirement. This documents the
-exact blocker, the fix, and the policy consequence._
+_2026-05-30, completion pass: the JDK blocker is RESOLVED. `npm run test:rules`
+passes (11/11 on the current rules). JDK 21 (Homebrew `openjdk@21`, 21.0.11) is
+installed but keg-only, so it is not on the default PATH; the `test:rules`
+script now prepends `$(brew --prefix openjdk@21)/bin` automatically, so the
+harness "just works" with no manual `JAVA_HOME` setup. The original blocker
+write-up is kept below for history._
+
+## Status: WORKING
+
+- `npm run test:rules` boots the Firestore emulator and runs the suite green.
+- Rule-gated features may now ship **provided each new rule has emulator
+  tests** added to `firestore-tests/` first.
+- If `brew` or `openjdk@21` is absent, the script falls back to system Java and
+  fails with the JDK-version error below - install via `brew install
+  openjdk@21` (no symlink or profile edit needed).
+
+---
+
+_Original blocker write-up (historical):_
 
 ## What is ready
 
