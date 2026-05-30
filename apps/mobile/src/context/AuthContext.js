@@ -24,8 +24,9 @@ export const AuthProvider = ({children}) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    trace('auth listener attached');
     const unsub = auth().onAuthStateChanged(u => {
-      trace('auth-resolved', {signedIn: !!u});
+      trace('auth resolved', {signedIn: !!u});
       setUser(u || null);
       setLoading(false);
     });

@@ -117,7 +117,7 @@ const TabBar = () => {
     if (next === mode) {
       return;
     }
-    trace('mode-switch', {from: mode, to: next});
+    trace('mode switch', {from: mode, to: next});
     LayoutAnimation.configureNext(
       LayoutAnimation.create(180, 'easeInEaseOut', 'opacity'),
     );

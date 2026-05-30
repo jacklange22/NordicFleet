@@ -63,8 +63,9 @@ export const ModeProvider = ({children}) => {
       setProfileLoaded(false);
       return undefined;
     }
+    trace('profile subscription attached');
     const unsub = subscribeProfile(user.uid, p => {
-      trace('profile-snapshot', {hasProfile: !!p, isCoach: deriveIsCoach(p)});
+      trace('profile loaded', {hasProfile: !!p, isCoach: deriveIsCoach(p)});
       setProfile(p);
       setIsCoach(deriveIsCoach(p));
       setProfileLoaded(true);
@@ -83,13 +84,16 @@ export const ModeProvider = ({children}) => {
         if (cancelled) {
           return;
         }
-        trace('mode-restore', {stored});
         if (VALID_MODES.includes(stored)) {
+          trace('mode restored', {stored, valid: true});
           setModeState(stored);
         } else if (stored != null) {
           // Corrupt / legacy value — drop it so we never re-read garbage
           // and never strand the app on an invalid mode.
+          trace('mode validated', {stored, valid: false, reset: 'personal'});
           AsyncStorage.removeItem(STORAGE_KEY).catch(() => {});
+        } else {
+          trace('mode restored', {stored: null});
         }
       })
       .catch(() => {})

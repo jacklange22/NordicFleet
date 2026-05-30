@@ -7,6 +7,7 @@
 // vendor swap is a one-file change.
 
 import {scrubErrorForReport} from '@nordicfleet/core';
+import {trace} from './devTrace';
 
 /**
  * Report an error through the PII-safe funnel.
@@ -48,6 +49,7 @@ export function installGlobalErrorHandler() {
   const previous = g.ErrorUtils.getGlobalHandler();
   g.ErrorUtils.setGlobalHandler((error, isFatal) => {
     try {
+      trace('global JS error caught', {fatal: !!isFatal});
       reportError(error, {boundary: 'global', code: isFatal ? 'fatal' : 'nonfatal'});
     } catch {
       // never let reporting break the chain

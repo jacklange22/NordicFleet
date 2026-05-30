@@ -60,8 +60,22 @@ const navTheme = {
 const Stack = createStackNavigator();
 
 const App = () => {
+  const routedRef = React.useRef(false);
   React.useEffect(() => {
-    trace('app-mounted');
+    trace('app mounted');
+    // Dev-only boot watchdog: if we never reach a route, the app is hung on
+    // auth/profile/mode. Log loudly (does NOT mask production errors — it's
+    // __DEV__-only and only fires when boot stalls). The AuthLoadingScreen
+    // also has a 12s getProfile fallback so the splash can't sit forever.
+    if (__DEV__) {
+      const id = setTimeout(() => {
+        if (!routedRef.current) {
+          trace('WATCHDOG boot stalled — no route after 15000ms (check the last line above)');
+        }
+      }, 15000);
+      return () => clearTimeout(id);
+    }
+    return undefined;
   }, []);
   return (
     <ErrorBoundary>
@@ -71,8 +85,11 @@ const App = () => {
           <ModeProvider>
           <NavigationContainer
             theme={navTheme}
-            onReady={() => trace('navigator-ready')}
-            onStateChange={state => trace('route', getActiveRouteName(state))}>
+            onReady={() => trace('navigator ready')}
+            onStateChange={state => {
+              routedRef.current = true;
+              trace('route changed', {route: getActiveRouteName(state)});
+            }}>
             <Stack.Navigator
               initialRouteName="AuthLoading"
               screenOptions={{

@@ -23,7 +23,7 @@ const AuthLoadingScreen = ({navigation}) => {
       return;
     }
     if (!user) {
-      trace('boot-decision', {target: 'Welcome', reason: 'signed-out'});
+      trace('boot decision', {target: 'Welcome', reason: 'signed-out'});
       navigation.replace('Welcome');
       return;
     }
@@ -52,30 +52,30 @@ const AuthLoadingScreen = ({navigation}) => {
           return;
         }
         if (profileOrTimeout === timedOut) {
-          trace('boot-decision', {target: 'Home', reason: 'getProfile-timeout'});
+          trace('boot decision', {target: 'Home', reason: 'getProfile-timeout'});
           navigation.replace('Home');
           return;
         }
         const profile = profileOrTimeout;
         if (!profile) {
-          trace('boot-decision', {target: 'Welcome', reason: 'no-profile'});
+          trace('boot decision', {target: 'Welcome', reason: 'no-profile'});
           navigation.replace('Welcome');
           return;
         }
         const isCoach = deriveIsCoach(profile);
         if (isCoach && storedMode === 'coaching') {
-          trace('boot-decision', {target: 'CoachDashboard'});
+          trace('boot decision', {target: 'CoachDashboard'});
           navigation.replace('CoachDashboard');
         } else if (isCoach && storedMode === 'waxtruck') {
-          trace('boot-decision', {target: 'WaxTruck'});
+          trace('boot decision', {target: 'WaxTruck'});
           navigation.replace('WaxTruck');
         } else {
-          trace('boot-decision', {target: 'Home'});
+          trace('boot decision', {target: 'Home'});
           navigation.replace('Home');
         }
       } catch {
         if (!cancelled) {
-          trace('boot-decision', {target: 'Home', reason: 'error'});
+          trace('boot decision', {target: 'Home', reason: 'error'});
           navigation.replace('Home');
         }
       }

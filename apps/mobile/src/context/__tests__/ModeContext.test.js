@@ -146,6 +146,41 @@ describe('ModeContext', () => {
     });
   });
 
+  it('a non-coach with a stale waxtruck mode gets snapped back to personal', async () => {
+    await AsyncStorage.setItem(STORAGE_KEY, 'waxtruck');
+    mockProfile = {uid: 'u1', isCoach: false};
+    const tree = renderProbe();
+    await waitFor(() => {
+      expect(tree.getByTestId('mode').props.children).toBe('personal');
+    });
+  });
+
+  it('a corrupt stored mode resets to personal and clears storage', async () => {
+    await AsyncStorage.setItem(STORAGE_KEY, 'not-a-real-mode');
+    mockProfile = {uid: 'u1', isCoach: true};
+    const tree = renderProbe();
+    await act(async () => {});
+    await act(async () => {});
+    // Invalid value never applied — stays personal.
+    expect(tree.getByTestId('mode').props.children).toBe('personal');
+    // And the garbage value is cleared from storage.
+    expect(await AsyncStorage.getItem(STORAGE_KEY)).toBeNull();
+  });
+
+  it('a coach with a stored waxtruck mode keeps it after async profile load', async () => {
+    mockDeferProfile = true;
+    await AsyncStorage.setItem(STORAGE_KEY, 'waxtruck');
+    const tree = renderProbe();
+    await act(async () => {});
+    await act(async () => {});
+    await act(async () => {});
+    expect(await AsyncStorage.getItem(STORAGE_KEY)).toBe('waxtruck');
+    await act(async () => {
+      mockProfileCb({uid: 'u1', isCoach: true});
+    });
+    expect(tree.getByTestId('mode').props.children).toBe('waxtruck');
+  });
+
   it('keeps a coach in their persisted mode while the profile is still loading', async () => {
     // Reproduce the cold-start race: the persisted mode restores from
     // AsyncStorage before the (deferred) Firestore profile resolves, so

@@ -14,9 +14,9 @@ Last updated: 2026-05-30. Branch `claude-rewrite`.
 
 1. **Clean-reinstall first** (section 2). A stale/cached JS bundle is the #1
    cause of a "frozen" RN app after code changes, and it's free to rule out.
-2. If it still freezes, **read the `[freeze-trace]` logs** (section 3) and
+2. If it still freezes, **read the `[NF_BOOT]` logs** (section 3) and
    match the **last line printed** against the decision tree (section 4).
-3. Report the last `[freeze-trace]` line + any `JetsamEvent` — that pins it.
+3. Report the last `[NF_BOOT]` line + any `JetsamEvent` — that pins it.
 
 ---
 
@@ -78,22 +78,32 @@ If the app boots normally after this, the freeze was a stale bundle — done.
 
 ## 3. Read the boot trace
 
-Every boot stage now logs a line tagged **`[freeze-trace]`** (Debug builds
-only — `__DEV__`; never ships in Release; silenced under Jest). A healthy
-cold start prints, in order:
+Every boot stage now logs a timestamped line tagged **`[NF_BOOT]`** (Debug
+builds only — `__DEV__`; never ships in Release; silenced under Jest). The
+`NNNNms` is elapsed time since the JS bundle loaded, so you can see WHERE the
+time goes. A healthy cold start prints, in order:
 
 ```
-[freeze-trace] js-bundle-loaded
-[freeze-trace] app-mounted
-[freeze-trace] auth-resolved { signedIn: true }
-[freeze-trace] mode-restore { stored: 'coaching' }      # or null/personal
-[freeze-trace] profile-snapshot { hasProfile: true, isCoach: true }
-[freeze-trace] navigator-ready
-[freeze-trace] boot-decision { target: 'CoachDashboard' }
-[freeze-trace] route CoachDashboard
+[NF_BOOT] 0000ms index loaded
+[NF_BOOT] 0005ms firebase configured { persistence: true }
+[NF_BOOT] 0040ms app mounted
+[NF_BOOT] 0042ms auth listener attached
+[NF_BOOT] 0050ms profile subscription attached
+[NF_BOOT] 0120ms auth resolved { signedIn: true }
+[NF_BOOT] 0130ms mode restored { stored: 'coaching', valid: true }
+[NF_BOOT] 0200ms profile loaded { hasProfile: true, isCoach: true }
+[NF_BOOT] 0260ms navigator ready
+[NF_BOOT] 0280ms boot decision { target: 'CoachDashboard' }
+[NF_BOOT] 0300ms route changed { route: 'CoachDashboard' }
 ```
 
-**The freeze is at the stage AFTER the last line you see.**
+Other lines you may see: `mode validated { valid: false }` (a corrupt stored
+mode was cleared), `mode switch { from, to }` (user tapped the switcher),
+`ErrorBoundary caught { message }`, `global JS error caught { fatal }`, and
+`WATCHDOG boot stalled — no route after 15000ms` (boot never reached a route).
+
+**The freeze is at the stage AFTER the last line you see** (and the `NNNNms`
+gap before the freeze tells you how long that stage ran before hanging).
 
 ### Where the logs appear
 
@@ -102,26 +112,27 @@ cold start prints, in order:
 - **Xcode** → the debug console at the bottom while the app runs on the
   device (Product → Run).
 - **No Metro / detached** → macOS **Console.app**: connect the iPhone, select
-  it in the sidebar, and filter the search box by `freeze-trace` (or
+  it in the sidebar, and filter the search box by `NF_BOOT` (or
   `NordicFleet`). CLI equivalent:
   ```bash
   # Needs libimobiledevice: brew install libimobiledevice
-  idevicesyslog | grep -iE "freeze-trace|NordicFleet|Jetsam"
+  idevicesyslog | grep -iE "NF_BOOT|NordicFleet|Jetsam"
   ```
 
 ---
 
-## 4. Decision tree (match the LAST `[freeze-trace]` line)
+## 4. Decision tree (match the LAST `[NF_BOOT]` line)
 
 | Last line seen | Most likely cause | Next step |
 |---|---|---|
 | _(nothing)_ | JS bundle never loaded — stale/failed bundle, or Metro unreachable | Redo section 2; confirm the device can reach the Metro host/port |
-| `js-bundle-loaded` but no `app-mounted` | A provider throws during first render | Check Xcode console for a red-box / JS exception; ErrorBoundary should show "Something went wrong" |
-| `app-mounted` but no `auth-resolved` (>5s) | Firebase Auth init / keychain | Verify `GoogleService-Info.plist` is in the target and `keychain-access-groups` entitlement is present |
-| `auth-resolved` but no `profile-snapshot` and no `boot-decision` (>12s) | Firestore profile read is hanging (offline w/o cache, Firestore stall) | The new **12s boot timeout** now routes to Home so it can't sit frozen — if it STILL hangs on the splash, the timeout isn't firing: capture full logs |
-| `boot-decision` but no `navigator-ready` / `route` | Navigation/container problem | Confirm the target route exists in `App.tsx`; capture logs |
-| `route X` then frozen | Screen **X** is the culprit | Inspect screen X; reproduce by navigating there from a known-good screen |
-| `mode-switch` / `route` **repeating rapidly** | A loop (should not happen) | Capture ~20 lines; the repeated pair names the loop |
+| `index loaded` but no `firebase configured` | Firebase native init crashed before JS | Check Xcode console; verify `GoogleService-Info.plist` in target |
+| `app mounted` but no `auth resolved` (>5s) | Firebase Auth init / keychain | Verify `GoogleService-Info.plist` is in the target and `keychain-access-groups` entitlement is present |
+| `auth resolved` but no `profile loaded` and no `boot decision` (>12s) | Firestore profile read is hanging (offline w/o cache, Firestore stall) | The **12s boot timeout** now routes to Home so it can't sit frozen — if it STILL hangs on the splash, capture full logs |
+| `boot decision` but no `navigator ready` / `route changed` | Navigation/container problem | Confirm the target route exists in `App.tsx`; capture logs |
+| `route changed { route: X }` then frozen | Screen **X** is the culprit | Inspect screen X; reproduce by navigating there from a known-good screen |
+| `mode switch` / `route changed` **repeating rapidly** | A loop (should not happen) | Capture ~20 lines; the repeated pair names the loop |
+| `WATCHDOG boot stalled …` | Boot never reached a route within 15s | The line directly above names the stalled stage |
 
 ---
 
@@ -139,10 +150,11 @@ All committed on `claude-rewrite`:
   resolved, so `isCoach` was still `false` and a **coach's persisted mode was
   clobbered to personal every cold start** (and the stored value overwritten).
   Corrupt/legacy stored mode values are now cleared instead of re-read.
-- **Boot tracing** (`devTrace.js` + call sites): the `[freeze-trace]` lines
-  above. **Temporary** — remove `devTrace.js` and its imports once the freeze
-  is understood. They are `__DEV__`-only and silenced under Jest, so they do
-  not affect Release builds or test output.
+- **Boot tracing + watchdog** (`devTrace.js` + call sites): the `[NF_BOOT]`
+  timestamped lines above, plus a 15s dev-only watchdog that logs if boot
+  never reaches a route. **Temporary** — remove `devTrace.js` and its imports
+  once the freeze is understood. They are `__DEV__`-only and silenced under
+  Jest, so they do not affect Release builds or test output.
 
 ---
 

@@ -4,6 +4,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import {colors, spacing, typography, radius} from '../theme';
 import Button from './ui/Button';
 import {reportError} from '../services/reportError';
+import {trace} from '../services/devTrace';
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -16,6 +17,7 @@ class ErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, info) {
+    trace('ErrorBoundary caught', {message: String(error?.message || error)});
     // Route render-time errors through the PII-safe reporting funnel.
     // (Console in dev today; Crashlytics/Sentry drop-in later — see
     // OBSERVABILITY_PLAN.md.)

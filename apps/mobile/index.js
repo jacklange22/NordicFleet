@@ -12,6 +12,6 @@ import {trace} from './src/services/devTrace';
 // preserving the default handler (dev red-box still shows).
 installGlobalErrorHandler();
 
-trace('js-bundle-loaded');
+trace('index loaded');
 
 AppRegistry.registerComponent(appName, () => App);

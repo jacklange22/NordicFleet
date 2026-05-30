@@ -1,33 +1,36 @@
-// TEMPORARY on-device freeze diagnostics — see PHONE_FREEZE_DEBUG_STEPS.md.
+// TEMPORARY on-device boot/freeze diagnostics — see PHONE_FREEZE_DEBUG_STEPS.md.
 //
-// These traces map the boot/render lifecycle so a freeze on a real device
-// can be pinned to the last stage that printed. They are __DEV__-only, so
-// they never ship in a Release build and add zero overhead in production.
+// Maps the boot/render lifecycle with elapsed-ms timestamps so a freeze on a
+// real device can be pinned to the last stage that printed — and you can see
+// WHERE the time went. __DEV__-only: never ships in a Release build, and
+// silenced under Jest so test output stays clean.
 //
-// Filter device logs by the tag below (Console.app, `idevicesyslog`, or the
-// Metro/Xcode console):
-//
-//     [freeze-trace]
+// Filter device logs by the tag:  [NF_BOOT]
+//   [NF_BOOT] 0000ms index loaded
+//   [NF_BOOT] 0120ms auth resolved { signedIn: true }
+//   [NF_BOOT] 0300ms navigator ready { route: 'Home' }
 //
 // Remove this file + its call sites once the freeze is understood.
 
-const TAG = '[freeze-trace]';
+const TAG = '[NF_BOOT]';
+const t0 = Date.now();
 
-// Active only in a __DEV__ runtime (Debug builds / Metro), and never under
-// Jest — keeps test output clean while still printing on a real device.
+// Active only in a __DEV__ runtime (Debug builds / Metro), never under Jest.
 const SILENCED =
   typeof process !== 'undefined' &&
   !!process.env &&
   process.env.JEST_WORKER_ID !== undefined;
+
+const stamp = () => `${String(Date.now() - t0).padStart(4, '0')}ms`;
 
 export function trace(stage, extra) {
   if (!__DEV__ || SILENCED) {
     return;
   }
   if (extra !== undefined) {
-    console.log(`${TAG} ${stage}`, extra);
+    console.log(`${TAG} ${stamp()} ${stage}`, extra);
   } else {
-    console.log(`${TAG} ${stage}`);
+    console.log(`${TAG} ${stamp()} ${stage}`);
   }
 }
 
