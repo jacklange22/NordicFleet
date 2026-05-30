@@ -1,4 +1,4 @@
-import React, {useState, useMemo} from 'react';
+import React, {useState, useMemo, useEffect} from 'react';
 import {
   View,
   Text,
@@ -10,11 +10,11 @@ import {
   Pressable,
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
-import {useNavigation} from '@react-navigation/native';
+import {useNavigation, useRoute} from '@react-navigation/native';
 import Toast from 'react-native-toast-message';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import {useAuth} from '../context/AuthContext';
-import {createSki} from '../services/skiService';
+import {createSki, getSki, updateSki} from '../services/skiService';
 import {isOCRAvailable} from '../services/ocrService';
 import {
   Header,
@@ -60,8 +60,13 @@ const ChipGroup = ({options, value, onChange, accessibilityLabel}) => (
 
 const AddSkiForm = () => {
   const navigation = useNavigation();
+  const route = useRoute();
   const {user} = useAuth();
   const uid = user?.uid;
+
+  // Edit mode: same form, pre-filled, saves with updateSki instead of create.
+  const editSkiId = route?.params?.editSkiId || null;
+  const isEditing = !!editSkiId;
 
   const [name, setName] = useState('');
   const [brand, setBrand] = useState('');
@@ -78,6 +83,38 @@ const AddSkiForm = () => {
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+
+  // Pre-fill when editing an existing ski.
+  useEffect(() => {
+    if (!isEditing || !uid) {
+      return undefined;
+    }
+    let cancelled = false;
+    getSki(uid, editSkiId).then(ski => {
+      if (cancelled || !ski) {
+        return;
+      }
+      setName(ski.name || '');
+      setModel(ski.model || '');
+      setTechnique(ski.technique || '');
+      setType(ski.type || '');
+      setLength(ski.length != null ? String(ski.length) : '');
+      setFlex(ski.flex != null ? String(ski.flex) : '');
+      setBase(ski.base || '');
+      setBuild(ski.build || '');
+      setGrind(ski.grind || '');
+      setNotes(ski.notes || '');
+      if (BRAND_OPTIONS.includes(ski.brand)) {
+        setBrand(ski.brand);
+      } else if (ski.brand) {
+        setBrandIsOther(true);
+        setCustomBrand(ski.brand);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [isEditing, uid, editSkiId]);
 
   const effectiveBrand = brandIsOther ? customBrand.trim() : brand;
 
@@ -97,28 +134,41 @@ const AddSkiForm = () => {
       return;
     }
     setSubmitting(true);
+    const data = {
+      name: name.trim(),
+      brand: effectiveBrand,
+      model: model.trim(),
+      technique,
+      type,
+      length,
+      flex,
+      base: base.trim(),
+      build: build.trim(),
+      grind: grind.trim(),
+      notes: notes.trim(),
+    };
     try {
-      const newId = await createSki(uid, {
-        name: name.trim(),
-        brand: effectiveBrand,
-        model: model.trim(),
-        technique,
-        type,
-        length,
-        flex,
-        base: base.trim(),
-        build: build.trim(),
-        grind: grind.trim(),
-        notes: notes.trim(),
-      });
-      Toast.show({
-        type: 'success',
-        text1: 'Ski added',
-        text2: name.trim(),
-        position: 'top',
-        visibilityTime: 2200,
-      });
-      navigation.replace('SkiInfo', {skiId: newId});
+      if (isEditing) {
+        await updateSki(uid, editSkiId, data);
+        Toast.show({
+          type: 'success',
+          text1: 'Ski updated',
+          text2: name.trim(),
+          position: 'top',
+          visibilityTime: 2000,
+        });
+        navigation.replace('SkiInfo', {skiId: editSkiId});
+      } else {
+        const newId = await createSki(uid, data);
+        Toast.show({
+          type: 'success',
+          text1: 'Ski added',
+          text2: name.trim(),
+          position: 'top',
+          visibilityTime: 2200,
+        });
+        navigation.replace('SkiInfo', {skiId: newId});
+      }
     } catch (err) {
       setError(String(err.message || err));
     } finally {
@@ -140,7 +190,7 @@ const AddSkiForm = () => {
     <SafeAreaView style={styles.safe} edges={['top']}>
       <StatusBar barStyle="light-content" />
       <Header
-        title="Add ski"
+        title={isEditing ? 'Edit ski' : 'Add ski'}
         right={
           <Pressable
             accessibilityRole="button"

@@ -273,23 +273,42 @@ const SkiInfo = ({route, navigation}) => {
         title={ski.name || 'Ski'}
         right={
           !isCoachView ? (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Share ski"
-              onPress={handleShare}
-              disabled={sharing}
-              hitSlop={8}
-              style={({pressed}) => [
-                styles.shareBtn,
-                sharing && {opacity: 0.5},
-                pressed && {opacity: 0.6},
-              ]}>
-              <Ionicons
-                name="share-outline"
-                size={22}
-                color={colors.textPrimary}
-              />
-            </Pressable>
+            <View style={styles.headerActions}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Edit ski"
+                onPress={() =>
+                  navigation.navigate('newSki', {editSkiId: skiId})
+                }
+                hitSlop={8}
+                style={({pressed}) => [
+                  styles.shareBtn,
+                  pressed && {opacity: 0.6},
+                ]}>
+                <Ionicons
+                  name="create-outline"
+                  size={22}
+                  color={colors.textPrimary}
+                />
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Share ski"
+                onPress={handleShare}
+                disabled={sharing}
+                hitSlop={8}
+                style={({pressed}) => [
+                  styles.shareBtn,
+                  sharing && {opacity: 0.5},
+                  pressed && {opacity: 0.6},
+                ]}>
+                <Ionicons
+                  name="share-outline"
+                  size={22}
+                  color={colors.textPrimary}
+                />
+              </Pressable>
+            </View>
           ) : undefined
         }
       />
@@ -582,6 +601,10 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: colors.textPrimary,
     lineHeight: 22,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   shareBtn: {
     width: 40,
