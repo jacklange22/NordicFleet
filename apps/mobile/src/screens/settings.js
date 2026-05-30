@@ -20,7 +20,15 @@ import {exportAndShareUserData} from '../services/dataExportService';
 import {deleteAccount} from '../services/userService';
 import {auth} from '../services/firebase';
 import {buildFeedbackMailto} from '@nordicfleet/core';
-import {Header, Card, ListItem, SectionHeader, Button, Input} from '../components/ui';
+import {
+  Header,
+  Card,
+  ListItem,
+  SectionHeader,
+  Button,
+  Input,
+  TabBar,
+} from '../components/ui';
 import {colors, radius, spacing, typography} from '../theme';
 import {BUILD_TAG} from '../buildInfo';
 import {legalUrl, MARKETING_URL, FEEDBACK_EMAIL} from '../config/urls';
@@ -353,6 +361,8 @@ const SettingsScreen = () => {
           {__DEV__ ? 'DEV' : 'Build'} · {BUILD_TAG}
         </Text>
       </ScrollView>
+
+      <TabBar />
 
       {/* Password modal */}
       <Modal

@@ -15,7 +15,15 @@ import {useAuth} from '../context/AuthContext';
 import {getMessage, markRead} from '../services/messageService';
 import {getProfile} from '../services/userService';
 import {subscribeSki} from '../services/skiService';
-import {Header, Card, Avatar, ListItem, Pill, SectionHeader} from '../components/ui';
+import {
+  Header,
+  Card,
+  Avatar,
+  ListItem,
+  Pill,
+  SectionHeader,
+  TabBar,
+} from '../components/ui';
 import {colors, spacing, typography, radius} from '../theme';
 
 const fmtFull = raw => {
@@ -95,6 +103,7 @@ const MessageDetail = ({route}) => {
         <View style={styles.loadingWrap}>
           <ActivityIndicator color={colors.red} />
         </View>
+        <TabBar />
       </SafeAreaView>
     );
   }
@@ -168,6 +177,7 @@ const MessageDetail = ({route}) => {
           </>
         )}
       </ScrollView>
+      <TabBar />
     </SafeAreaView>
   );
 };

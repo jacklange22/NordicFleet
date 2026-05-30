@@ -54,6 +54,8 @@ describe('EditWaxLogScreen', () => {
 
     const tree = renderScreen({logId: 'w1', skiId: 's1'});
     await waitFor(() => tree.getByLabelText('Notes'));
+    // Bottom nav stays visible on the edit screen (nav consistency).
+    expect(tree.getByLabelText('Fleet')).toBeTruthy();
     fireEvent.changeText(tree.getByLabelText('Notes'), 'fresh note');
     await act(async () => {});
     fireEvent.press(tree.getByLabelText('Save'));

@@ -20,6 +20,7 @@ const SAFE_METRICS = {
 };
 
 let mockMode = {mode: 'personal', setMode: jest.fn(), isCoach: false};
+let mockRoute = {name: 'Home'};
 const mockNavigate = jest.fn();
 const mockReset = jest.fn();
 
@@ -37,7 +38,7 @@ jest.mock('../../../services/messageService', () => ({
 }));
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({navigate: mockNavigate, reset: mockReset}),
-  useRoute: () => ({name: 'Home'}),
+  useRoute: () => mockRoute,
 }));
 
 const TabBar = require('../TabBar').default;
@@ -51,6 +52,7 @@ const renderTabBar = () =>
 
 beforeEach(() => {
   mockMode = {mode: 'personal', setMode: jest.fn(), isCoach: false};
+  mockRoute = {name: 'Home'};
   mockNavigate.mockClear();
   mockReset.mockClear();
   rafQueue = [];
@@ -106,6 +108,28 @@ describe('TabBar — conditional tabs per mode', () => {
     expect(tree.queryByLabelText('My Fleet mode')).toBeNull();
     expect(tree.queryByLabelText('Coaching mode')).toBeNull();
     expect(tree.queryByLabelText('Wax Truck mode')).toBeNull();
+  });
+});
+
+describe('TabBar — central visibility policy (navTabs)', () => {
+  it('renders nothing on a hidden route (e.g. the WaxLog entry form)', () => {
+    mockRoute = {name: 'WaxLog'};
+    const tree = renderTabBar();
+    expect(tree.queryByLabelText('Fleet')).toBeNull();
+    expect(tree.queryByLabelText('Profile')).toBeNull();
+  });
+
+  it('renders nothing on auth routes', () => {
+    mockRoute = {name: 'Login'};
+    const tree = renderTabBar();
+    expect(tree.queryByLabelText('Fleet')).toBeNull();
+  });
+
+  it('still renders on a visible edit route (EditWaxLog)', () => {
+    mockRoute = {name: 'EditWaxLog'};
+    const tree = renderTabBar();
+    expect(tree.getByLabelText('Fleet')).toBeTruthy();
+    expect(tree.getByLabelText('Profile')).toBeTruthy();
   });
 });
 

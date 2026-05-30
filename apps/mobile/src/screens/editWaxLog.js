@@ -16,10 +16,11 @@ import Toast from 'react-native-toast-message';
 
 import {useAuth} from '../context/AuthContext';
 import useSkis from '../hooks/useSkis';
+import useUnsavedGuard from '../hooks/useUnsavedGuard';
 import {waxLogHasContent} from '@nordicfleet/core';
 import {getWaxLog, updateWaxLog} from '../services/waxLogService';
 import {WaxEntryCard, emptyWaxEntry} from './waxinglog';
-import {Header, Button} from '../components/ui';
+import {Header, Button, TabBar} from '../components/ui';
 import {colors, spacing, typography} from '../theme';
 
 const EditWaxLogScreen = ({route}) => {
@@ -36,6 +37,10 @@ const EditWaxLogScreen = ({route}) => {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [dirty, setDirty] = useState(false);
+
+  // Warn before a tab tap / back discards an in-progress edit.
+  useUnsavedGuard(dirty);
 
   const ski = useMemo(
     () =>
@@ -89,7 +94,10 @@ const EditWaxLogScreen = ({route}) => {
     };
   }, [uid, logId]);
 
-  const handleChange = partial => setEntry(prev => ({...prev, ...partial}));
+  const handleChange = partial => {
+    setEntry(prev => ({...prev, ...partial}));
+    setDirty(true);
+  };
 
   const canSave = !!uid && !!logId && !!entry && !submitting;
 
@@ -123,6 +131,7 @@ const EditWaxLogScreen = ({route}) => {
       }
     }
     setSubmitting(false);
+    setDirty(false); // saved - don't prompt on the goBack pop
     Toast.show({
       type: 'success',
       text1: 'Wax updated',
@@ -194,6 +203,7 @@ const EditWaxLogScreen = ({route}) => {
           )}
         </ScrollView>
       </KeyboardAvoidingView>
+      <TabBar />
     </SafeAreaView>
   );
 };

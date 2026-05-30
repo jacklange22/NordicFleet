@@ -53,6 +53,8 @@ describe('SettingsScreen (#4)', () => {
     expect(tree.getByLabelText('Export my data')).toBeTruthy();
     expect(tree.getByLabelText('Privacy Policy')).toBeTruthy();
     expect(tree.getByLabelText('Delete account')).toBeTruthy();
+    // Settings now carries the persistent bottom nav (nav consistency).
+    expect(tree.getByLabelText('Fleet')).toBeTruthy();
   });
 
   it('Change password opens the reauth modal', async () => {

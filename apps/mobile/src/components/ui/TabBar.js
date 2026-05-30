@@ -7,6 +7,7 @@ import {colors, spacing, typography} from '../../theme';
 import {useAuth} from '../../context/AuthContext';
 import {useMode} from '../../context/ModeContext';
 import {subscribeUnreadCountForAthlete} from '../../services/messageService';
+import {shouldShowTabBar} from '../../config/navTabs';
 import {trace} from '../../services/devTrace';
 
 // Both useNavigation and useRoute throw when the component isn't inside a
@@ -99,6 +100,14 @@ const TabBar = () => {
     }
     return subscribeUnreadCountForAthlete(user.uid, setUnread);
   }, [user?.uid, mode]);
+
+  // Central visibility policy (src/config/navTabs.js): hide on auth, the
+  // camera scanner, and heavy create/entry flows. Only ever hide on a KNOWN
+  // hidden route - when the route is unknown (standalone test render) the bar
+  // still draws, matching prior behavior.
+  if (!shouldShowTabBar(route?.name)) {
+    return null;
+  }
 
   const accent = MODE_ACCENT[mode] || colors.red;
   const tabs = MODE_TABS[mode] || PERSONAL_TABS;

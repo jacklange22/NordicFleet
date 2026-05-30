@@ -29,6 +29,7 @@ import {
   EmptyState,
   Input,
   Button,
+  TabBar,
 } from '../components/ui';
 import {colors, radius, spacing, typography} from '../theme';
 
@@ -277,6 +278,8 @@ const AthleteDetailScreen = ({route}) => {
           }
         />
       )}
+
+      <TabBar />
 
       {/* Send-message modal */}
       <Modal

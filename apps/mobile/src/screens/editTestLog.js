@@ -16,6 +16,7 @@ import Toast from 'react-native-toast-message';
 
 import {useAuth} from '../context/AuthContext';
 import useSkis from '../hooks/useSkis';
+import useUnsavedGuard from '../hooks/useUnsavedGuard';
 import {getTestLog, updateTestLog} from '../services/testLogService';
 import {TestEntryCard, emptyTestEntry} from './testinglog';
 import {
@@ -25,6 +26,7 @@ import {
   Button,
   Pill,
   SectionHeader,
+  TabBar,
 } from '../components/ui';
 import {colors, spacing, typography} from '../theme';
 
@@ -55,6 +57,10 @@ const EditTestLogScreen = ({route}) => {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [dirty, setDirty] = useState(false);
+
+  // Warn before a tab tap / back discards an in-progress edit.
+  useUnsavedGuard(dirty);
 
   const ski = useMemo(
     () =>
@@ -118,11 +124,18 @@ const EditTestLogScreen = ({route}) => {
     };
   }, [uid, logId]);
 
-  const setCondition = (k, v) => setConditions(prev => ({...prev, [k]: v}));
-  const togglePill = (k, v) =>
+  const setCondition = (k, v) => {
+    setConditions(prev => ({...prev, [k]: v}));
+    setDirty(true);
+  };
+  const togglePill = (k, v) => {
     setConditions(prev => ({...prev, [k]: prev[k] === v ? '' : v}));
-  const handleEntryChange = partial =>
+    setDirty(true);
+  };
+  const handleEntryChange = partial => {
     setEntry(prev => ({...prev, ...partial}));
+    setDirty(true);
+  };
 
   const canSave = !!uid && !!logId && !!entry && !submitting;
 
@@ -158,6 +171,7 @@ const EditTestLogScreen = ({route}) => {
       }
     }
     setSubmitting(false);
+    setDirty(false); // saved - don't prompt on the goBack pop
     Toast.show({
       type: 'success',
       text1: 'Test updated',
@@ -287,6 +301,7 @@ const EditTestLogScreen = ({route}) => {
           )}
         </ScrollView>
       </KeyboardAvoidingView>
+      <TabBar />
     </SafeAreaView>
   );
 };

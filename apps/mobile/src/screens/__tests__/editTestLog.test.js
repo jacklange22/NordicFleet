@@ -53,6 +53,8 @@ describe('EditTestLogScreen', () => {
 
     const tree = renderScreen({logId: 't1', skiId: 's1'});
     await waitFor(() => tree.getByLabelText('Temperature'));
+    // Bottom nav stays visible on the edit screen (nav consistency).
+    expect(tree.getByLabelText('Fleet')).toBeTruthy();
     fireEvent.changeText(tree.getByLabelText('Temperature'), '-12');
     await act(async () => {});
     fireEvent.press(tree.getByLabelText('Save'));

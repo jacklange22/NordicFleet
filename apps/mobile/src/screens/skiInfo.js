@@ -247,7 +247,7 @@ const SkiInfo = ({route, navigation}) => {
         <View style={styles.loadingWrap}>
           <ActivityIndicator color={colors.red} />
         </View>
-        {!isCoachView && <TabBar />}
+        <TabBar />
       </SafeAreaView>
     );
   }
@@ -261,7 +261,7 @@ const SkiInfo = ({route, navigation}) => {
         <View style={styles.notFoundWrap}>
           <Text style={styles.notFound}>Ski not found</Text>
         </View>
-        {!isCoachView && <TabBar />}
+        <TabBar />
       </SafeAreaView>
     );
   }
