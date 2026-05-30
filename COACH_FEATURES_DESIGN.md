@@ -130,3 +130,21 @@ coach, so the owner-only write rule on skis/waxLogs/testLogs stays intact for
 4. Athlete "Manage coach access" + Suggestions inbox; coach "Suggest a change".
 5. Optional: automated invite email via provider + Cloud Function.
 6. Optional, last: the `edit` tier (coach direct write), behind explicit grant.
+
+## Implementation-pass status (2026-05-30)
+
+Step 1 (the safe pure-core layer) LANDED this pass, unit-tested, with no rules:
+
+- `@nordicfleet/core` `inviteOperations`: `parseEmailList`, `buildInviteLink`,
+  `buildInviteEmail`, `buildInviteMailto`. No fake "sent" - these only build a
+  link and a `mailto:` draft the coach's own mail app opens.
+- `@nordicfleet/core` `coachPermissions`: the `view`/`comment`/`edit` ladder
+  (default `view`), `canView`/`canComment`/`canEdit`/`coachHasAtLeast`, and the
+  `fleetSuggestions` payload builder + `sanitizeSuggestedChanges`
+  (scalars/scalar-arrays only) + `applySuggestedChanges`.
+
+Still deferred (gated on the rules harness, which is BLOCKED on JDK 21 - see
+`FIRESTORE_RULES_TESTING_PLAN.md`): the `athleteInvites`, `fleetSuggestions`,
+and `coachAccess` collections and their rules; the coach invite UI; the
+athlete "Manage coach access" + Suggestions inbox; and the `edit` tier. No
+Firestore rules were changed or deployed.

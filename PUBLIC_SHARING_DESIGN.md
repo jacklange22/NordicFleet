@@ -110,3 +110,17 @@ fields, so even a readable share cannot leak private data.
 5. (Later) Firebase Admin server route for truly live data.
 
 Do not ship steps 2 to 4 until step 2's rules tests pass.
+
+## Implementation-pass status (2026-05-30)
+
+Still deferred. The implementation pass added a Firestore rules regression
+harness (`firestore-tests/`) but it is BLOCKED on the local toolchain (JDK 21
+required by firebase-tools; only JDK 11 is installed), so no rules can be
+emulator-tested or deployed yet. See `FIRESTORE_RULES_TESTING_PLAN.md`.
+
+Because public sharing is gated on new unauthenticated-read rules, nothing in
+this document shipped this pass. Even step 1 (the pure-core
+`buildPublicShare` builder + sanitizer) was intentionally left for the same
+pass that lands the rules, so the snapshot shape and the rules are written and
+tested together. The current screenshot-image share (skiInfo) is unchanged and
+needs no rules.

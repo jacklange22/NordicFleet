@@ -90,6 +90,55 @@ catch anything embarrassing before strangers see it.
 - [ ] Delete account removes Auth user + Firestore docs (verify in console).
 - [ ] Privacy/Terms links in Profile open the marketing pages.
 
+## 6. Implementation-pass features (2026-05-30)
+
+New this pass. Run on iOS at minimum; note any web gaps (web parity is on the
+backlog, not shipped).
+
+### 6a. Unified messaging
+
+- [ ] As an athlete with a linked coach, open **Messages**. A coach-sent
+      message shows as **Received** with an unread dot; once opened the dot
+      clears.
+- [ ] Send a message the other way (athlete → coach if available, or verify on
+      the coach device): the **sender** sees their own message in the list,
+      labelled **Sent** (or **Sent · Read** once the recipient opens it).
+- [ ] The list is one chronological thread (newest first), not a one-way inbox.
+- [ ] The tab badge counts only **received-unread** - a message you sent does
+      not bump your own badge.
+
+### 6b. History screens + stat-card nav
+
+- [ ] On **Home**, tap the **Last wax** figure → full **Wax history** across all
+      skis, each row labelled by ski name, newest first.
+- [ ] Tap the **Tests logged** figure → full **Test history**.
+- [ ] The **Total skis** figure is NOT tappable (the fleet is listed below it).
+
+### 6c. Edit a wax / test log
+
+- [ ] Tap a row in Wax history (or a ski's wax history) → **Edit wax**. Change a
+      field, Save → the change shows in history; the log keeps its original
+      date/position (created time preserved).
+- [ ] Same for a test log via **Edit test** (conditions + ratings; the stored
+      location is preserved, not edited).
+- [ ] In a **coach** (read-only) view of an athlete's ski, the history rows are
+      NOT tappable to edit.
+
+### 6d. Unit preferences
+
+- [ ] **Profile → Units**: switch Weight to **lb** / Height to **in**. The
+      figures convert immediately; the underlying value is unchanged (re-open in
+      kg/cm to confirm it round-trips).
+- [ ] Editing weight while in lb stores the metric value back (not the raw lb
+      number).
+
+### 6e. Beta feedback entry point
+
+- [ ] **Settings → Feedback → Send beta feedback** opens a mail draft (or the
+      site if no feedback inbox is configured) with the **build tag + platform**
+      in the body. Confirm it never targets `nordicfleet.com`.
+- [ ] **Report a problem** does the same with a bug-report subject.
+
 ## What to capture
 
 - Screenshots/recordings of: empty Home, a filled ski detail, the Wax
