@@ -70,4 +70,42 @@ describe('ProfileScreen', () => {
     const stored = firestoreMock.__getStore().get('users/u1');
     expect(stored.weight).toBe(72);
   });
+
+  it('renders a stored metric weight in pounds when the profile prefers lb', async () => {
+    authMock.__setCurrentUser({uid: 'u1', email: 'a@b.com'});
+    firestoreMock.__seedDoc('users/u1', {
+      email: 'a@b.com',
+      weight: 70, // stored as kg
+      weightUnit: 'lb',
+    });
+    const tree = renderProfile();
+    // 70 kg displayed in pounds.
+    await waitFor(() => tree.getByText('154.3 lb'));
+  });
+
+  it('converts an lb entry back to kilograms on save', async () => {
+    authMock.__setCurrentUser({uid: 'u1', email: 'a@b.com'});
+    firestoreMock.__seedDoc('users/u1', {email: 'a@b.com', weightUnit: 'lb'});
+    const tree = renderProfile();
+    await waitFor(() => tree.getByLabelText('Edit Weight (lb):'));
+    fireEvent.press(tree.getByLabelText('Edit Weight (lb):'));
+    const inputs = tree.UNSAFE_getAllByType(require('react-native').TextInput);
+    fireEvent.changeText(inputs[inputs.length - 1], '154.3');
+    fireEvent.press(tree.getByText('Save'));
+    await act(async () => {});
+    const stored = firestoreMock.__getStore().get('users/u1');
+    // Stored back in kg, not the raw pounds figure.
+    expect(stored.weight).toBeCloseTo(70, 0);
+  });
+
+  it('persists the weight unit preference when a unit chip is tapped', async () => {
+    authMock.__setCurrentUser({uid: 'u1', email: 'a@b.com'});
+    firestoreMock.__seedDoc('users/u1', {email: 'a@b.com', weight: 70});
+    const tree = renderProfile();
+    await waitFor(() => tree.getByText('70 kg'));
+    fireEvent.press(tree.getByLabelText('Height in inches'));
+    await act(async () => {});
+    const stored = firestoreMock.__getStore().get('users/u1');
+    expect(stored.heightUnit).toBe('in');
+  });
 });

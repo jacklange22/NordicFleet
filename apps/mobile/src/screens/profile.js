@@ -17,7 +17,17 @@ import {useNavigation} from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
 import Toast from 'react-native-toast-message';
-import {isValidEmail} from '@nordicfleet/core';
+import {
+  isValidEmail,
+  formatWeight,
+  formatHeight,
+  weightFromMetric,
+  weightToMetric,
+  heightFromMetric,
+  heightToMetric,
+  normalizeWeightUnit,
+  normalizeHeightUnit,
+} from '@nordicfleet/core';
 import LoadingScreen from '../components/LoadingScreen';
 import {shareSnapshot, fleetShareMessage} from '../services/shareService';
 import FleetShareCard from '../components/share/FleetShareCard';
@@ -48,18 +58,33 @@ import {
   SectionHeader,
   Button,
   Input,
+  Pill,
   TabBar,
 } from '../components/ui';
 import {colors, radius, spacing, typography} from '../theme';
 
 const NUMERIC_FIELDS = new Set(['weight', 'height']);
 
+// weight/height are stored in metric (kg/cm); `unitKind` drives the
+// per-user display unit (see the Units section + @nordicfleet/core).
 const FIELD_DEFS = [
-  {key: 'weight', label: 'Weight', suffix: ' kg', icon: 'barbell-outline'},
-  {key: 'height', label: 'Height', suffix: ' cm', icon: 'resize-outline'},
+  {key: 'weight', label: 'Weight', unitKind: 'weight', icon: 'barbell-outline'},
+  {key: 'height', label: 'Height', unitKind: 'height', icon: 'resize-outline'},
   {key: 'team', label: 'Team', icon: 'people-outline'},
   {key: 'location', label: 'Location', icon: 'location-outline'},
 ];
+
+// The active display unit ('kg'/'lb'/'cm'/'in') for a field, or '' for
+// plain text fields.
+const unitFor = (def, weightUnit, heightUnit) => {
+  if (def.unitKind === 'weight') {
+    return weightUnit;
+  }
+  if (def.unitKind === 'height') {
+    return heightUnit;
+  }
+  return '';
+};
 
 // Brief: decimal-pad for weight/height. iOS decimal-pad shows digits +
 // the locale's decimal separator (no minus sign - fine for these, since
@@ -71,12 +96,18 @@ const keyboardTypeFor = field => {
   return 'default';
 };
 
-const fieldDisplay = (def, profile) => {
+const fieldDisplay = (def, profile, weightUnit, heightUnit) => {
   const v = profile?.[def.key];
   if (v === undefined || v === null || v === '') {
     return '-';
   }
-  return `${v}${def.suffix || ''}`;
+  if (def.unitKind === 'weight') {
+    return formatWeight(v, weightUnit) || '-';
+  }
+  if (def.unitKind === 'height') {
+    return formatHeight(v, heightUnit) || '-';
+  }
+  return `${v}`;
 };
 
 const ProfileScreen = () => {
@@ -88,6 +119,11 @@ const ProfileScreen = () => {
   const {profile, loading} = useProfile(uid);
   const {skis} = useSkis(uid);
   const {totalWaxes, totalTests} = useDashboardStats(uid);
+
+  // Display units for body metrics (stored value stays metric). Default
+  // to kg/cm when the profile carries no preference yet.
+  const weightUnit = normalizeWeightUnit(profile?.weightUnit);
+  const heightUnit = normalizeHeightUnit(profile?.heightUnit);
 
   const [coachingBusy, setCoachingBusy] = useState(false);
 
@@ -170,7 +206,19 @@ const ProfileScreen = () => {
 
   const openEdit = def => {
     const v = profile?.[def.key];
-    setTempValue(v !== undefined && v !== null ? String(v) : '');
+    let display = '';
+    if (v !== undefined && v !== null && v !== '') {
+      if (def.unitKind === 'weight') {
+        const n = weightFromMetric(v, weightUnit);
+        display = n === null ? '' : String(n);
+      } else if (def.unitKind === 'height') {
+        const n = heightFromMetric(v, heightUnit);
+        display = n === null ? '' : String(n);
+      } else {
+        display = String(v);
+      }
+    }
+    setTempValue(display);
     setEditField(def);
   };
 
@@ -179,11 +227,16 @@ const ProfileScreen = () => {
       setEditField(null);
       return;
     }
-    const next = NUMERIC_FIELDS.has(editField.key)
-      ? tempValue === ''
-        ? null
-        : Number(tempValue)
-      : tempValue;
+    // weight/height are entered in the user's display unit and converted
+    // back to metric (kg/cm) before storage.
+    let next;
+    if (editField.unitKind === 'weight') {
+      next = tempValue === '' ? null : weightToMetric(tempValue, weightUnit);
+    } else if (editField.unitKind === 'height') {
+      next = tempValue === '' ? null : heightToMetric(tempValue, heightUnit);
+    } else {
+      next = tempValue;
+    }
     try {
       await updateProfile(uid, {[editField.key]: next});
       Toast.show({
@@ -198,7 +251,23 @@ const ProfileScreen = () => {
     } finally {
       setEditField(null);
     }
-  }, [editField, tempValue, uid]);
+  }, [editField, tempValue, uid, weightUnit, heightUnit]);
+
+  // Switching a display unit only rewrites the preference; the stored
+  // metric value is unchanged, so the figure simply re-renders converted.
+  const changeUnit = useCallback(
+    async (field, value) => {
+      if (!uid) {
+        return;
+      }
+      try {
+        await updateProfile(uid, {[field]: value});
+      } catch (err) {
+        Alert.alert('Save failed', String(err.message || err));
+      }
+    },
+    [uid],
+  );
 
   const openCoachModal = useCallback(() => {
     setCoachEmailInput('');
@@ -436,27 +505,67 @@ const ProfileScreen = () => {
         {/* Personal info */}
         <SectionHeader title="Personal info" />
         <Card padding={0}>
-          {FIELD_DEFS.map((def, i) => (
-            <View key={def.key} style={styles.rowOuter}>
-              <ListItem
-                icon={def.icon}
-                title={`${def.label} (${def.suffix?.trim() || ''})`.replace(
-                  / \(\)$/,
-                  '',
-                )}
-                subtitle={fieldDisplay(def, profile)}
-                onPress={() => openEdit(def)}
-                accessibilityLabel={`Edit ${def.label}${
-                  def.suffix ? ` (${def.suffix.trim()}):` : ''
-                }`}
-                right={
-                  <Text style={styles.editAction}>Edit</Text>
-                }
-                showDivider={i < FIELD_DEFS.length - 1}
-                chevron={false}
-              />
+          {FIELD_DEFS.map((def, i) => {
+            const unit = unitFor(def, weightUnit, heightUnit);
+            return (
+              <View key={def.key} style={styles.rowOuter}>
+                <ListItem
+                  icon={def.icon}
+                  title={unit ? `${def.label} (${unit})` : def.label}
+                  subtitle={fieldDisplay(def, profile, weightUnit, heightUnit)}
+                  onPress={() => openEdit(def)}
+                  accessibilityLabel={`Edit ${def.label}${
+                    unit ? ` (${unit}):` : ''
+                  }`}
+                  right={<Text style={styles.editAction}>Edit</Text>}
+                  showDivider={i < FIELD_DEFS.length - 1}
+                  chevron={false}
+                />
+              </View>
+            );
+          })}
+        </Card>
+
+        {/* Measurement units */}
+        <SectionHeader title="Units" />
+        <Card padding={spacing.lg}>
+          <View style={styles.unitRow}>
+            <Text style={styles.unitRowLabel}>Weight</Text>
+            <View style={styles.unitChoices}>
+              {['kg', 'lb'].map(u => (
+                <View key={u} style={styles.unitChoiceWrap}>
+                  <Pill
+                    variant={weightUnit === u ? 'solid' : 'outline'}
+                    color="red"
+                    onPress={() => changeUnit('weightUnit', u)}
+                    accessibilityLabel={`Weight in ${
+                      u === 'kg' ? 'kilograms' : 'pounds'
+                    }`}>
+                    {u}
+                  </Pill>
+                </View>
+              ))}
             </View>
-          ))}
+          </View>
+          <View style={styles.unitDivider} />
+          <View style={styles.unitRow}>
+            <Text style={styles.unitRowLabel}>Height</Text>
+            <View style={styles.unitChoices}>
+              {['cm', 'in'].map(u => (
+                <View key={u} style={styles.unitChoiceWrap}>
+                  <Pill
+                    variant={heightUnit === u ? 'solid' : 'outline'}
+                    color="red"
+                    onPress={() => changeUnit('heightUnit', u)}
+                    accessibilityLabel={`Height in ${
+                      u === 'cm' ? 'centimetres' : 'inches'
+                    }`}>
+                    {u}
+                  </Pill>
+                </View>
+              ))}
+            </View>
+          </View>
         </Card>
 
         {/* Coaching capability toggle - every user can become a coach. */}
@@ -624,7 +733,11 @@ const ProfileScreen = () => {
                   value={tempValue}
                   onChangeText={setTempValue}
                   keyboardType={keyboardTypeFor(editField.key)}
-                  suffix={isNumeric ? (editField.suffix || '').trim() : undefined}
+                  suffix={
+                    isNumeric
+                      ? unitFor(editField, weightUnit, heightUnit)
+                      : undefined
+                  }
                   autoCapitalize={
                     isNumeric
                       ? 'none'
@@ -794,6 +907,26 @@ const styles = StyleSheet.create({
     ...typography.bodySm,
     color: colors.red,
     fontWeight: '600',
+  },
+  unitRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  unitRowLabel: {
+    ...typography.bodyLg,
+    color: colors.textPrimary,
+  },
+  unitChoices: {
+    flexDirection: 'row',
+  },
+  unitChoiceWrap: {
+    marginLeft: spacing.sm,
+  },
+  unitDivider: {
+    height: 1,
+    backgroundColor: colors.border,
+    marginVertical: spacing.md,
   },
   gearButton: {
     width: 40,
