@@ -338,9 +338,6 @@ const ScanSkiScreen = () => {
                       {parsed && parsed.rawLines?.length
                         ? `${parsed.rawLines.length} line${parsed.rawLines.length === 1 ? '' : 's'} detected`
                         : 'no lines detected'}
-                      {parsed && parsed.unmatched?.length
-                        ? ` • ${parsed.unmatched.length} ignored`
-                        : ''}
                     </Text>
                     <Pressable
                       onPress={handleRetake}
@@ -433,15 +430,6 @@ const ScanSkiScreen = () => {
               onChangeText={setNotes}
               multiline
             />
-
-            {!!parsed?.unmatched?.length && (
-              <Card style={styles.unmatchedCard}>
-                <Text style={styles.unmatchedTitle}>Ignored text</Text>
-                <Text style={styles.unmatchedBody}>
-                  {parsed.unmatched.join(' · ')}
-                </Text>
-              </Card>
-            )}
 
             {!!error && <Text style={styles.error}>{error}</Text>}
 
@@ -624,21 +612,6 @@ const styles = StyleSheet.create({
   row2: {flexDirection: 'row'},
   row2Cell: {flex: 1},
   row2Spacer: {width: spacing.md},
-  unmatchedCard: {
-    marginTop: spacing.lg,
-    borderStyle: 'dashed',
-  },
-  unmatchedTitle: {
-    ...typography.caption,
-    color: colors.textTertiary,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginBottom: spacing.xs,
-  },
-  unmatchedBody: {
-    ...typography.bodySm,
-    color: colors.textSecondary,
-  },
   error: {
     ...typography.body,
     color: colors.red,
