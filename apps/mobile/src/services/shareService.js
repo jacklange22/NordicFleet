@@ -7,7 +7,10 @@ import {captureRef} from 'react-native-view-shot';
  * invite goes to the marketing site.
  */
 export function inviteUrl() {
-  return process.env.NORDICFLEET_MARKETING_URL || 'https://nordicfleet.com';
+  return (
+    process.env.NORDICFLEET_MARKETING_URL ||
+    'https://marketing-black-eight.vercel.app'
+  );
 }
 
 /**
