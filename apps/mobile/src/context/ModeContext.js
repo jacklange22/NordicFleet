@@ -30,6 +30,7 @@ import {
   subscribeProfile,
   backfillCoachCapability,
 } from '../services/userService';
+import {trace} from '../services/devTrace';
 
 const STORAGE_KEY = 'nordicfleet.mode';
 
@@ -50,6 +51,7 @@ export const ModeProvider = ({children}) => {
   const {user} = useAuth();
   const [profile, setProfile] = useState(null);
   const [isCoach, setIsCoach] = useState(false);
+  const [profileLoaded, setProfileLoaded] = useState(false);
   const [mode, setModeState] = useState('personal');
   const [modeReady, setModeReady] = useState(false);
 
@@ -58,11 +60,14 @@ export const ModeProvider = ({children}) => {
     if (!user?.uid) {
       setProfile(null);
       setIsCoach(false);
+      setProfileLoaded(false);
       return undefined;
     }
     const unsub = subscribeProfile(user.uid, p => {
+      trace('profile-snapshot', {hasProfile: !!p, isCoach: deriveIsCoach(p)});
       setProfile(p);
       setIsCoach(deriveIsCoach(p));
+      setProfileLoaded(true);
       if (needsCoachBackfill(p)) {
         backfillCoachCapability(user.uid, p).catch(() => {});
       }
@@ -78,10 +83,16 @@ export const ModeProvider = ({children}) => {
         if (cancelled) {
           return;
         }
+        trace('mode-restore', {stored});
         if (VALID_MODES.includes(stored)) {
           setModeState(stored);
+        } else if (stored != null) {
+          // Corrupt / legacy value — drop it so we never re-read garbage
+          // and never strand the app on an invalid mode.
+          AsyncStorage.removeItem(STORAGE_KEY).catch(() => {});
         }
       })
+      .catch(() => {})
       .finally(() => {
         if (!cancelled) {
           setModeReady(true);
@@ -92,14 +103,20 @@ export const ModeProvider = ({children}) => {
     };
   }, []);
 
-  // If the user loses (or never had) the coaching capability, snap
-  // back to personal so we never strand them in a mode they can't use.
+  // If the user loses (or never had) the coaching capability, snap back to
+  // personal so we never strand them in a mode they can't use.
+  //
+  // Gate on profileLoaded: before the Firestore profile resolves, isCoach
+  // is false-by-default. Acting on that would clobber a real coach's
+  // persisted mode on every cold start, because AsyncStorage restores the
+  // mode well before the network profile arrives. Only correct the mode
+  // once we actually KNOW the capability.
   useEffect(() => {
-    if (!isCoach && mode !== 'personal') {
+    if (profileLoaded && !isCoach && mode !== 'personal') {
       setModeState('personal');
       AsyncStorage.setItem(STORAGE_KEY, 'personal').catch(() => {});
     }
-  }, [isCoach, mode]);
+  }, [profileLoaded, isCoach, mode]);
 
   const setMode = useCallback(
     next => {

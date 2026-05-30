@@ -32,6 +32,17 @@ import ErrorBoundary from './src/components/ErrorBoundary';
 import Toast from 'react-native-toast-message';
 import {toastConfig} from './src/components/ui/toastConfig';
 import {colors} from './src/theme';
+import {trace} from './src/services/devTrace';
+
+// TEMPORARY freeze diagnostics (PHONE_FREEZE_DEBUG_STEPS.md): the deepest
+// active route name, for the navigator onStateChange trace.
+const getActiveRouteName = (state: any): string | undefined => {
+  if (!state || typeof state.index !== 'number') {
+    return undefined;
+  }
+  const route = state.routes[state.index];
+  return route?.state ? getActiveRouteName(route.state) : route?.name;
+};
 
 const navTheme = {
   ...DefaultTheme,
@@ -49,13 +60,19 @@ const navTheme = {
 const Stack = createStackNavigator();
 
 const App = () => {
+  React.useEffect(() => {
+    trace('app-mounted');
+  }, []);
   return (
     <ErrorBoundary>
       <SafeAreaProvider>
         <StatusBar barStyle="light-content" backgroundColor={colors.bg} />
         <AuthProvider>
           <ModeProvider>
-          <NavigationContainer theme={navTheme}>
+          <NavigationContainer
+            theme={navTheme}
+            onReady={() => trace('navigator-ready')}
+            onStateChange={state => trace('route', getActiveRouteName(state))}>
             <Stack.Navigator
               initialRouteName="AuthLoading"
               screenOptions={{

@@ -8,6 +8,7 @@ import React, {
 } from 'react';
 import {auth} from '../services/firebase';
 import {createProfile} from '../services/userService';
+import {trace} from '../services/devTrace';
 
 const AuthContext = createContext({
   user: null,
@@ -24,6 +25,7 @@ export const AuthProvider = ({children}) => {
 
   useEffect(() => {
     const unsub = auth().onAuthStateChanged(u => {
+      trace('auth-resolved', {signedIn: !!u});
       setUser(u || null);
       setLoading(false);
     });

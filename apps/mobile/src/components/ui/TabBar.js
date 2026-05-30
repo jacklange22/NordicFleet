@@ -15,6 +15,7 @@ import {colors, spacing, typography} from '../../theme';
 import {useAuth} from '../../context/AuthContext';
 import {useMode} from '../../context/ModeContext';
 import {subscribeUnreadCountForAthlete} from '../../services/messageService';
+import {trace} from '../../services/devTrace';
 
 // Both useNavigation and useRoute throw when the component isn't inside a
 // NavigationContainer / Screen. Tests sometimes render screens standalone,
@@ -116,6 +117,7 @@ const TabBar = () => {
     if (next === mode) {
       return;
     }
+    trace('mode-switch', {from: mode, to: next});
     LayoutAnimation.configureNext(
       LayoutAnimation.create(180, 'easeInEaseOut', 'opacity'),
     );
