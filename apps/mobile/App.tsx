@@ -24,6 +24,7 @@ import ScanSkiScreen from './src/screens/scanSki.js';
 import RoleSelectScreen from './src/screens/roleSelect.js';
 import CoachDashboardScreen from './src/screens/coachDashboard.js';
 import AthleteDetailScreen from './src/screens/athleteDetail.js';
+import InviteAthletesScreen from './src/screens/inviteAthletes.js';
 import MessagesScreen from './src/screens/messages.js';
 import MessageDetailScreen from './src/screens/messageDetail.js';
 import ComposeAdvisoryScreen from './src/screens/composeAdvisory.js';
@@ -128,6 +129,10 @@ const App = () => {
               <Stack.Screen
                 name="AthleteDetail"
                 component={AthleteDetailScreen}
+              />
+              <Stack.Screen
+                name="InviteAthletes"
+                component={InviteAthletesScreen}
               />
               <Stack.Screen name="Messages" component={MessagesScreen} />
               <Stack.Screen

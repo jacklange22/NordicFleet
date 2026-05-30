@@ -190,6 +190,65 @@ describe('messages', () => {
   });
 });
 
+describe('athleteInvites', () => {
+  beforeEach(async () => {
+    await seed(db =>
+      setDoc(doc(db, 'athleteInvites/inv1'), {
+        coachUid: 'coach',
+        coachName: 'Coach',
+        email: 'a@b.com',
+        token: 'tok1',
+        status: 'pending',
+      }),
+    );
+  });
+
+  it('a coach can create an invite they own, starting pending', async () => {
+    await assertSucceeds(
+      setDoc(doc(asCoach(), 'athleteInvites/inv2'), {
+        coachUid: 'coach',
+        email: 'x@y.com',
+        token: 't2',
+        status: 'pending',
+      }),
+    );
+  });
+
+  it('rejects a non-pending invite or one owned by someone else', async () => {
+    await assertFails(
+      setDoc(doc(asCoach(), 'athleteInvites/inv3'), {
+        coachUid: 'coach',
+        email: 'x@y.com',
+        token: 't3',
+        status: 'accepted',
+      }),
+    );
+    await assertFails(
+      setDoc(doc(asCoach(), 'athleteInvites/inv4'), {
+        coachUid: 'someone-else',
+        email: 'x@y.com',
+        token: 't4',
+        status: 'pending',
+      }),
+    );
+  });
+
+  it('only the owning coach can read an invite (no enumeration)', async () => {
+    await assertSucceeds(getDoc(doc(asCoach(), 'athleteInvites/inv1')));
+    await assertFails(getDoc(doc(asBob(), 'athleteInvites/inv1')));
+    await assertFails(getDoc(doc(asAnon(), 'athleteInvites/inv1')));
+  });
+
+  it('the owning coach can revoke; others cannot update', async () => {
+    await assertSucceeds(
+      updateDoc(doc(asCoach(), 'athleteInvites/inv1'), {status: 'revoked'}),
+    );
+    await assertFails(
+      updateDoc(doc(asBob(), 'athleteInvites/inv1'), {status: 'revoked'}),
+    );
+  });
+});
+
 describe('marketingSignups', () => {
   it('anyone can create a valid signup but clients cannot read them', async () => {
     await assertSucceeds(

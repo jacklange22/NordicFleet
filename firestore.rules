@@ -113,6 +113,30 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // Coach -> athlete invites: the coach's PRIVATE tracking list of who
+    // they invited and the status. There is deliberately NO public / athlete
+    // read here, so invite tokens cannot be enumerated. Redemption does NOT
+    // happen via a token lookup in this collection - the athlete connects
+    // through the existing athlete-initiated coachRequests flow (entering the
+    // coach's email). This doc is purely the coach's record.
+    match /athleteInvites/{inviteId} {
+      // Only the owning coach reads / lists their invites.
+      allow read: if request.auth != null
+        && request.auth.uid == resource.data.coachUid;
+
+      // A coach creates an invite they own; it must start 'pending'.
+      allow create: if request.auth != null
+        && request.auth.uid == request.resource.data.coachUid
+        && request.resource.data.status == 'pending';
+
+      // The owning coach can update (e.g. revoke) their own invite.
+      allow update: if request.auth != null
+        && request.auth.uid == resource.data.coachUid;
+
+      // Keep an audit trail - no client delete.
+      allow delete: if false;
+    }
+
     // Marketing email signups from the public website. Anyone (signed in
     // or not) can submit one, but nobody can read, update, or delete them
     // from the client — they're an internal lead list. We require the doc

@@ -1,5 +1,7 @@
 const {
   parseEmailList,
+  makeInviteToken,
+  buildInvitePayload,
   buildInviteLink,
   buildInviteEmail,
   buildInviteMailto,
@@ -27,6 +29,58 @@ describe('parseEmailList', () => {
   test('empty / non-string input yields empty buckets', () => {
     expect(parseEmailList('')).toEqual({emails: [], invalid: []});
     expect(parseEmailList(null)).toEqual({emails: [], invalid: []});
+  });
+});
+
+describe('makeInviteToken', () => {
+  test('produces a non-trivial url-safe token', () => {
+    const t = makeInviteToken();
+    expect(typeof t).toBe('string');
+    expect(t.length).toBeGreaterThanOrEqual(16);
+    expect(t).toMatch(/^[a-z0-9]+$/);
+  });
+
+  test('is effectively unique across calls', () => {
+    const set = new Set();
+    for (let i = 0; i < 200; i += 1) {
+      set.add(makeInviteToken());
+    }
+    expect(set.size).toBe(200);
+  });
+});
+
+describe('buildInvitePayload', () => {
+  test('builds a pending invite with a lowercased email + token', () => {
+    const out = buildInvitePayload({
+      coachUid: 'c1',
+      coachName: '  Coach Pat ',
+      email: 'Athlete@X.com',
+    });
+    expect(out).toMatchObject({
+      coachUid: 'c1',
+      coachName: 'Coach Pat',
+      email: 'athlete@x.com',
+      status: 'pending',
+    });
+    expect(typeof out.token).toBe('string');
+    expect(out.token.length).toBeGreaterThanOrEqual(16);
+  });
+
+  test('honors a supplied token and null coachName', () => {
+    const out = buildInvitePayload({
+      coachUid: 'c1',
+      email: 'a@b.com',
+      token: 'tok123',
+    });
+    expect(out.token).toBe('tok123');
+    expect(out.coachName).toBeNull();
+  });
+
+  test('rejects missing coachUid or invalid email', () => {
+    expect(() => buildInvitePayload({email: 'a@b.com'})).toThrow(/coachUid/);
+    expect(() =>
+      buildInvitePayload({coachUid: 'c1', email: 'nope'}),
+    ).toThrow(/valid athlete email/);
   });
 });
 

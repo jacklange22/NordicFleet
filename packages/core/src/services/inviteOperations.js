@@ -40,6 +40,51 @@ function parseEmailList(text) {
 }
 
 /**
+ * Generate a URL-safe tracking token for an invite. This is a tracking id,
+ * NOT a security secret: redemption goes through the existing
+ * athlete-initiated coachRequest flow (the athlete enters the coach's email),
+ * so a leaked token cannot link anyone to a coach on its own. ~18+ chars of
+ * base36 from time + randomness, no crypto dependency.
+ *
+ * @returns {string}
+ */
+function makeInviteToken() {
+  const rand = () => Math.random().toString(36).slice(2, 10);
+  return `${Date.now().toString(36)}${rand()}${rand()}`;
+}
+
+/**
+ * Shape the field set for a NEW athleteInvites/{id} doc (the coach's private
+ * tracking record). The platform layer adds createdAt / expiresAt timestamps.
+ * Throws on an invalid email.
+ *
+ * @param {Object} args
+ * @param {string} args.coachUid
+ * @param {string} [args.coachName]
+ * @param {string} args.email
+ * @param {string} [args.token]   defaults to a fresh makeInviteToken()
+ * @returns {Object}
+ */
+function buildInvitePayload({coachUid, coachName, email, token} = {}) {
+  if (!coachUid) {
+    throw new Error('coachUid is required');
+  }
+  const cleanEmail = String(email || '')
+    .trim()
+    .toLowerCase();
+  if (!isValidEmail(cleanEmail)) {
+    throw new Error('A valid athlete email is required');
+  }
+  return {
+    coachUid,
+    coachName: (coachName || '').trim() || null,
+    email: cleanEmail,
+    token: token || makeInviteToken(),
+    status: 'pending',
+  };
+}
+
+/**
  * Build a shareable invite link off a base URL. Carries the coach id (so
  * the athlete app can pre-fill the coach request) and optional name.
  *
@@ -103,6 +148,8 @@ function buildInviteMailto(emails, opts = {}) {
 
 module.exports = {
   parseEmailList,
+  makeInviteToken,
+  buildInvitePayload,
   buildInviteLink,
   buildInviteEmail,
   buildInviteMailto,

@@ -162,6 +162,17 @@ const CoachDashboardScreen = () => {
           <StatCard compact value="-" label="Tests / wk" />
         </View>
       </View>
+      <View style={styles.inviteCta}>
+        <Button
+          variant="secondary"
+          size="md"
+          fullWidth
+          icon="person-add-outline"
+          onPress={() => navigation.navigate('InviteAthletes')}
+          accessibilityLabel="Invite athletes">
+          Invite athletes
+        </Button>
+      </View>
       {pendingRequests.length > 0 && (
         <>
           <SectionHeader title="Pending requests" />
@@ -297,6 +308,8 @@ const styles = StyleSheet.create({
   },
   statCell: {flex: 1},
   statCellSpacer: {width: spacing.sm},
+
+  inviteCta: {marginBottom: spacing.md},
 
   afterSearch: {height: spacing.lg},
 
