@@ -2,6 +2,7 @@ import Link from 'next/link';
 import {Container, Eyebrow} from '@/components/ui';
 import {Reveal} from '@/components/Reveal';
 import {EmailCapture} from '@/components/EmailCapture';
+import {APP_URL} from '@/lib/urls';
 
 export const metadata = {
   title: 'Pricing',
@@ -39,9 +40,6 @@ const PLANS = [
     highlight: true,
   },
 ];
-
-const APP_URL =
-  process.env.NEXT_PUBLIC_APP_URL || 'https://app.nordicfleet.com';
 
 export default function PricingPage() {
   return (

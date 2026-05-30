@@ -3,6 +3,7 @@
 import {useEffect, useState} from 'react';
 import Link from 'next/link';
 import {usePathname} from 'next/navigation';
+import {APP_URL} from '@/lib/urls';
 
 const LINKS = [
   {href: '/features', label: 'Features'},
@@ -10,9 +11,6 @@ const LINKS = [
   {href: '/pricing', label: 'Pricing'},
   {href: '/about', label: 'About'},
 ];
-
-const APP_URL =
-  process.env.NEXT_PUBLIC_APP_URL || 'https://app.nordicfleet.com';
 
 export function Nav() {
   const pathname = usePathname();

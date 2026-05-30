@@ -1,15 +1,16 @@
 import './globals.css';
 import {Nav} from '@/components/Nav';
 import {Footer} from '@/components/Footer';
+import {MARKETING_URL} from '@/lib/urls';
 
-const SITE_URL = 'https://nordicfleet.com';
+const SITE_URL = MARKETING_URL;
 const DESCRIPTION =
-  'NordicFleet is the ski-and-wax logbook for nordic racers and coaches — track your fleet, log conditions, and run head-to-head wax tests that settle the argument.';
+  'NordicFleet is the ski and wax logbook for nordic racers and coaches. Track your fleet, log conditions, and run head-to-head wax tests that settle the argument.';
 
 export const metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: 'NordicFleet — the wax logbook for nordic racers',
+    default: 'NordicFleet: the wax logbook for nordic racers',
     template: '%s · NordicFleet',
   },
   description: DESCRIPTION,
@@ -23,7 +24,7 @@ export const metadata = {
     'ski coach',
   ],
   openGraph: {
-    title: 'NordicFleet — the wax logbook for nordic racers',
+    title: 'NordicFleet: the wax logbook for nordic racers',
     description: DESCRIPTION,
     url: SITE_URL,
     siteName: 'NordicFleet',
@@ -31,7 +32,7 @@ export const metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'NordicFleet — the wax logbook for nordic racers',
+    title: 'NordicFleet: the wax logbook for nordic racers',
     description: DESCRIPTION,
   },
 };

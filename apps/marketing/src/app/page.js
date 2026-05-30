@@ -2,9 +2,7 @@ import Link from 'next/link';
 import {Container, Eyebrow, FeatureCard} from '@/components/ui';
 import {Reveal} from '@/components/Reveal';
 import {EmailCapture} from '@/components/EmailCapture';
-
-const APP_URL =
-  process.env.NEXT_PUBLIC_APP_URL || 'https://app.nordicfleet.com';
+import {APP_URL} from '@/lib/urls';
 
 export default function HomePage() {
   return (

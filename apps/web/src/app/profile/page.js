@@ -24,10 +24,7 @@ import {
   exportUserData,
   deleteAccount,
 } from '@/lib/firestore';
-
-const MARKETING_URL =
-  process.env.NEXT_PUBLIC_MARKETING_URL ||
-  'https://marketing-black-eight.vercel.app';
+import {MARKETING_URL} from '@/lib/urls';
 
 export default function ProfilePage() {
   return (
