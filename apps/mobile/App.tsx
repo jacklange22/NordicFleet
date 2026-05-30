@@ -11,6 +11,7 @@ import ForgotPasswordScreen from './src/screens/forgotPassword.js';
 import AuthLoadingScreen from './src/screens/AuthLoadingScreen';
 import HomeScreen from './src/screens/homescreen.js';
 import ProfileScreen from './src/screens/profile.js';
+import SettingsScreen from './src/screens/settings.js';
 import TestingLogScreen from './src/screens/testinglog.js';
 import WaxLogScreen from './src/screens/waxinglog.js';
 import SkiInfo from './src/screens/skiInfo.js';
@@ -71,6 +72,7 @@ const App = () => {
               />
               <Stack.Screen name="Home" component={HomeScreen} />
               <Stack.Screen name="Profile" component={ProfileScreen} />
+              <Stack.Screen name="Settings" component={SettingsScreen} />
               <Stack.Screen name="TestingLog" component={TestingLogScreen} />
               <Stack.Screen name="WaxLog" component={WaxLogScreen} />
               <Stack.Screen name="SkiInfo" component={SkiInfo} />

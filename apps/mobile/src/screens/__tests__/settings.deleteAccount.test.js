@@ -6,7 +6,7 @@ import {Alert} from 'react-native';
 import authMock from '@react-native-firebase/auth';
 import firestoreMock from '@react-native-firebase/firestore';
 
-import ProfileScreen from '../profile';
+import SettingsScreen from '../settings';
 import {AuthProvider} from '../../context/AuthContext';
 
 // Stub navigation so navigation.reset() is a spy we can assert, instead
@@ -40,18 +40,18 @@ const SA_METRICS = {
   insets: {top: 0, left: 0, right: 0, bottom: 0},
 };
 
-const renderProfile = () =>
+const renderSettings = () =>
   render(
     <SafeAreaProvider initialMetrics={SA_METRICS}>
       <NavigationContainer>
         <AuthProvider>
-          <ProfileScreen />
+          <SettingsScreen />
         </AuthProvider>
       </NavigationContainer>
     </SafeAreaProvider>,
   );
 
-describe('ProfileScreen — delete account', () => {
+describe('SettingsScreen — delete account (#4)', () => {
   it('first alert + cancel: does not call deleteAccount', async () => {
     authMock.__setCurrentUser({uid: 'a1', email: 'a@b.com'});
     firestoreMock.__seedDoc('users/a1', {email: 'a@b.com', role: 'athlete'});
@@ -61,7 +61,7 @@ describe('ProfileScreen — delete account', () => {
       cancelButton = buttons.find(b => b.text === 'Cancel');
     });
 
-    const tree = renderProfile();
+    const tree = renderSettings();
     await waitFor(() => tree.getByLabelText('Delete account'));
     fireEvent.press(tree.getByLabelText('Delete account'));
 
@@ -81,13 +81,13 @@ describe('ProfileScreen — delete account', () => {
     firestoreMock.__seedDoc('users/a1', {email: 'a@b.com', role: 'athlete'});
 
     Alert.alert = jest.fn((title, msg, buttons) => {
-      const confirm = buttons.find(b => b.text === 'I want to delete');
+      const confirm = buttons.find(b => b.text === 'Continue');
       if (confirm && confirm.onPress) {
         confirm.onPress();
       }
     });
 
-    const tree = renderProfile();
+    const tree = renderSettings();
     await waitFor(() => tree.getByLabelText('Delete account'));
     await act(async () => {
       fireEvent.press(tree.getByLabelText('Delete account'));
@@ -109,13 +109,13 @@ describe('ProfileScreen — delete account', () => {
     firestoreMock.__seedDoc(`users/${aUid}/skis/s1`, {name: 'A'});
 
     Alert.alert = jest.fn((title, msg, buttons) => {
-      const confirm = buttons.find(b => b.text === 'I want to delete');
+      const confirm = buttons.find(b => b.text === 'Continue');
       if (confirm && confirm.onPress) {
         confirm.onPress();
       }
     });
 
-    const tree = renderProfile();
+    const tree = renderSettings();
     await waitFor(() => tree.getByLabelText('Delete account'));
     await act(async () => {
       fireEvent.press(tree.getByLabelText('Delete account'));
