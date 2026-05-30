@@ -51,7 +51,7 @@ if (
 // Personal mode: the full skier experience.
 const PERSONAL_TABS = [
   {key: 'home', label: 'Fleet', icon: 'home-outline', activeIcon: 'home', route: 'Home'},
-  {key: 'add', label: 'Add', icon: 'add-circle-outline', activeIcon: 'add-circle', route: 'newSki'},
+  {key: 'add', label: 'Ski', icon: 'add-circle-outline', activeIcon: 'add-circle', route: 'newSki'},
   {key: 'wax', label: 'Wax', icon: 'flask-outline', activeIcon: 'flask', route: 'WaxLog'},
   {key: 'test', label: 'Test', icon: 'analytics-outline', activeIcon: 'analytics', route: 'TestingLog'},
   {key: 'messages', label: 'Messages', icon: 'chatbubble-outline', activeIcon: 'chatbubble', route: 'Messages', badgeKey: 'unread'},
@@ -121,9 +121,12 @@ const TabBar = () => {
     );
     setMode(next);
     if (navigation) {
-      // Reframe to the destination mode's home so the user isn't left
-      // on a screen that doesn't belong to the new mode.
-      navigation.navigate(MODE_HOME[next]);
+      // A mode switch is a top-level context change, so RESET the stack to
+      // the new mode's home rather than pushing onto it. Pushing left
+      // stale-mode screens underneath and a back button that crossed
+      // modes — which made switching feel broken. reset() gives a clean,
+      // single-screen stack in the new mode.
+      navigation.reset({index: 0, routes: [{name: MODE_HOME[next]}]});
     }
   };
 
