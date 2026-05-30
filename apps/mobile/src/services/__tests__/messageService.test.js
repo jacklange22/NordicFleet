@@ -4,6 +4,7 @@ import {
   sendAdvisory,
   markRead,
   subscribeMessagesForAthlete,
+  subscribeMessagesForUser,
   subscribeMessagesFromCoach,
   subscribeUnreadCountForAthlete,
   getMessage,
@@ -164,6 +165,91 @@ describe('messageService', () => {
       const last = cb.mock.calls[cb.mock.calls.length - 1][0];
       expect(last.length).toBe(1);
       expect(last[0].body).toBe('A');
+    });
+  });
+
+  describe('subscribeMessagesForUser', () => {
+    it('fires with [] for missing uid', () => {
+      const cb = jest.fn();
+      subscribeMessagesForUser(null, cb);
+      expect(cb).toHaveBeenCalledWith([]);
+    });
+
+    it('tags a message the coach sent as direction=sent', () => {
+      firestoreMock.__seedDoc('messages/m1', {
+        fromUid: 'coach',
+        toUid: 'a1',
+        body: 'Try the cold wax',
+        read: false,
+        createdAt: {seconds: 100},
+      });
+      const cb = jest.fn();
+      subscribeMessagesForUser('coach', cb);
+      const last = cb.mock.calls[cb.mock.calls.length - 1][0];
+      expect(last.length).toBe(1);
+      expect(last[0].id).toBe('m1');
+      expect(last[0].direction).toBe('sent');
+    });
+
+    it('tags the same message the athlete received as direction=received', () => {
+      firestoreMock.__seedDoc('messages/m1', {
+        fromUid: 'coach',
+        toUid: 'a1',
+        body: 'Try the cold wax',
+        read: false,
+        createdAt: {seconds: 100},
+      });
+      const cb = jest.fn();
+      subscribeMessagesForUser('a1', cb);
+      const last = cb.mock.calls[cb.mock.calls.length - 1][0];
+      expect(last.length).toBe(1);
+      expect(last[0].id).toBe('m1');
+      expect(last[0].direction).toBe('received');
+    });
+
+    it('merges sent and received into one list, newest first, no duplicates', () => {
+      // Athlete a1 received this one (oldest).
+      firestoreMock.__seedDoc('messages/m1', {
+        fromUid: 'coach',
+        toUid: 'a1',
+        body: 'received-old',
+        read: false,
+        createdAt: {seconds: 100},
+      });
+      // a1 sent this one to the coach (newest).
+      firestoreMock.__seedDoc('messages/m2', {
+        fromUid: 'a1',
+        toUid: 'coach',
+        body: 'sent-new',
+        read: false,
+        createdAt: {seconds: 300},
+      });
+      // a1 received this one (middle).
+      firestoreMock.__seedDoc('messages/m3', {
+        fromUid: 'coach',
+        toUid: 'a1',
+        body: 'received-mid',
+        read: true,
+        createdAt: {seconds: 200},
+      });
+      // Not involving a1 at all - must be excluded.
+      firestoreMock.__seedDoc('messages/m4', {
+        fromUid: 'coach',
+        toUid: 'someone-else',
+        body: 'unrelated',
+        read: false,
+        createdAt: {seconds: 400},
+      });
+      const cb = jest.fn();
+      subscribeMessagesForUser('a1', cb);
+      const last = cb.mock.calls[cb.mock.calls.length - 1][0];
+      expect(last.map(m => m.id)).toEqual(['m2', 'm3', 'm1']);
+      expect(last.map(m => m.direction)).toEqual([
+        'sent',
+        'received',
+        'received',
+      ]);
+      expect(last.some(m => m.body === 'unrelated')).toBe(false);
     });
   });
 
