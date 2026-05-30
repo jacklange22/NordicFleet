@@ -112,6 +112,39 @@ describe('athlete subcollections + coach access', () => {
   });
 });
 
+describe('coach permission (on the athlete user doc)', () => {
+  beforeEach(async () => {
+    await seed(db =>
+      setDoc(doc(db, 'users/alice'), {
+        email: 'a@b.com',
+        role: 'athlete',
+        coachId: 'coach',
+        coachPermission: 'comment',
+      }),
+    );
+  });
+
+  it('the athlete can set their own coachPermission', async () => {
+    await assertSucceeds(
+      updateDoc(doc(asAlice(), 'users/alice'), {coachPermission: 'view'}),
+    );
+  });
+
+  it('the linked coach can READ the permission but CANNOT raise it', async () => {
+    await assertSucceeds(getDoc(doc(asCoach(), 'users/alice')));
+    await assertFails(
+      updateDoc(doc(asCoach(), 'users/alice'), {coachPermission: 'edit'}),
+    );
+  });
+
+  it('an unrelated user cannot read or change the permission', async () => {
+    await assertFails(getDoc(doc(asBob(), 'users/alice')));
+    await assertFails(
+      updateDoc(doc(asBob(), 'users/alice'), {coachPermission: 'edit'}),
+    );
+  });
+});
+
 describe('edit access (update) — ship-edit confidence', () => {
   beforeEach(async () => {
     await seed(async db => {

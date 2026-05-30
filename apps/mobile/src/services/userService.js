@@ -273,7 +273,27 @@ export async function removeCoach(athleteUid) {
   if (!athleteUid) {
     throw new Error('removeCoach: athleteUid is required');
   }
-  await updateProfile(athleteUid, {coachId: null});
+  // Clear the permission too so the next coach starts at the default (view).
+  await updateProfile(athleteUid, {coachId: null, coachPermission: null});
+}
+
+const COACH_PERMISSION_LEVELS = ['view', 'comment', 'edit'];
+
+/**
+ * Athlete sets how much access their coach has. Stored on the athlete's own
+ * user doc (owner-write), so a coach can never raise their own permission.
+ * Invalid values fall back to 'view'.
+ *
+ * @param {string} athleteUid
+ * @param {'view'|'comment'|'edit'} level
+ * @returns {Promise<void>}
+ */
+export async function setCoachPermission(athleteUid, level) {
+  if (!athleteUid) {
+    throw new Error('setCoachPermission: athleteUid is required');
+  }
+  const value = COACH_PERMISSION_LEVELS.includes(level) ? level : 'view';
+  await updateProfile(athleteUid, {coachPermission: value});
 }
 
 /**

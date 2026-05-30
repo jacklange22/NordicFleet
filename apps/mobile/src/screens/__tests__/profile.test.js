@@ -108,4 +108,39 @@ describe('ProfileScreen', () => {
     const stored = firestoreMock.__getStore().get('users/u1');
     expect(stored.heightUnit).toBe('in');
   });
+
+  it('lets a linked athlete set their coach permission to comment', async () => {
+    authMock.__setCurrentUser({uid: 'u1', email: 'a@b.com'});
+    firestoreMock.__seedDoc('users/u1', {
+      email: 'a@b.com',
+      coachId: 'coach1',
+    });
+    firestoreMock.__seedDoc('users/coach1', {
+      email: 'c@b.com',
+      role: 'coach',
+      name: 'Coach Pat',
+    });
+    // An accepted request keeps coachId set (the profile re-syncs coachId
+    // from requests on load, nulling it when there is no accepted one).
+    firestoreMock.__seedDoc('coachRequests/r1', {
+      athleteUid: 'u1',
+      coachUid: 'coach1',
+      status: 'accepted',
+      athleteEmail: 'a@b.com',
+      coachEmail: 'c@b.com',
+      updatedAt: {seconds: 100},
+    });
+    const tree = renderProfile();
+    const chip = await tree.findByLabelText(
+      'Coach access: Can suggest',
+      {},
+      {timeout: 4000},
+    );
+    fireEvent.press(chip);
+    await waitFor(() =>
+      expect(
+        firestoreMock.__getStore().get('users/u1').coachPermission,
+      ).toBe('comment'),
+    );
+  });
 });

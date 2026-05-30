@@ -40,8 +40,9 @@ import {
   removeCoach,
   getProfile,
   setCoachCapability,
+  setCoachPermission,
 } from '../services/userService';
-import {deriveIsCoach} from '@nordicfleet/core';
+import {deriveIsCoach, normalizePermission} from '@nordicfleet/core';
 import {useMode} from '../context/ModeContext';
 import {
   requestCoach,
@@ -124,6 +125,23 @@ const ProfileScreen = () => {
   // to kg/cm when the profile carries no preference yet.
   const weightUnit = normalizeWeightUnit(profile?.weightUnit);
   const heightUnit = normalizeHeightUnit(profile?.heightUnit);
+
+  // How much access the linked coach has (default view).
+  const coachPermission = normalizePermission(profile?.coachPermission);
+
+  const changeCoachPermission = useCallback(
+    async level => {
+      if (!uid) {
+        return;
+      }
+      try {
+        await setCoachPermission(uid, level);
+      } catch (err) {
+        Alert.alert('Update failed', String(err.message || err));
+      }
+    },
+    [uid],
+  );
 
   const [coachingBusy, setCoachingBusy] = useState(false);
 
@@ -629,6 +647,42 @@ const ProfileScreen = () => {
                     />
                   </View>
                   <View style={styles.rowOuter}>
+                    <View style={styles.permWrap}>
+                      <Text style={styles.permLabel}>Coach access</Text>
+                      <View style={styles.permChoices}>
+                        {[
+                          {key: 'view', label: 'View only'},
+                          {key: 'comment', label: 'Can suggest'},
+                        ].map(opt => (
+                          <View key={opt.key} style={styles.permChoiceWrap}>
+                            <Pill
+                              variant={
+                                coachPermission === opt.key ? 'solid' : 'outline'
+                              }
+                              color="red"
+                              onPress={() => changeCoachPermission(opt.key)}
+                              accessibilityLabel={`Coach access: ${opt.label}`}>
+                              {opt.label}
+                            </Pill>
+                          </View>
+                        ))}
+                        <View style={styles.permChoiceWrap}>
+                          <Pill
+                            variant="ghost"
+                            color="neutral"
+                            accessibilityLabel="Coach edit access, coming soon">
+                            Edit (soon)
+                          </Pill>
+                        </View>
+                      </View>
+                      <Text style={styles.permHint}>
+                        {coachPermission === 'comment'
+                          ? 'Your coach can suggest changes you approve. They cannot edit your data directly.'
+                          : 'Your coach can view your fleet and history only.'}
+                      </Text>
+                    </View>
+                  </View>
+                  <View style={styles.rowOuter}>
                     <ListItem
                       icon="close-circle-outline"
                       iconColor={colors.red}
@@ -927,6 +981,27 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: colors.border,
     marginVertical: spacing.md,
+  },
+  permWrap: {
+    paddingVertical: spacing.md,
+  },
+  permLabel: {
+    ...typography.bodyLg,
+    color: colors.textPrimary,
+    marginBottom: spacing.sm,
+  },
+  permChoices: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  permChoiceWrap: {
+    marginRight: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  permHint: {
+    ...typography.bodySm,
+    color: colors.textTertiary,
+    marginTop: spacing.xs,
   },
   gearButton: {
     width: 40,
