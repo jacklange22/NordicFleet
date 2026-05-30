@@ -1,13 +1,5 @@
-import React, {useEffect, useState} from 'react';
-import {
-  View,
-  Pressable,
-  Text,
-  StyleSheet,
-  LayoutAnimation,
-  UIManager,
-  Platform,
-} from 'react-native';
+import React, {useEffect, useRef, useState} from 'react';
+import {View, Pressable, Text, StyleSheet} from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import {useNavigation, useRoute} from '@react-navigation/native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
@@ -41,13 +33,6 @@ const useSafeMode = () => {
     return {mode: 'personal', setMode: () => {}, isCoach: false};
   }
 };
-
-if (
-  Platform.OS === 'android' &&
-  UIManager.setLayoutAnimationEnabledExperimental
-) {
-  UIManager.setLayoutAnimationEnabledExperimental(true);
-}
 
 // Personal mode: the full skier experience.
 const PERSONAL_TABS = [
@@ -101,6 +86,11 @@ const TabBar = () => {
   const {user} = useAuth() || {};
   const {mode, setMode, isCoach} = useSafeMode();
   const [unread, setUnread] = useState(0);
+  // Re-entrancy guard: a fast double-tap on the switcher (e.g. Coaching then
+  // Wax Truck) must not queue two stack resets. Set true on the first valid
+  // switch, released after the deferred navigation runs (or on unmount, when
+  // the reset tears this TabBar down).
+  const switchingRef = useRef(false);
 
   useEffect(() => {
     if (mode !== 'personal' || !user?.uid) {
@@ -114,22 +104,38 @@ const TabBar = () => {
   const tabs = MODE_TABS[mode] || PERSONAL_TABS;
 
   const switchMode = next => {
-    if (next === mode) {
+    // No-op when already in this mode, or while a switch is already in flight.
+    if (next === mode || switchingRef.current) {
       return;
     }
-    trace('mode switch', {from: mode, to: next});
-    LayoutAnimation.configureNext(
-      LayoutAnimation.create(180, 'easeInEaseOut', 'opacity'),
-    );
+    switchingRef.current = true;
+    trace('mode switch requested', {from: mode, to: next});
+
+    // 1) Persist + update the mode first (so the restored-mode + the screen
+    //    we reset to agree).
     setMode(next);
-    if (navigation) {
-      // A mode switch is a top-level context change, so RESET the stack to
-      // the new mode's home rather than pushing onto it. Pushing left
-      // stale-mode screens underneath and a back button that crossed
-      // modes — which made switching feel broken. reset() gives a clean,
-      // single-screen stack in the new mode.
-      navigation.reset({index: 0, routes: [{name: MODE_HOME[next]}]});
-    }
+    trace('mode persisted', {mode: next});
+
+    // 2) Defer the stack reset OUT of this touch/setState frame.
+    //    Previously this ran synchronously here, right after a native
+    //    layout-animation config call — and on a real device the Fabric
+    //    layout-animation driver tried to animate the whole stack teardown +
+    //    remount, aborting the mounting transaction on the main thread
+    //    (mounting pullTransaction -> SIGABRT). The layout animation is gone
+    //    now, and running reset() on the next frame lets the current frame's
+    //    mutations settle before the big remount.
+    const target = MODE_HOME[next];
+    requestAnimationFrame(() => {
+      if (navigation) {
+        // A mode switch is a top-level context change, so RESET the stack to
+        // the new mode's home (clean single-screen stack — no stale screens
+        // underneath, no back button that crosses modes).
+        trace('mode navigation start', {to: target});
+        navigation.reset({index: 0, routes: [{name: target}]});
+        trace('mode navigation complete', {to: target});
+      }
+      switchingRef.current = false;
+    });
   };
 
   return (
