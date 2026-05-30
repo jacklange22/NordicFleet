@@ -72,6 +72,7 @@ const ForgotPasswordScreen = ({navigation}) => {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView
           contentContainerStyle={styles.scroll}
+          keyboardDismissMode="on-drag"
           keyboardShouldPersistTaps="handled">
           {sentTo ? (
             <View style={styles.successWrap}>

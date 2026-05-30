@@ -73,6 +73,7 @@ const SignupScreen = ({navigation}) => {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView
           contentContainerStyle={styles.scroll}
+          keyboardDismissMode="on-drag"
           keyboardShouldPersistTaps="handled">
           <View style={styles.intro}>
             <Text style={styles.title}>Create your account</Text>

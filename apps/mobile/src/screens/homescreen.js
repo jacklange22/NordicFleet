@@ -323,6 +323,8 @@ const HomeScreen = () => {
           data={filteredSkis}
           keyExtractor={item => item.id.toString()}
           renderItem={renderSkiRow}
+          keyboardDismissMode="on-drag"
+          keyboardShouldPersistTaps="handled"
           ListHeaderComponent={ListHeader}
           ItemSeparatorComponent={SkiSeparator}
           ListEmptyComponent={

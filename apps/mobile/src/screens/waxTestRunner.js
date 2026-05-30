@@ -295,6 +295,7 @@ const WaxTestRunnerScreen = () => {
       />
       <ScrollView
         contentContainerStyle={styles.scroll}
+        keyboardDismissMode="on-drag"
         keyboardShouldPersistTaps="handled">
         {test.status === 'setup' && (
           <Arranger

@@ -33,6 +33,9 @@ import {colors, radius, spacing, typography} from '../../theme';
  *   textContentType    passthrough (iOS keychain hint)
  *   passwordRules      passthrough (iOS strong-password rules)
  *   autoCorrect        passthrough
+ *   returnKeyType      passthrough; single-line defaults to "done"
+ *   onSubmitEditing    passthrough (fires on the return key)
+ *   blurOnSubmit       passthrough; defaults to RN's behavior (true single-line)
  */
 const Input = ({
   label,
@@ -54,6 +57,9 @@ const Input = ({
   textContentType,
   passwordRules,
   autoCorrect,
+  returnKeyType,
+  onSubmitEditing,
+  blurOnSubmit,
 }) => {
   const [focused, setFocused] = useState(false);
   const [showSecure, setShowSecure] = useState(false);
@@ -129,6 +135,9 @@ const Input = ({
           autoCorrect={autoCorrect}
           editable={editable}
           multiline={multiline}
+          returnKeyType={returnKeyType || (multiline ? undefined : 'done')}
+          onSubmitEditing={onSubmitEditing}
+          blurOnSubmit={blurOnSubmit}
           textAlignVertical={multiline ? 'top' : 'center'}
           onFocus={e => {
             setFocused(true);

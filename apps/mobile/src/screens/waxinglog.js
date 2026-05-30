@@ -444,6 +444,7 @@ const WaxLogScreen = () => {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView
           contentContainerStyle={styles.scroll}
+          keyboardDismissMode="on-drag"
           keyboardShouldPersistTaps="handled">
           {loadingSkis ? (
             <View style={styles.loadingWrap}>

@@ -86,6 +86,7 @@ const OnboardingScreen = ({navigation}) => {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView
           contentContainerStyle={styles.scroll}
+          keyboardDismissMode="on-drag"
           keyboardShouldPersistTaps="handled">
           <Text style={styles.intro}>
             NordicFleet starts with your own fleet — your skis, your wax

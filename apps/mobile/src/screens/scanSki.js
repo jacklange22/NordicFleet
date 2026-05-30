@@ -327,6 +327,7 @@ const ScanSkiScreen = () => {
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <ScrollView
             contentContainerStyle={styles.reviewScroll}
+            keyboardDismissMode="on-drag"
             keyboardShouldPersistTaps="handled">
             {!!imageUri && (
               <Card style={styles.previewCard} padding={spacing.sm}>
