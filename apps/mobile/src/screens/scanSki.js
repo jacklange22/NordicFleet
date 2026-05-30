@@ -34,7 +34,7 @@ import {useNavigation} from '@react-navigation/native';
 import {launchCamera, launchImageLibrary} from 'react-native-image-picker';
 import Toast from 'react-native-toast-message';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import {parseStickerText, toSkiInput} from '@nordicfleet/core';
+import {parseSticker, toSkiInput} from '@nordicfleet/core';
 import {useAuth} from '../context/AuthContext';
 import {createSki} from '../services/skiService';
 import {recognizeTextLines, isOCRAvailable} from '../services/ocrService';
@@ -116,7 +116,10 @@ const ScanSkiScreen = () => {
     setError('');
     try {
       const lines = await recognizeTextLines(uri);
-      const p = parseStickerText(lines);
+      // Brand-aware parse: same per-field shape as before, plus brand
+      // metrics + an overall confidence, and brand refiners (e.g. Madshus
+      // hardness-code decoding) applied.
+      const p = parseSticker(lines);
       const prefill = toSkiInput(p);
       setParsed(p);
       // Pre-fill - toSkiInput already returns plain values.
