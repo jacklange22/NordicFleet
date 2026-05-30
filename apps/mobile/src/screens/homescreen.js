@@ -240,14 +240,44 @@ const HomeScreen = () => {
           <StatCard value={skis.length} label="Total skis" />
         </View>
         <View style={styles.statsCell}>
-          <StatCard
-            value={formatLastWax(lastWaxAt)}
-            label="Last wax"
-            valueStyle={styles.lastWaxValue}
-          />
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="View wax history"
+            onPress={() => navigation.navigate('WaxHistory')}
+            style={({pressed}) => [
+              styles.statPressable,
+              pressed && {opacity: 0.7},
+            ]}>
+            <StatCard
+              value={formatLastWax(lastWaxAt)}
+              label="Last wax"
+              valueStyle={styles.lastWaxValue}
+            />
+            <Ionicons
+              name="chevron-forward"
+              size={14}
+              color={colors.textTertiary}
+              style={styles.statChevron}
+            />
+          </Pressable>
         </View>
         <View style={styles.statsCell}>
-          <StatCard value={totalTests} label="Tests logged" />
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="View test history"
+            onPress={() => navigation.navigate('TestHistory')}
+            style={({pressed}) => [
+              styles.statPressable,
+              pressed && {opacity: 0.7},
+            ]}>
+            <StatCard value={totalTests} label="Tests logged" />
+            <Ionicons
+              name="chevron-forward"
+              size={14}
+              color={colors.textTertiary}
+              style={styles.statChevron}
+            />
+          </Pressable>
         </View>
       </View>
 
@@ -418,6 +448,15 @@ const styles = StyleSheet.create({
   statsCell: {
     flex: 1,
     marginHorizontal: spacing.xs,
+  },
+  statPressable: {
+    flex: 1,
+    position: 'relative',
+  },
+  statChevron: {
+    position: 'absolute',
+    top: spacing.sm,
+    right: spacing.sm,
   },
   lastWaxValue: {
     fontSize: 22,

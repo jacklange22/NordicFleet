@@ -74,6 +74,32 @@ export async function createWaxLog(uid, data) {
 }
 
 /**
+ * Subscribe to EVERY wax log for the user, newest first. Powers the
+ * full wax-history screen (reached from the dashboard).
+ * @param {string} uid
+ * @param {(logs: Array<object>) => void} callback
+ * @returns {() => void} unsubscribe
+ */
+export function subscribeAllWaxLogs(uid, callback) {
+  if (!uid) {
+    callback([]);
+    return () => {};
+  }
+  return waxLogsCollection(uid)
+    .orderBy('date', 'desc')
+    .onSnapshot(
+      snap => {
+        const logs = [];
+        snap.forEach(d => logs.push(mapDoc(d)));
+        callback(logs);
+      },
+      () => {
+        callback([]);
+      },
+    );
+}
+
+/**
  * Subscribe to wax logs for a single ski, newest first.
  * @param {string} uid
  * @param {string} skiId

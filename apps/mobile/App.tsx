@@ -14,6 +14,8 @@ import ProfileScreen from './src/screens/profile.js';
 import SettingsScreen from './src/screens/settings.js';
 import TestingLogScreen from './src/screens/testinglog.js';
 import WaxLogScreen from './src/screens/waxinglog.js';
+import WaxHistoryScreen from './src/screens/waxHistory.js';
+import TestHistoryScreen from './src/screens/testHistory.js';
 import SkiInfo from './src/screens/skiInfo.js';
 import AddSkiForm from './src/screens/newSki.js';
 import ScanSkiScreen from './src/screens/scanSki.js';
@@ -109,6 +111,8 @@ const App = () => {
               <Stack.Screen name="Settings" component={SettingsScreen} />
               <Stack.Screen name="TestingLog" component={TestingLogScreen} />
               <Stack.Screen name="WaxLog" component={WaxLogScreen} />
+              <Stack.Screen name="WaxHistory" component={WaxHistoryScreen} />
+              <Stack.Screen name="TestHistory" component={TestHistoryScreen} />
               <Stack.Screen name="SkiInfo" component={SkiInfo} />
               <Stack.Screen name="newSki" component={AddSkiForm} />
               <Stack.Screen name="ScanSki" component={ScanSkiScreen} />

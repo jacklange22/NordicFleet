@@ -83,6 +83,32 @@ export async function createTestLog(uid, data) {
 }
 
 /**
+ * Subscribe to EVERY test log for the user, newest first. Powers the
+ * full test-history screen (reached from the dashboard).
+ * @param {string} uid
+ * @param {(logs: Array<object>) => void} callback
+ * @returns {() => void} unsubscribe
+ */
+export function subscribeAllTestLogs(uid, callback) {
+  if (!uid) {
+    callback([]);
+    return () => {};
+  }
+  return testLogsCollection(uid)
+    .orderBy('date', 'desc')
+    .onSnapshot(
+      snap => {
+        const logs = [];
+        snap.forEach(d => logs.push(mapDoc(d)));
+        callback(logs);
+      },
+      () => {
+        callback([]);
+      },
+    );
+}
+
+/**
  * Subscribe to test logs for a single ski, newest first.
  * @param {string} uid
  * @param {string} skiId

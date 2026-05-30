@@ -4,6 +4,7 @@ import {
   listAllTestLogs,
   createTestLog,
   subscribeTestLogsForSki,
+  subscribeAllTestLogs,
 } from '../testLogService';
 
 beforeEach(() => {
@@ -103,6 +104,33 @@ describe('testLogService', () => {
       const cb = jest.fn();
       subscribeTestLogsForSki(null, null, cb);
       expect(cb).toHaveBeenCalledWith([]);
+    });
+  });
+
+  describe('subscribeAllTestLogs', () => {
+    it('fires with [] for missing uid', () => {
+      const cb = jest.fn();
+      subscribeAllTestLogs(null, cb);
+      expect(cb).toHaveBeenCalledWith([]);
+    });
+
+    it('delivers every test log across skis, newest first', () => {
+      firestoreMock.__seedDoc('users/u1/testLogs/a', {skiId: 's1', date: 10});
+      firestoreMock.__seedDoc('users/u1/testLogs/b', {skiId: 's2', date: 30});
+      firestoreMock.__seedDoc('users/u1/testLogs/c', {skiId: 's1', date: 20});
+      const cb = jest.fn();
+      subscribeAllTestLogs('u1', cb);
+      const last = cb.mock.calls[cb.mock.calls.length - 1][0];
+      expect(last.map(l => l.id)).toEqual(['b', 'c', 'a']);
+    });
+
+    it('re-fires when a new log is added', () => {
+      firestoreMock.__seedDoc('users/u1/testLogs/a', {skiId: 's1', date: 10});
+      const cb = jest.fn();
+      subscribeAllTestLogs('u1', cb);
+      expect(cb.mock.calls[cb.mock.calls.length - 1][0].length).toBe(1);
+      firestoreMock.__seedDoc('users/u1/testLogs/b', {skiId: 's2', date: 30});
+      expect(cb.mock.calls[cb.mock.calls.length - 1][0].length).toBe(2);
     });
   });
 });

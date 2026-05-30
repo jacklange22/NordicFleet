@@ -4,6 +4,7 @@ import {
   listAllWaxLogs,
   createWaxLog,
   subscribeWaxLogsForSki,
+  subscribeAllWaxLogs,
 } from '../waxLogService';
 
 beforeEach(() => {
@@ -95,6 +96,33 @@ describe('waxLogService', () => {
       const cb = jest.fn();
       subscribeWaxLogsForSki(null, 's1', cb);
       expect(cb).toHaveBeenCalledWith([]);
+    });
+  });
+
+  describe('subscribeAllWaxLogs', () => {
+    it('fires with [] for missing uid', () => {
+      const cb = jest.fn();
+      subscribeAllWaxLogs(null, cb);
+      expect(cb).toHaveBeenCalledWith([]);
+    });
+
+    it('delivers every wax log across skis, newest first', () => {
+      firestoreMock.__seedDoc('users/u1/waxLogs/a', {skiId: 's1', date: 50});
+      firestoreMock.__seedDoc('users/u1/waxLogs/b', {skiId: 's2', date: 90});
+      firestoreMock.__seedDoc('users/u1/waxLogs/c', {skiId: 's1', date: 70});
+      const cb = jest.fn();
+      subscribeAllWaxLogs('u1', cb);
+      const last = cb.mock.calls[cb.mock.calls.length - 1][0];
+      expect(last.map(l => l.id)).toEqual(['b', 'c', 'a']);
+    });
+
+    it('re-fires when a new log is added', () => {
+      firestoreMock.__seedDoc('users/u1/waxLogs/a', {skiId: 's1', date: 50});
+      const cb = jest.fn();
+      subscribeAllWaxLogs('u1', cb);
+      expect(cb.mock.calls[cb.mock.calls.length - 1][0].length).toBe(1);
+      firestoreMock.__seedDoc('users/u1/waxLogs/b', {skiId: 's2', date: 90});
+      expect(cb.mock.calls[cb.mock.calls.length - 1][0].length).toBe(2);
     });
   });
 });
