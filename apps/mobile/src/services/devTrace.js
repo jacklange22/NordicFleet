@@ -1,7 +1,7 @@
-// TEMPORARY on-device boot/freeze diagnostics — see PHONE_FREEZE_DEBUG_STEPS.md.
+// TEMPORARY on-device boot/freeze diagnostics - see PHONE_FREEZE_DEBUG_STEPS.md.
 //
 // Maps the boot/render lifecycle with elapsed-ms timestamps so a freeze on a
-// real device can be pinned to the last stage that printed — and you can see
+// real device can be pinned to the last stage that printed - and you can see
 // WHERE the time went. __DEV__-only: never ships in a Release build, and
 // silenced under Jest so test output stays clean.
 //

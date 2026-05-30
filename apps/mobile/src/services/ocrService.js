@@ -6,7 +6,7 @@
 //   recognizeText(imageUri) → Promise<{lines: Array<TextLine>}>
 //
 // where TextLine = { text, confidence, bbox? }. The native module is
-// iOS-only — calling it on Android currently returns an empty result
+// iOS-only - calling it on Android currently returns an empty result
 // rather than throwing, so the screen layer can render a "not
 // supported here" empty state without a try/catch.
 
@@ -55,7 +55,7 @@ export async function recognizeText(imageUri) {
   const mod = nativeModule();
   if (!mod || typeof mod.recognizeText !== 'function') {
     const err = new Error(
-      'OCR native module not linked — rebuild the iOS app',
+      'OCR native module not linked - rebuild the iOS app',
     );
     err.code = 'NFOCR_UNAVAILABLE';
     throw err;
@@ -79,7 +79,7 @@ export async function recognizeTextLines(imageUri) {
 }
 
 /**
- * Returns true if OCR is callable on this device — used by screens to
+ * Returns true if OCR is callable on this device - used by screens to
  * gate the "Scan sticker" button at boot.
  *
  * @returns {boolean}

@@ -26,7 +26,7 @@ export default function TermsPage() {
 
       <LegalSection heading="Your content">
         <p>
-          You retain ownership of the content you create — your skis, logs,
+          You retain ownership of the content you create, your skis, logs,
           tests, and messages. You grant us a limited license to store,
           process, and display that content solely to operate the Service for
           you (and for a coach you have explicitly linked, where applicable).

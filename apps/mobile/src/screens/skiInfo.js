@@ -31,7 +31,7 @@ import {colors, radius, spacing, typography} from '../theme';
 
 const formatDate = raw => {
   if (!raw) {
-    return '—';
+    return '-';
   }
   let d = null;
   if (typeof raw.toDate === 'function') {
@@ -45,7 +45,7 @@ const formatDate = raw => {
     }
   }
   if (!d) {
-    return '—';
+    return '-';
   }
   return d.toLocaleDateString(undefined, {
     month: 'short',
@@ -113,7 +113,7 @@ const RatingBadge = ({value}) => {
   return (
     <View style={[styles.ratingBadge, {backgroundColor: bg}]}>
       <Text style={styles.ratingBadgeText}>
-        {value === null || value === undefined || value === '' ? '—' : value}
+        {value === null || value === undefined || value === '' ? '-' : value}
       </Text>
     </View>
   );
@@ -349,19 +349,19 @@ const SkiInfo = ({route, navigation}) => {
                 <Text style={styles.miniStatValue}>
                   {ski.flex !== null && ski.flex !== undefined && ski.flex !== ''
                     ? `${ski.flex} kg`
-                    : '—'}
+                    : '-'}
                 </Text>
               </View>
               <View style={styles.miniStat}>
                 <Text style={styles.miniStatLabel}>Length</Text>
                 <Text style={styles.miniStatValue}>
-                  {ski.length ? `${ski.length} cm` : '—'}
+                  {ski.length ? `${ski.length} cm` : '-'}
                 </Text>
               </View>
               <View style={styles.miniStat}>
                 <Text style={styles.miniStatLabel}>Grind</Text>
                 <Text style={styles.miniStatValue} numberOfLines={1}>
-                  {ski.grind || '—'}
+                  {ski.grind || '-'}
                 </Text>
               </View>
             </View>
@@ -456,7 +456,7 @@ const SkiInfo = ({route, navigation}) => {
       </ScrollView>
 
       {/* Off-screen share card. Position it absolutely far off-screen
-          so it never blocks taps but stays in the render tree —
+          so it never blocks taps but stays in the render tree -
           captureRef needs a mounted, laid-out View. */}
       <View pointerEvents="none" style={styles.shareCardHost}>
         <SkiShareCard

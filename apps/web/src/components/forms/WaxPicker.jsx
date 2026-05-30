@@ -4,7 +4,7 @@
 // - Free-text fallback: if the user types and submits a value that
 //   doesn't match an entry, the value is stored as the bare string
 //   and waxId is null. The wax log validator is happy with both.
-// - Mirrors mobile WaxPicker — same dictionary, same fallback.
+// - Mirrors mobile WaxPicker - same dictionary, same fallback.
 
 import {useEffect, useMemo, useRef, useState} from 'react';
 import {searchWaxes} from '@nordicfleet/core';
@@ -16,7 +16,7 @@ export function WaxPicker({
   value,
   waxId,
   onChange,
-  placeholder = 'Type to search — e.g. VR40 or Marathon Yellow',
+  placeholder = 'Type to search - e.g. VR40 or Marathon Yellow',
   type, // optional filter passed to searchWaxes (e.g. 'glide' / 'kick')
   category, // optional category filter (kick/paraffin/topcoat/structure)
   disabled,
@@ -109,11 +109,11 @@ export function WaxPicker({
                     <div className="text-text-tertiary text-[11px] mt-0.5">
                       {wax.tempRange.min !== null
                         ? `${wax.tempRange.min}°`
-                        : '—'}
+                        : '-'}
                       {' to '}
                       {wax.tempRange.max !== null
                         ? `${wax.tempRange.max}°`
-                        : '—'}
+                        : '-'}
                     </div>
                   )}
                 </div>

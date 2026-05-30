@@ -1,4 +1,4 @@
-// WaxTestSetup — name a test, set conditions + fleet size, and build
+// WaxTestSetup - name a test, set conditions + fleet size, and build
 // the wax combinations that will compete in the bracket.
 //
 // The category selector (Kick / Paraffin / Topcoat / Structure) filters
@@ -57,7 +57,7 @@ const CATEGORY_ICON = {
 };
 // One test = one type. Order as the coach requested.
 const TEST_TYPES = ['kick', 'paraffin', 'structure', 'topcoat'];
-// What the single "layer" represents, per type (just clearer copy — the
+// What the single "layer" represents, per type (just clearer copy - the
 // underlying model is the same wax-layer in every case).
 const PICK_PLACEHOLDER = {
   kick: 'Pick or type a kick wax / binder',
@@ -250,13 +250,13 @@ const WaxTestSetupScreen = () => {
       Toast.show({
         type: 'success',
         text1: 'Test created',
-        text2: 'Bracket generated — time to arrange and run.',
+        text2: 'Bracket generated - time to arrange and run.',
         position: 'top',
         visibilityTime: 2200,
       });
       navigation.replace('WaxTestRunner', {testId});
     } catch (err) {
-      // Never crash on create — surface a clear error and report it.
+      // Never crash on create - surface a clear error and report it.
       reportError(err, {boundary: 'waxTestSetup.create'});
       setError(
         "Couldn't create the test. Please check your connection and try again.",
@@ -433,7 +433,7 @@ const WaxTestSetupScreen = () => {
 
           <SectionHeader
             title={`Combinations (${combinations.length}/${
-              Number.isFinite(fleetNum) ? fleetNum : '—'
+              Number.isFinite(fleetNum) ? fleetNum : '-'
             })`}
           />
           {combinations.map((combo, idx) => (

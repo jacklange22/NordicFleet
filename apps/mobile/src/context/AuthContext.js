@@ -44,7 +44,7 @@ export const AuthProvider = ({children}) => {
     try {
       await createProfile(cred.user.uid, {email: cred.user.email});
     } catch {
-      // Swallow — surfaceable via subscribeProfile on next mount.
+      // Swallow - surfaceable via subscribeProfile on next mount.
     }
   }, []);
 

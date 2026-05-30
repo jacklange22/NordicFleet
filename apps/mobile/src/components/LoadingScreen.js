@@ -10,7 +10,7 @@ import {
 import {colors, spacing, typography} from '../theme';
 
 /**
- * Branded loading screen — centered NordicFleet logo, a subtle spinner
+ * Branded loading screen - centered NordicFleet logo, a subtle spinner
  * below, and an optional label. Used for AuthLoading, profile boot, and
  * anywhere else the app pauses on a network roundtrip.
  */

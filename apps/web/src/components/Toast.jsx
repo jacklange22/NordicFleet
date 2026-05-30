@@ -7,7 +7,7 @@
 //   - Toasts stack top-right and auto-dismiss after ~2.4s.
 //
 // Mirrors the iOS app's Toast.show({type, text1, text2}) API in
-// spirit — different shape, same affordances.
+// spirit - different shape, same affordances.
 
 import {createContext, useCallback, useContext, useEffect, useRef, useState} from 'react';
 

@@ -41,7 +41,7 @@ const SettingsScreen = () => {
   // Export flow.
   const [exporting, setExporting] = useState(false);
 
-  // Delete-account flow (App Store guideline 5.1.1(v)) — two-step:
+  // Delete-account flow (App Store guideline 5.1.1(v)) - two-step:
   // (1) a destructive Alert, then (2) a password reauth modal.
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deletePw, setDeletePw] = useState('');
@@ -124,7 +124,7 @@ const SettingsScreen = () => {
       } else if (code === 'auth/weak-password') {
         setPwError('New password is too weak');
       } else if (code === 'auth/network-request-failed') {
-        setPwError('No connection — please try again');
+        setPwError('No connection - please try again');
       } else {
         setPwError('Could not change password, please try again');
       }
@@ -213,7 +213,7 @@ const SettingsScreen = () => {
       ) {
         setDeleteError('Wrong password');
       } else if (code === 'auth/network-request-failed') {
-        setDeleteError('No connection — please try again');
+        setDeleteError('No connection - please try again');
       } else if (code === 'auth/requires-recent-login') {
         setDeleteError('Please sign out, sign back in, and try again');
       } else {
@@ -254,7 +254,7 @@ const SettingsScreen = () => {
           </View>
         </Card>
 
-        {/* Privacy & data — export + legal + issue reporting */}
+        {/* Privacy & data - export + legal + issue reporting */}
         <SectionHeader title="Privacy & data" />
         <Card padding={0}>
           <View style={styles.rowOuter}>
@@ -302,7 +302,7 @@ const SettingsScreen = () => {
           </View>
         </Card>
 
-        {/* Danger zone — App Store guideline 5.1.1(v): account deletion */}
+        {/* Danger zone - App Store guideline 5.1.1(v): account deletion */}
         <SectionHeader title="Danger zone" />
         <Card padding={0}>
           <View style={styles.rowOuter}>
@@ -319,7 +319,7 @@ const SettingsScreen = () => {
           </View>
         </Card>
 
-        {/* Build label — proves the phone is running THIS build. Shown in
+        {/* Build label - proves the phone is running THIS build. Shown in
             both Debug and Release (the user runs Release on device). Bump
             BUILD_TAG in src/buildInfo.js per build. */}
         <Text style={styles.buildTag} accessibilityLabel={`Build ${BUILD_TAG}`}>

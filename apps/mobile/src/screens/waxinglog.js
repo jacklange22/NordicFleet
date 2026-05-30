@@ -98,7 +98,7 @@ const resizeArr = (arr, n, fill = '') => {
   return out;
 };
 
-// Short one-line summary of what's been entered — shown on a collapsed
+// Short one-line summary of what's been entered - shown on a collapsed
 // accordion card so the coach can scan filled vs. empty without expanding.
 const summarizeEntry = entry => {
   const parts = [];
@@ -170,7 +170,7 @@ const WaxEntryCard = ({ski, entry, onChange, collapsible, expanded, onToggle}) =
 
       {!expanded ? null : (
         <>
-      {/* Read-only ski attributes — ghost variant so they read as quiet
+      {/* Read-only ski attributes - ghost variant so they read as quiet
           labels, NOT like the tappable outline/solid selector pills. */}
       <View style={styles.entryPillRow}>
         {!!ski.technique && (
@@ -307,7 +307,7 @@ const WaxLogScreen = () => {
     if (!accordion) {
       return;
     }
-    // Keep a valid ski expanded — default to the first selected.
+    // Keep a valid ski expanded - default to the first selected.
     setExpandedSki(prev =>
       prev && selectedSkis.includes(prev) ? prev : selectedSkis[0],
     );

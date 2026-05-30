@@ -27,8 +27,8 @@ const matchesQuery = (ski, q) => {
  *   skis         array of {id, name, brand?, model?}
  *   selectedIds  array of selected ski ids
  *   onToggle     (id) => void
- *   onSelectAll  () => void   — parent selects the whole fleet
- *   onClearAll   () => void   — parent clears the selection
+ *   onSelectAll  () => void   - parent selects the whole fleet
+ *   onClearAll   () => void   - parent clears the selection
  *   hint         empty-state helper text (shown when nothing selected)
  */
 const SkiSelector = ({

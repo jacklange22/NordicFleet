@@ -6,7 +6,7 @@
 //     points at the coach (i.e. the relationship is currently linked).
 //   - Athlete can flip `read: true` (and the platform updates updatedAt).
 //
-// No push notifications, no Cloud Functions — UI surfaces unread
+// No push notifications, no Cloud Functions - UI surfaces unread
 // counts via a live subscription.
 
 import {
@@ -42,7 +42,7 @@ export async function sendMessage(args) {
 
 /**
  * Coach-side: send a race-day advisory. Rides on the same `messages/`
- * collection as a plain message — the doc gets `type: 'advisory'` and
+ * collection as a plain message - the doc gets `type: 'advisory'` and
  * an `advisory` sub-object the athlete UI reads to render the
  * structured view. Firestore rules don't need changing; this is the
  * same write path as sendMessage.
@@ -106,7 +106,7 @@ export function subscribeMessagesForAthlete(athleteUid, callback) {
 }
 
 /**
- * Subscribe to messages from this coach to one specific athlete —
+ * Subscribe to messages from this coach to one specific athlete -
  * used to render the "Sent" history on the coach's AthleteDetail.
  */
 export function subscribeMessagesFromCoach(coachUid, athleteUid, callback) {

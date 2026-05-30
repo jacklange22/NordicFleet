@@ -22,7 +22,7 @@ export default function Error({error, reset}) {
           Something went wrong
         </h1>
         <p className="text-text-secondary mb-8">
-          We hit an unexpected error. You can try again — if it keeps
+          We hit an unexpected error. You can try again - if it keeps
           happening, please let us know.
         </p>
         <div className="flex items-center justify-center gap-3">

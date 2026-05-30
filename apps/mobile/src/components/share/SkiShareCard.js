@@ -32,7 +32,7 @@ const waxSummary = log => {
   if (log.kickWax) {
     parts.push(`kick: ${log.kickWax}`);
   }
-  return parts.join(' · ') || '—';
+  return parts.join(' · ') || '-';
 };
 
 const testSummary = log => {
@@ -54,7 +54,7 @@ const testSummary = log => {
   ) {
     bits.push(`Glide ${log.glideRating}/10`);
   }
-  return bits.join(' · ') || '—';
+  return bits.join(' · ') || '-';
 };
 
 /**
@@ -62,7 +62,7 @@ const testSummary = log => {
  * ref via forwardRef; that ref is what shareSnapshot captures.
  *
  * Render this off-screen (or just out-of-bounds) when generating the
- * share — captureRef works on collapsable=false Views even if they're
+ * share - captureRef works on collapsable=false Views even if they're
  * not visible. Don't add transforms or absolute positioning that would
  * break the snapshot.
  */
@@ -148,7 +148,7 @@ const SpecCell = ({label, value}) => (
   <View style={styles.specCell}>
     <Text style={styles.specLabel}>{label}</Text>
     <Text style={styles.specValue} numberOfLines={1}>
-      {value === null || value === undefined || value === '' ? '—' : String(value)}
+      {value === null || value === undefined || value === '' ? '-' : String(value)}
     </Text>
   </View>
 );

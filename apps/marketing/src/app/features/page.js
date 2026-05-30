@@ -5,7 +5,7 @@ import {EmailCapture} from '@/components/EmailCapture';
 export const metadata = {
   title: 'Features',
   description:
-    'Fleet management, condition logging, the Wax Truck testing bracket, and coaching tools — everything in NordicFleet.',
+    'Fleet management, condition logging, the Wax Truck testing bracket, and coaching tools, everything in NordicFleet.',
 };
 
 const GROUPS = [
@@ -37,7 +37,7 @@ const GROUPS = [
       {
         icon: '🧪',
         title: 'Wax logs',
-        body: 'Record the layers you applied with a wax dictionary that suggests real products — or type in whatever you actually used.',
+        body: 'Record the layers you applied with a wax dictionary that suggests real products, or type in whatever you actually used.',
       },
       {
         icon: '🌡️',
@@ -47,7 +47,7 @@ const GROUPS = [
       {
         icon: '📍',
         title: 'Location tagging',
-        body: 'Tag where you tested so "fast at Soldier Hollow" and "fast at home" never get confused again.',
+        body: 'Tag where you tested so results from different venues never get mixed up.',
       },
     ],
   },
@@ -91,7 +91,7 @@ export default function FeaturesPage() {
           as="p"
           delay={120}
           className="mt-5 text-lg text-text-secondary max-w-2xl mx-auto">
-          NordicFleet covers the whole loop — organize your skis, log what
+          NordicFleet covers the whole loop, organize your skis, log what
           happens on snow, and test your way to the fastest call.
         </Reveal>
       </Container>

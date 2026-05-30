@@ -16,19 +16,19 @@ import {Card} from '@/components/Card';
 import {Pill} from '@/components/Pill';
 import {Button} from '@/components/Button';
 
-// Apple-quality matters here per the brief — pasted data is real
+// Apple-quality matters here per the brief - pasted data is real
 // real-world tabular text, often messy, and the user is doing this
 // because typing 30 skis manually is unbearable. The UI surface needs
 // to be calm, informative, and forgiving.
 //
 // Stages:
-//   1. paste     — large textarea + Parse button
-//   2. preview   — summary card + per-row table with inline error
+//   1. paste     - large textarea + Parse button
+//   2. preview   - summary card + per-row table with inline error
 //                  tags. Save kicks off the batched write.
-//   2b. mapping  — manual column→field assignment when auto-detection
+//   2b. mapping  - manual column→field assignment when auto-detection
 //                  couldn't recognize a required field, or when the
 //                  paste had no header row.
-//   3. confirm   — success card with the count saved + any per-row
+//   3. confirm   - success card with the count saved + any per-row
 //                  failures from the batched write.
 
 const EXAMPLE = `Brand\tModel\tTechnique\tType\tLength\tFlex
@@ -55,7 +55,7 @@ const FIELD_ORDER = [
 // fields are marked inline so users see why a save is blocked without
 // having to read the footer status line.
 const MAPPING_OPTIONS = [
-  {value: '', label: '— Skip column —'},
+  {value: '', label: '- Skip column -'},
   {value: 'name', label: 'Name (required)'},
   {value: 'brand', label: 'Brand'},
   {value: 'model', label: 'Model'},
@@ -112,7 +112,7 @@ function Inner() {
   const handleApplyMapping = newMapping => {
     // Re-map from the UNSTRIPPED data rows (with section headers) and
     // pass the headers so applyMapping replays section-technique
-    // inheritance + rescue-column folding — same as the initial parse.
+    // inheritance + rescue-column folding - same as the initial parse.
     // Fall back to the stripped rows for pre-existing parses that lack
     // dataRows.
     const sourceRows =
@@ -174,7 +174,7 @@ function Inner() {
     } catch (err) {
       setSaveError(
         (err && err.message) ||
-          'Something went wrong saving — please try again.',
+          'Something went wrong saving - please try again.',
       );
     } finally {
       setSaving(false);
@@ -245,7 +245,7 @@ function PasteStep({raw, setRaw, onParse, onUseExample}) {
       <h1 className="text-4xl font-bold tracking-tight mb-3">Import skis</h1>
       <p className="text-text-secondary text-lg mb-8 max-w-2xl">
         Paste your ski data below. CSV, tab-separated, copy-direct from
-        Excel / Google Sheets, or a markdown table — we&apos;ll detect the
+        Excel / Google Sheets, or a markdown table - we&apos;ll detect the
         structure automatically.
       </p>
 
@@ -327,11 +327,11 @@ function PreviewStep({
         {rows.length === 1 ? 'ski' : 'skis'}
         {errorRowCount > 0 ? (
           <>
-            {' '}— <span className="text-red font-semibold">{errorRowCount}</span>{' '}
+            {' '}- <span className="text-red font-semibold">{errorRowCount}</span>{' '}
             need{errorRowCount === 1 ? 's' : ''} attention.
           </>
         ) : (
-          ' — every row looks good.'
+          ' - every row looks good.'
         )}
       </p>
 
@@ -360,7 +360,7 @@ function PreviewStep({
             <span className="text-text-secondary">
               {parsed.unmappedHeaders.join(', ')}
             </span>
-            . They&apos;ll be ignored — open the mapping editor if any of
+            . They&apos;ll be ignored - open the mapping editor if any of
             these should map to a Ski field.
           </div>
         )}
@@ -372,7 +372,7 @@ function PreviewStep({
               {parsed.rescuedHeaders.join(', ')}
             </span>
             . These columns didn&apos;t map to a Ski field, but they had
-            data in most rows — we appended the per-row values to the
+            data in most rows - we appended the per-row values to the
             notes column so nothing is lost.
           </div>
         )}
@@ -384,7 +384,7 @@ function PreviewStep({
                 Map columns to continue.
               </span>{' '}
               We couldn&apos;t auto-detect every required field (brand,
-              model, technique) — pick the columns by hand.
+              model, technique) - pick the columns by hand.
             </div>
             <Button variant="primary" size="sm" onClick={onEnterMapping}>
               Map columns →
@@ -413,7 +413,7 @@ function PreviewStep({
       {rows.length === 0 ? (
         <Card>
           <p className="text-text-tertiary italic">
-            No data rows detected. Go back and check the paste — the first
+            No data rows detected. Go back and check the paste - the first
             row should be column headers, and at least one data row should
             follow.
           </p>
@@ -472,7 +472,7 @@ function ConfirmStep({result, onImportMore}) {
         <p className="text-text-secondary text-lg max-w-xl mx-auto">
           {allOk
             ? "They're already syncing to your iOS app."
-            : `${failed.length} of ${result.totalAttempted} couldn't be saved — see below.`}
+            : `${failed.length} of ${result.totalAttempted} couldn't be saved - see below.`}
         </p>
       </div>
 
@@ -606,7 +606,7 @@ function MappingStep({parsed, onApply, onCancel}) {
       <h1 className="text-4xl font-bold tracking-tight mb-3">Map columns</h1>
       <p className="text-text-secondary text-lg mb-6 max-w-2xl">
         For each column from your paste, choose which ski field it
-        represents. Brand, model, and technique are required — the rest
+        represents. Brand, model, and technique are required - the rest
         are optional.
       </p>
 

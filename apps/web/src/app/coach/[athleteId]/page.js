@@ -85,11 +85,11 @@ function Inner() {
           <div className="grid grid-cols-3 gap-4 border-t border-border pt-4 mt-4">
             <MiniStat
               label="Weight"
-              value={athlete?.weight ? `${athlete.weight} kg` : '—'}
+              value={athlete?.weight ? `${athlete.weight} kg` : '-'}
             />
             <MiniStat
               label="Height"
-              value={athlete?.height ? `${athlete.height} cm` : '—'}
+              value={athlete?.height ? `${athlete.height} cm` : '-'}
             />
             <MiniStat label="Skis" value={`${skis.length}`} />
           </div>

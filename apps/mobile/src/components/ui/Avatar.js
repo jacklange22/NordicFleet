@@ -27,7 +27,7 @@ const initialsFor = (name, email) => {
   if (parts.length === 2) {
     return (parts[0][0] + parts[1][0]).toUpperCase();
   }
-  // No spaces — try email prefix
+  // No spaces - try email prefix
   if (raw.includes('@')) {
     const prefix = raw.split('@')[0];
     return prefix.slice(0, 2).toUpperCase();

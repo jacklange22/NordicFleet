@@ -1,4 +1,4 @@
-// Wax Truck persistence — users/{coachUid}/waxTests/{testId}.
+// Wax Truck persistence - users/{coachUid}/waxTests/{testId}.
 //
 // Validation + bracket shaping live in @nordicfleet/core
 // (buildWaxTestCreatePayload). The service is a thin Firestore wrapper

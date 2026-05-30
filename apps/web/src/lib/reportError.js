@@ -2,7 +2,7 @@
 //
 // Single funnel for "something went wrong" on the web app. Today it
 // scrubs PII (via @nordicfleet/core) and logs to the console. It is the
-// ONE place a real vendor (Sentry) gets wired later — see
+// ONE place a real vendor (Sentry) gets wired later - see
 // OBSERVABILITY_PLAN.md. Keep all error reporting going through here so
 // the vendor swap is a one-file change.
 
@@ -36,7 +36,7 @@ export function reportError(error, context) {
   if (VENDOR_ENABLED) {
     // TODO(OBSERVABILITY_PLAN.md): forward `payload` to Sentry here, e.g.
     //   Sentry.captureException(error, { extra: payload.context });
-    // Intentionally not implemented yet — no DSN, no dependency.
+    // Intentionally not implemented yet - no DSN, no dependency.
   }
 }
 

@@ -178,17 +178,17 @@ function Inner() {
           </button>
         </div>
         <Card className="divide-y divide-border p-0 mb-8">
-          <Row label="Display name" value={profile?.name || '—'} />
+          <Row label="Display name" value={profile?.name || '-'} />
           <Row
             label="Weight"
-            value={profile?.weight ? `${profile.weight} kg` : '—'}
+            value={profile?.weight ? `${profile.weight} kg` : '-'}
           />
           <Row
             label="Height"
-            value={profile?.height ? `${profile.height} cm` : '—'}
+            value={profile?.height ? `${profile.height} cm` : '-'}
           />
-          <Row label="Team" value={profile?.team || '—'} />
-          <Row label="Location" value={profile?.location || '—'} />
+          <Row label="Team" value={profile?.team || '-'} />
+          <Row label="Location" value={profile?.location || '-'} />
           <Row label="Skis" value={`${skis.length}`} />
         </Card>
 
@@ -243,8 +243,8 @@ function Inner() {
             <div>
               <p className="text-white font-semibold">Export my data</p>
               <p className="text-text-secondary text-sm mt-1 max-w-prose">
-                Download everything in your account — profile, skis, wax
-                logs, test logs, and wax tests — as a JSON file.
+                Download everything in your account - profile, skis, wax
+                logs, test logs, and wax tests - as a JSON file.
               </p>
             </div>
             <Button

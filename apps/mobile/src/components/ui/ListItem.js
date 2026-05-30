@@ -15,7 +15,7 @@ import {colors, spacing, typography} from '../../theme';
  *   onPress
  *   showDivider     hairline below the row
  *   destructive     red title (for sign-out etc.)
- *   icon            convenience — pass an Ionicon name for leading
+ *   icon            convenience - pass an Ionicon name for leading
  *   iconColor       (default red)
  *   chevron         show right chevron (default true if onPress)
  */

@@ -1,6 +1,6 @@
 'use client';
 
-// Wax test detail — arrange, run, and read the result. Three phases
+// Wax test detail - arrange, run, and read the result. Three phases
 // keyed off `status`, mirroring the mobile waxTestRunner:
 //   setup     → reorder seeds (up/down), then Start.
 //   running   → pick a winner per live matchup; record performance #s.
@@ -189,7 +189,7 @@ function Inner() {
             ? 'Arrange the bracket, then start.'
             : test.status === 'complete'
               ? 'Result'
-              : `Round ${progress.currentRound + 1} of ${progress.totalRounds} — ${progress.decided} of ${progress.total} decided`}
+              : `Round ${progress.currentRound + 1} of ${progress.totalRounds} - ${progress.decided} of ${progress.total} decided`}
         </p>
 
         {test.status === 'setup' && (
@@ -249,7 +249,7 @@ function Arranger({combinations, onMove, onStart}) {
   return (
     <div>
       <p className="text-text-secondary text-sm mb-4">
-        Order sets the seeding — top seeds get any byes. Reorder, then start.
+        Order sets the seeding - top seeds get any byes. Reorder, then start.
       </p>
       <div className="space-y-2 mb-6">
         {combinations.map((c, i) => (
@@ -293,7 +293,7 @@ function Runner({bracket, labelFor, onPick}) {
     return (
       <Card>
         <p className="text-text-secondary">
-          Waiting on earlier rounds — no live matchups right now.
+          Waiting on earlier rounds - no live matchups right now.
         </p>
       </Card>
     );
@@ -345,7 +345,7 @@ function PerfNumbers({combinations, onChange, onSave}) {
                 value={c.performanceNumber == null ? '' : String(c.performanceNumber)}
                 onChange={v => onChange(c.id, v)}
                 inputMode="numeric"
-                placeholder="—"
+                placeholder="-"
               />
             </div>
           </div>
@@ -425,7 +425,7 @@ function BracketOverview({bracket, labelFor}) {
 function Slot({label, won}) {
   return (
     <div className={`truncate ${won ? 'text-waxtruck font-bold' : 'text-text-secondary'}`}>
-      {label || '—'}
+      {label || '-'}
     </div>
   );
 }

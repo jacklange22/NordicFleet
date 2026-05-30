@@ -15,11 +15,11 @@ export function inviteUrl() {
 
 /**
  * Caption for a shared *fleet* snapshot. The screenshot alone has no
- * context — this gives the recipient a reason to try the app (issue #6).
+ * context - this gives the recipient a reason to try the app (issue #6).
  */
 export function fleetShareMessage() {
   return (
-    'My ski quiver, tracked in NordicFleet — wax logs, ski testing, and ' +
+    'My ski quiver, tracked in NordicFleet - wax logs, ski testing, and ' +
     `race-day picks. Try it: ${inviteUrl()}`
   );
 }

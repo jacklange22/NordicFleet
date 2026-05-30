@@ -8,7 +8,7 @@ import {useMode} from '@/components/ModeProvider';
 import {subscribeUnreadCountForAthlete} from '@/lib/firestore';
 
 // Nav per mode. Personal = the skier surface; coaching = the
-// athlete-management surface. The mode prop on the old API is gone —
+// athlete-management surface. The mode prop on the old API is gone -
 // the header reads mode straight from ModeProvider now.
 const PERSONAL_NAV = [
   {href: '/home', label: 'Fleet'},

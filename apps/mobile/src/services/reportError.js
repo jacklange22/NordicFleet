@@ -2,7 +2,7 @@
 //
 // Single funnel for crashes/errors on iOS. Today it scrubs PII (via
 // @nordicfleet/core) and logs to the console. It is the ONE place a real
-// vendor (Firebase Crashlytics or Sentry) gets wired later — see
+// vendor (Firebase Crashlytics or Sentry) gets wired later - see
 // OBSERVABILITY_PLAN.md. Keep all reporting going through here so the
 // vendor swap is a one-file change.
 
@@ -27,7 +27,7 @@ export function reportError(error, context) {
   }
   // TODO(OBSERVABILITY_PLAN.md): forward to Crashlytics/Sentry here, e.g.
   //   crashlytics().recordError(error);  // with payload.context as attrs
-  // Intentionally not implemented yet — no native vendor dependency.
+  // Intentionally not implemented yet - no native vendor dependency.
 }
 
 let installed = false;

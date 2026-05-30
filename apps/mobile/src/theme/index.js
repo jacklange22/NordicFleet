@@ -1,7 +1,7 @@
 // NordicFleet design system tokens.
 //
 // All UI components draw colors, spacing, radius, and typography from this
-// module. Don't hard-code design values in component files — add a token
+// module. Don't hard-code design values in component files - add a token
 // here first, then reference it.
 
 export const colors = {
@@ -15,14 +15,14 @@ export const colors = {
   redPressed: '#C62828',
   redDim: '#7F1D1D',
 
-  // Coaching-mode accent. A calm steel-blue — clearly distinct from
+  // Coaching-mode accent. A calm steel-blue - clearly distinct from
   // the brand red so the user always knows which mode they're in,
   // but harmonious on the near-black surfaces (not garish).
   coaching: '#4F8EF7',
   coachingPressed: '#3B6FD4',
   coachingDim: '#1E2F4F',
 
-  // Wax Truck accent. A calm amber — evokes wax/heat on the iron and
+  // Wax Truck accent. A calm amber - evokes wax/heat on the iron and
   // reads clearly apart from the brand red and coaching blue without
   // shouting. Same restraint as the coaching accent.
   waxtruck: '#E0A93B',

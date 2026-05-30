@@ -1,4 +1,4 @@
-// ScanSki — camera → OCR → review-and-save flow for adding a ski.
+// ScanSki - camera → OCR → review-and-save flow for adding a ski.
 //
 // The user lands here from the AddSki screen ("Scan sticker" CTA),
 // snaps or picks an image, the NFOCR native module runs Apple Vision
@@ -8,9 +8,9 @@
 // just like the manual form.
 //
 // Three phases:
-//   idle       — hero + "Take photo" / "Choose from library"
-//   processing — thumbnail + spinner ("Reading sticker…")
-//   review     — thumbnail (small) + editable fields with confidence
+//   idle       - hero + "Take photo" / "Choose from library"
+//   processing - thumbnail + spinner ("Reading sticker…")
+//   review     - thumbnail (small) + editable fields with confidence
 //                badges + Save
 //
 // Failure handling: any phase can return to idle with a Toast. The
@@ -64,7 +64,7 @@ const CONFIDENCE_LABEL = {
   low: 'Maybe',
 };
 
-// ─── Confidence chip — small dot + word, sits next to a field label ───
+// ─── Confidence chip - small dot + word, sits next to a field label ───
 const ConfidenceChip = ({confidence}) => {
   if (!confidence) {
     return null;
@@ -92,7 +92,7 @@ const ScanSkiScreen = () => {
   const [parsed, setParsed] = useState(null); // ParsedSticker
   const [error, setError] = useState('');
 
-  // Editable state — initialized from parsed when we enter review.
+  // Editable state - initialized from parsed when we enter review.
   const [brand, setBrand] = useState('');
   const [model, setModel] = useState('');
   const [technique, setTechnique] = useState('');
@@ -119,7 +119,7 @@ const ScanSkiScreen = () => {
       const p = parseStickerText(lines);
       const prefill = toSkiInput(p);
       setParsed(p);
-      // Pre-fill — toSkiInput already returns plain values.
+      // Pre-fill - toSkiInput already returns plain values.
       setBrand(prefill.brand || '');
       setModel(prefill.model || '');
       setTechnique(prefill.technique || '');
@@ -277,7 +277,7 @@ const ScanSkiScreen = () => {
               <Text style={styles.heroTitle}>Snap the sticker</Text>
               <Text style={styles.heroSubtitle}>
                 Aim at the white sticker on the topsheet of your ski.
-                Brand, model, length, and flex auto-fill — you confirm
+                Brand, model, length, and flex auto-fill - you confirm
                 before saving.
               </Text>
               {!!error && <Text style={styles.error}>{error}</Text>}
@@ -303,7 +303,7 @@ const ScanSkiScreen = () => {
               </View>
               <View style={styles.fineprint}>
                 <Text style={styles.fineprintText}>
-                  Photos stay on your device — Vision runs offline.
+                  Photos stay on your device - Vision runs offline.
                 </Text>
               </View>
             </View>

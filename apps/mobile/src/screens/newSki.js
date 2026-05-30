@@ -241,7 +241,7 @@ const AddSkiForm = () => {
           <SectionHeader title="Identity" />
           <Text style={styles.sectionHint}>
             The display name is whatever you'll recognize in your fleet. Brand
-            and model are the manufacturer's — both show on the ski card.
+            and model are the manufacturer's - both show on the ski card.
           </Text>
           <Input
             label="Display name"

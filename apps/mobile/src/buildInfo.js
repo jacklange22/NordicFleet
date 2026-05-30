@@ -1,4 +1,4 @@
-// Build identity — shown (dev-only) at the bottom of the Settings screen so
+// Build identity - shown (dev-only) at the bottom of the Settings screen so
 // you can confirm the phone is running THIS build and not a stale install.
 //
 // Bump BUILD_TAG whenever you cut a build you want to verify on the device.

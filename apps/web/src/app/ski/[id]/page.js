@@ -21,13 +21,13 @@ import {
 } from '@/lib/firestore';
 
 function fmtDate(raw) {
-  if (!raw) return '—';
+  if (!raw) return '-';
   let d = null;
   if (typeof raw?.toDate === 'function') d = raw.toDate();
   else if (raw instanceof Date) d = raw;
   else if (typeof raw === 'string' || typeof raw === 'number')
     d = new Date(raw);
-  if (!d || isNaN(d.getTime())) return '—';
+  if (!d || isNaN(d.getTime())) return '-';
   return d.toLocaleDateString(undefined, {
     month: 'short',
     day: 'numeric',
@@ -98,7 +98,7 @@ function Inner() {
         body: ski.name,
       });
       setRetireOpen(false);
-      // Refresh local state — subscribe pattern would be nicer but
+      // Refresh local state - subscribe pattern would be nicer but
       // getSki was already used on mount; do a quick refetch.
       const fresh = await getSki(user.uid, skiId);
       setSki(fresh);
@@ -154,12 +154,12 @@ function Inner() {
             {ski.retired && <Pill variant="solid">Retired</Pill>}
           </div>
           <div className="grid grid-cols-3 gap-4 border-t border-border pt-4">
-            <MiniStat label="Flex" value={ski.flex ? `${ski.flex} kg` : '—'} />
+            <MiniStat label="Flex" value={ski.flex ? `${ski.flex} kg` : '-'} />
             <MiniStat
               label="Length"
-              value={ski.length ? `${ski.length} cm` : '—'}
+              value={ski.length ? `${ski.length} cm` : '-'}
             />
-            <MiniStat label="Grind" value={ski.grind || '—'} />
+            <MiniStat label="Grind" value={ski.grind || '-'} />
           </div>
         </Card>
 
@@ -181,7 +181,7 @@ function Inner() {
               <div key={log.id} className="p-4">
                 <div className="text-sm font-semibold">{fmtDate(log.date)}</div>
                 <div className="text-sm text-text-secondary mt-1">
-                  {(log.glideWaxes || []).filter(Boolean).join(', ') || '—'}
+                  {(log.glideWaxes || []).filter(Boolean).join(', ') || '-'}
                   {log.kickWax && <> · Kick: {log.kickWax}</>}
                 </div>
               </div>
@@ -201,7 +201,7 @@ function Inner() {
             {testLogs.slice(0, 10).map(log => (
               <div key={log.id} className="p-4 flex items-center gap-3">
                 <span className="w-9 h-9 rounded-full bg-red flex items-center justify-center text-sm font-bold">
-                  {log.glideRating ?? '—'}
+                  {log.glideRating ?? '-'}
                 </span>
                 <div className="flex-1">
                   <div className="text-sm font-semibold">

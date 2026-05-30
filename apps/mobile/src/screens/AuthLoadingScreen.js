@@ -10,7 +10,7 @@ import {trace} from '../services/devTrace';
 const MODE_KEY = 'nordicfleet.mode';
 
 // Safety net: if the one-time profile fetch hangs (offline with no cache,
-// a Firestore stall), never sit frozen on the splash — fall through to Home
+// a Firestore stall), never sit frozen on the splash - fall through to Home
 // after this long. useProfile on Home backfills the doc when it arrives.
 const BOOT_TIMEOUT_MS = 12000;
 
@@ -28,7 +28,7 @@ const AuthLoadingScreen = ({navigation}) => {
       return;
     }
     // Authenticated. Decide the landing screen from the capability +
-    // the last-used mode (capability model — see ModeContext):
+    // the last-used mode (capability model - see ModeContext):
     //   coach who last used coaching mode → CoachDashboard
     //   coach who last used wax-truck mode → WaxTruck
     //   everyone else                     → Home (personal fleet)
@@ -36,7 +36,7 @@ const AuthLoadingScreen = ({navigation}) => {
     setResolving(true);
     let cancelled = false;
     let timer;
-    const timedOut = {}; // unique sentinel — a real profile is object|null
+    const timedOut = {}; // unique sentinel - a real profile is object|null
     (async () => {
       try {
         const [profileOrTimeout, storedMode] = await Promise.all([

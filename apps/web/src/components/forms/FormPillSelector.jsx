@@ -1,6 +1,6 @@
 // Single-select horizontal pill row. Mirrors the mobile ChipGroup
 // behaviour: tap a pill to toggle the selection on / tap again to
-// clear. Use it for enum-style fields — technique, snow type, binder.
+// clear. Use it for enum-style fields - technique, snow type, binder.
 
 export function FormPillSelector({
   label,

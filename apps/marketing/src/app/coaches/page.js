@@ -5,14 +5,14 @@ import {EmailCapture} from '@/components/EmailCapture';
 export const metadata = {
   title: 'For coaches',
   description:
-    'Link your athletes, review their fleets, run morning wax tests, and send race-day advisories — NordicFleet for nordic coaches.',
+    'Link your athletes, review their fleets, run morning wax tests, and send race-day advisories, NordicFleet for nordic coaches.',
 };
 
 const STEPS = [
   {
     n: '1',
     title: 'Athletes link to you',
-    body: 'Your skiers add you by email. Once they accept, their fleet and logs are visible to you — read-only, so you are never editing their gear behind their back.',
+    body: 'Your skiers add you by email. Once they accept, their fleet and logs are visible to you, read-only, so you are never editing their gear behind their back.',
   },
   {
     n: '2',

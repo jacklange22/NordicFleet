@@ -24,7 +24,7 @@ const toDate = v => {
 };
 
 /**
- * Dashboard stats — counts and the most-recent wax timestamp.
+ * Dashboard stats - counts and the most-recent wax timestamp.
  *
  * Refetches whenever the screen using it gains focus (so logging a wax
  * from the WaxLog screen and returning to Home shows the new value).
@@ -62,7 +62,7 @@ export default function useDashboardStats(uid) {
       setTotalTests(testLogs.length);
       setLastWaxAt(toDate(waxLogs[0]?.date));
     } catch {
-      // Swallow — Firestore rules or network failures shouldn't crash Home.
+      // Swallow - Firestore rules or network failures shouldn't crash Home.
     } finally {
       setLoading(false);
     }

@@ -155,11 +155,11 @@ const CoachDashboardScreen = () => {
         </View>
         <View style={styles.statCellSpacer} />
         <View style={styles.statCell}>
-          <StatCard compact value="—" label="Total skis" />
+          <StatCard compact value="-" label="Total skis" />
         </View>
         <View style={styles.statCellSpacer} />
         <View style={styles.statCell}>
-          <StatCard compact value="—" label="Tests / wk" />
+          <StatCard compact value="-" label="Tests / wk" />
         </View>
       </View>
       {pendingRequests.length > 0 && (

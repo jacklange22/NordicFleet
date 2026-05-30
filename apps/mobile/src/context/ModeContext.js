@@ -1,8 +1,8 @@
-// ModeContext — the personal / coaching / wax-truck mode switcher.
+// ModeContext - the personal / coaching / wax-truck mode switcher.
 //
 // Every signed-in user has a personal fleet. Users with the coaching
-// capability (isCoach) can ADD two more surfaces — Coaching (manage
-// athletes) and Wax Truck (head-to-head wax testing) — and toggle
+// capability (isCoach) can ADD two more surfaces - Coaching (manage
+// athletes) and Wax Truck (head-to-head wax testing) - and toggle
 // among the three. Non-coaches are locked to personal and never see
 // the toggle.
 //
@@ -88,7 +88,7 @@ export const ModeProvider = ({children}) => {
           trace('mode restored', {stored, valid: true});
           setModeState(stored);
         } else if (stored != null) {
-          // Corrupt / legacy value — drop it so we never re-read garbage
+          // Corrupt / legacy value - drop it so we never re-read garbage
           // and never strand the app on an invalid mode.
           trace('mode validated', {stored, valid: false, reset: 'personal'});
           AsyncStorage.removeItem(STORAGE_KEY).catch(() => {});
@@ -138,7 +138,7 @@ export const ModeProvider = ({children}) => {
 
   const value = useMemo(
     () => ({
-      // Force personal whenever the user isn't a coach — defensive,
+      // Force personal whenever the user isn't a coach - defensive,
       // even if state somehow drifted.
       mode: isCoach ? mode : 'personal',
       setMode,

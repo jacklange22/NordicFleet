@@ -56,8 +56,8 @@ function Inner() {
 
         <div className="grid grid-cols-3 gap-3 mb-8">
           <StatCard value={athletes.length} label="Athletes" />
-          <StatCard value="—" label="Total skis" />
-          <StatCard value="—" label="Tests / wk" />
+          <StatCard value="-" label="Total skis" />
+          <StatCard value="-" label="Tests / wk" />
         </div>
 
         {pending.length > 0 && (
@@ -93,7 +93,7 @@ function Inner() {
           <Card>
             <h3 className="text-xl font-bold mb-2">No athletes yet</h3>
             <p className="text-text-secondary text-sm">
-              Share your account email with athletes — they can send you a
+              Share your account email with athletes - they can send you a
               coaching request from their profile, and you&apos;ll see it
               show up here.
             </p>

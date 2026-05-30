@@ -1,4 +1,4 @@
-// Surface container — direct port of the mobile Card atom. Same border
+// Surface container - direct port of the mobile Card atom. Same border
 // + radius, dark surface. Pass `as` to render a different element
 // (e.g. as="a" for a clickable link).
 

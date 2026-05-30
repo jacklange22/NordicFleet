@@ -7,7 +7,7 @@ import {APP_URL} from '@/lib/urls';
 export const metadata = {
   title: 'Pricing',
   description:
-    'NordicFleet pricing — start free, with team plans for coaches and clubs on the way.',
+    'NordicFleet pricing, start free, with team plans for coaches and clubs on the way.',
 };
 
 const PLANS = [
@@ -59,7 +59,7 @@ export default function PricingPage() {
           delay={120}
           className="mt-5 text-lg text-text-secondary max-w-2xl mx-auto">
           The individual app is free while we build. Team plans for coaches
-          and clubs are on the way — get on the list and you&apos;ll hear
+          and clubs are on the way, get on the list and you&apos;ll hear
           first.
         </Reveal>
       </Container>

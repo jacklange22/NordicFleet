@@ -2,7 +2,7 @@
 
 // Overlay + centered card. Click outside to close. ESC to close. The
 // child content is responsible for its own actions (Save / Cancel
-// buttons, etc.) — Modal only handles the chrome.
+// buttons, etc.) - Modal only handles the chrome.
 
 import {useEffect} from 'react';
 

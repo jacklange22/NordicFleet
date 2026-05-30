@@ -5,7 +5,7 @@ import {EmailCapture} from '@/components/EmailCapture';
 export const metadata = {
   title: 'About',
   description:
-    'Why we built NordicFleet — a logbook for skiers and coaches who were tired of losing their wax notes.',
+    'Why we built NordicFleet: a practical logbook for skiers and coaches who want better ski, wax, and testing records.',
 };
 
 export default function AboutPage() {
@@ -31,20 +31,20 @@ export default function AboutPage() {
             Nordic racing runs on details that are easy to forget. Which grind
             was fast in wet snow. What you layered under the topcoat at -8.
             Which ski felt alive on the climbs last winter. By the next race,
-            half of it has evaporated — or it&apos;s on a strip of tape at the
+            half of it has evaporated, or it&apos;s on a strip of tape at the
             bottom of a wax box.
           </Reveal>
           <Reveal as="p" delay={60}>
             NordicFleet started as a simple idea: keep all of it in one place,
             on the phone that&apos;s already in your pocket. Your fleet, your
-            logs, your tests. Then make the testing itself rigorous — not a
+            logs, your tests. Then make the testing itself rigorous, not a
             vague memory of &quot;I think the blue was faster,&quot; but a
             bracket that produces a winner you can stand behind.
           </Reveal>
           <Reveal as="p" delay={120}>
             We care about two things above features: that the data is honest,
             and that it&apos;s yours. The wax dictionary suggests but never
-            blocks — if you mixed something nobody sells, type it in and test
+            blocks, if you mixed something nobody sells, type it in and test
             it. And your fleet is private to you and the coach you choose to
             share it with. Nothing more.
           </Reveal>

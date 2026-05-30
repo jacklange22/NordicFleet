@@ -19,7 +19,7 @@ class ErrorBoundary extends React.Component {
   componentDidCatch(error, info) {
     trace('ErrorBoundary caught', {message: String(error?.message || error)});
     // Route render-time errors through the PII-safe reporting funnel.
-    // (Console in dev today; Crashlytics/Sentry drop-in later — see
+    // (Console in dev today; Crashlytics/Sentry drop-in later - see
     // OBSERVABILITY_PLAN.md.)
     reportError(error, {
       boundary: 'react',
@@ -28,7 +28,7 @@ class ErrorBoundary extends React.Component {
   }
 
   handleRestart = () => {
-    // Best-effort restart — reset our local state so the tree re-renders.
+    // Best-effort restart - reset our local state so the tree re-renders.
     // On a real device the user would force-close and reopen the app, but
     // clearing this state recovers from most render-time errors.
     this.setState({hasError: false, error: null});

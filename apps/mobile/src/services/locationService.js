@@ -3,7 +3,7 @@
 // Uses @react-native-community/geolocation under the hood. The
 // service:
 //   - tolerates the native module being unavailable (returns null)
-//   - never throws — callers can null-check
+//   - never throws - callers can null-check
 //   - handles "denied" and "timeout" the same way: return null
 //
 // The Info.plist key NSLocationWhenInUseUsageDescription is required
@@ -21,7 +21,7 @@ import Geolocation from '@react-native-community/geolocation';
 export function getCurrentLocation(opts = {}) {
   return new Promise(resolve => {
     if (!Geolocation || typeof Geolocation.getCurrentPosition !== 'function') {
-      // Native module not linked yet — degrade gracefully.
+      // Native module not linked yet - degrade gracefully.
       resolve(null);
       return;
     }

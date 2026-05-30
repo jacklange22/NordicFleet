@@ -62,7 +62,7 @@ const FIELD_DEFS = [
 ];
 
 // Brief: decimal-pad for weight/height. iOS decimal-pad shows digits +
-// the locale's decimal separator (no minus sign — fine for these, since
+// the locale's decimal separator (no minus sign - fine for these, since
 // negative weight/height isn't meaningful).
 const keyboardTypeFor = field => {
   if (NUMERIC_FIELDS.has(field)) {
@@ -74,7 +74,7 @@ const keyboardTypeFor = field => {
 const fieldDisplay = (def, profile) => {
   const v = profile?.[def.key];
   if (v === undefined || v === null || v === '') {
-    return '—';
+    return '-';
   }
   return `${v}${def.suffix || ''}`;
 };
@@ -114,7 +114,7 @@ const ProfileScreen = () => {
     return subscribeOutgoingRequestsForAthlete(uid, list => {
       setOutgoingRequests(list);
       // When a request transitions to accepted/ended, the athlete writes
-      // its own coachId. Best-effort — failures are ignored (the next
+      // its own coachId. Best-effort - failures are ignored (the next
       // snapshot fires the same path).
       syncCoachIdFromRequests(uid, list).catch(() => {});
     });
@@ -346,7 +346,7 @@ const ProfileScreen = () => {
             setCoachingBusy(true);
             try {
               const {clearedAthletes} = await setCoachCapability(uid, false);
-              // Drop back to personal mode — coaching surface is gone.
+              // Drop back to personal mode - coaching surface is gone.
               setMode('personal');
               Alert.alert(
                 'Coaching turned off',
@@ -411,14 +411,14 @@ const ProfileScreen = () => {
             size={80}
           />
           <Text style={styles.heroName} numberOfLines={1}>
-            {displayName || '—'}
+            {displayName || '-'}
           </Text>
           <Text style={styles.heroEmail} numberOfLines={1}>
-            {profile?.email || user?.email || '—'}
+            {profile?.email || user?.email || '-'}
           </Text>
         </View>
 
-        {/* Stat row — everyone has a personal fleet now */}
+        {/* Stat row - everyone has a personal fleet now */}
         <View style={styles.statRow}>
           <View style={styles.statCell}>
             <StatCard compact value={skis.length} label="Skis" />
@@ -459,7 +459,7 @@ const ProfileScreen = () => {
           ))}
         </Card>
 
-        {/* Coaching capability toggle — every user can become a coach. */}
+        {/* Coaching capability toggle - every user can become a coach. */}
         <SectionHeader title="Coaching" />
         <Card padding={spacing.lg} style={styles.coachingCard}>
           <View style={styles.coachingRow}>
@@ -483,7 +483,7 @@ const ProfileScreen = () => {
           </View>
         </Card>
 
-        {/* Coach link — every user can have a coach. */}
+        {/* Coach link - every user can have a coach. */}
         <>
             <SectionHeader title="My coach" />
             <Card padding={0}>
@@ -573,7 +573,7 @@ const ProfileScreen = () => {
                     title={isCoach ? 'Add your own coach' : 'Add a coach'}
                     subtitle={
                       isCoach
-                        ? 'Link a coach who advises you — separate from the athletes you coach'
+                        ? 'Link a coach who advises you - separate from the athletes you coach'
                         : 'Send a request to the coach who trains you'
                     }
                     onPress={openCoachModal}

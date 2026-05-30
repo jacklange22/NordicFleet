@@ -18,7 +18,7 @@ import {subscribeProfile, backfillCoachCapability} from '@/lib/firestore';
 
 const STORAGE_KEY = 'nordicfleet.mode';
 
-// The three surfaces — personal is always on; coaching + waxtruck are
+// The three surfaces - personal is always on; coaching + waxtruck are
 // coach-only. Single source of truth for both guards below.
 const VALID_MODES = ['personal', 'coaching', 'waxtruck'];
 

@@ -3,7 +3,7 @@ import {View, Pressable, StyleSheet} from 'react-native';
 import {colors, radius, spacing} from '../../theme';
 
 /**
- * Surface container — the building block for every grouped UI region.
+ * Surface container - the building block for every grouped UI region.
  *
  * Props:
  *   children

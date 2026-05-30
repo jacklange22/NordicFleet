@@ -1,11 +1,11 @@
-// ComposeAdvisory — coach-side screen for sending a race-day advisory.
+// ComposeAdvisory - coach-side screen for sending a race-day advisory.
 //
 // Route params:
 //   athleteUid    required
 //   athleteName   optional (display only)
 //
 // Flow:
-//   1. Loads the athlete's ski fleet (read-only — coach is just
+//   1. Loads the athlete's ski fleet (read-only - coach is just
 //      selecting, not editing).
 //   2. Coach fills event name + date, optionally conditions, picks
 //      primary + backup skis with per-ski notes, optionally a free-
@@ -54,7 +54,7 @@ const ComposeAdvisoryScreen = () => {
   const coachUid = user?.uid;
   const athleteUid = route.params?.athleteUid;
   const athleteName = route.params?.athleteName || 'athlete';
-  // Optional seed values — used when launching an advisory from a Wax
+  // Optional seed values - used when launching an advisory from a Wax
   // Truck result so the winning wax + conditions carry over.
   const prefill = route.params?.prefill || {};
 
@@ -93,7 +93,7 @@ const ComposeAdvisoryScreen = () => {
       } catch (err) {
         if (!cancelled) {
           console.warn('[ComposeAdvisory] failed to load skis', err);
-          setError("Couldn't load athlete's fleet — try again.");
+          setError("Couldn't load athlete's fleet - try again.");
         }
       } finally {
         if (!cancelled) {
@@ -345,7 +345,7 @@ const ComposeAdvisoryScreen = () => {
               </Text>
               <Text style={styles.emptyBody}>
                 Ask them to add a ski to their fleet before sending an
-                advisory — recommendations need at least one ski.
+                advisory - recommendations need at least one ski.
               </Text>
             </Card>
           ) : (
@@ -491,7 +491,7 @@ function isValidISODate(s) {
 }
 
 function defaultUpcomingDate() {
-  // Default the date field to one week out — convenient pre-fill for
+  // Default the date field to one week out - convenient pre-fill for
   // the coach who's planning ahead.
   const d = new Date();
   d.setDate(d.getDate() + 7);

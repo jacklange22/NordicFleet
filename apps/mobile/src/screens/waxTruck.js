@@ -1,4 +1,4 @@
-// WaxTruck — the wax-testing home (coaching capability, wax-truck mode).
+// WaxTruck - the wax-testing home (coaching capability, wax-truck mode).
 //
 // Lists the coach's saved wax tests newest-first with a status pill and
 // a quick progress line, plus a "New test" affordance. Tapping a test

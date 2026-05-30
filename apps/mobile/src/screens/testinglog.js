@@ -50,7 +50,7 @@ const RatingPicker = ({label, value, onChange}) => (
   <View style={styles.ratingBlock}>
     <View style={styles.ratingHeader}>
       <Text style={styles.ratingLabel}>{label}</Text>
-      <Text style={styles.ratingValue}>{value ?? '—'}</Text>
+      <Text style={styles.ratingValue}>{value ?? '-'}</Text>
     </View>
     <View style={styles.ratingRow}>
       {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => {
@@ -85,7 +85,7 @@ const TestEntryCard = ({ski, entry, onChange}) => {
   return (
     <Card style={styles.entryCard}>
       <Text style={styles.entryTitle}>{ski.name || ski.id}</Text>
-      {/* Read-only ski attributes — ghost variant so they read as quiet
+      {/* Read-only ski attributes - ghost variant so they read as quiet
           labels, NOT like the tappable outline/solid selector pills. */}
       <View style={styles.entryPillRow}>
         {!!ski.technique && (

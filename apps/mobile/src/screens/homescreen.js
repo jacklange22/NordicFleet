@@ -31,7 +31,7 @@ import {colors, spacing, typography, radius} from '../theme';
 
 const formatLastWax = d => {
   if (!d) {
-    return '—';
+    return '-';
   }
   const diff = Math.max(0, Date.now() - d.getTime());
   const day = 24 * 60 * 60 * 1000;

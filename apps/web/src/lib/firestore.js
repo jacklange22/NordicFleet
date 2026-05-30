@@ -1,5 +1,5 @@
 // Firestore helpers for the web app. Read paths live alongside the
-// small set of write paths the web exposes — currently just the
+// small set of write paths the web exposes - currently just the
 // import flow's batched ski create.
 
 import {
@@ -101,7 +101,7 @@ export async function getSki(uid, skiId) {
 
 /**
  * Live subscription to a single ski doc. Used where a one-shot read
- * would go stale — e.g. the message-detail attached-ski cards should
+ * would go stale - e.g. the message-detail attached-ski cards should
  * reflect a rename without a page reload.
  */
 export function subscribeSki(uid, skiId, cb) {
@@ -215,7 +215,7 @@ export async function updateProfile(uid, partial) {
 }
 
 /**
- * Find a coach by email — filters by role='coach' so Firestore rules
+ * Find a coach by email - filters by role='coach' so Firestore rules
  * permit the read. Returns null when no match.
  */
 export async function findCoachByEmail(email) {
@@ -294,7 +294,7 @@ export async function setCoachCapability(uid, isCoach) {
       await Promise.all(writes);
       clearedAthletes = snap.size;
     } catch {
-      // tolerate — drop the capability anyway
+      // tolerate - drop the capability anyway
     }
   }
   await setDoc(
@@ -691,7 +691,7 @@ export async function createSki(uid, data) {
 
 /**
  * Create several skis in parallel. Uses Promise.allSettled so one bad
- * row doesn't abort the rest — callers receive a {created, failed}
+ * row doesn't abort the rest - callers receive a {created, failed}
  * summary with per-row indices preserved for diagnostic messaging.
  *
  * @param {string} uid
@@ -727,7 +727,7 @@ export async function updateSki(uid, skiId, partial) {
 }
 
 /**
- * Soft-delete — sets retired=true. The web UI also exposes the
+ * Soft-delete - sets retired=true. The web UI also exposes the
  * inverse (set false) so coaches can resurrect skis a user retired
  * by mistake.
  */
@@ -743,7 +743,7 @@ export async function setSkiRetired(uid, skiId, retired) {
  * sort order on the ski-history list stays consistent.
  *
  * For skate skis the caller is expected to pass kickLayers: 0,
- * kickWax: null — same contract as the mobile service.
+ * kickWax: null - same contract as the mobile service.
  *
  * @param {string} uid
  * @param {object} data   WaxLogInput shape
@@ -771,7 +771,7 @@ export async function createWaxLog(uid, data) {
 
 /**
  * Append a test log for the given ski. Same pattern as createWaxLog
- * — goes through buildTestLogCreatePayload, attaches a serverTimestamp
+ * - goes through buildTestLogCreatePayload, attaches a serverTimestamp
  * for the date + createdAt.
  *
  * @param {string} uid
@@ -861,7 +861,7 @@ export async function exportUserData(uid) {
  * Permanently delete the signed-in user's account: unlink any athletes,
  * delete all subcollections, the user doc, then the auth user. Mirrors
  * the mobile userService.deleteAccount. The auth deletion throws
- * `auth/requires-recent-login` if the session is stale — the caller
+ * `auth/requires-recent-login` if the session is stale - the caller
  * should prompt a fresh sign-in and retry.
  */
 export async function deleteAccount() {
@@ -893,7 +893,7 @@ export async function deleteAccount() {
       await batch.commit();
     }
   } catch {
-    // Non-coach / no athletes — continue.
+    // Non-coach / no athletes - continue.
   }
 
   // 2. Delete subcollections in chunks (batch cap is 500).

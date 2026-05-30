@@ -1,7 +1,7 @@
 /**
  * Shared shape definitions for editor JSDoc autocompletion.
  *
- * These aren't runtime types — they're typedef hints. If you swap to
+ * These aren't runtime types - they're typedef hints. If you swap to
  * TypeScript later, this file's contents move into `types.ts` interfaces.
  */
 

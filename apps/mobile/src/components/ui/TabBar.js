@@ -11,7 +11,7 @@ import {trace} from '../../services/devTrace';
 
 // Both useNavigation and useRoute throw when the component isn't inside a
 // NavigationContainer / Screen. Tests sometimes render screens standalone,
-// so wrap defensively — TabBar should degrade rather than crash.
+// so wrap defensively - TabBar should degrade rather than crash.
 const useSafeNavigation = () => {
   try {
     return useNavigation();
@@ -46,21 +46,21 @@ const PERSONAL_TABS = [
 
 // Coaching mode: managing other skiers. The Athletes dashboard
 // surfaces pending requests inline, so there's no separate Requests
-// tab on iOS (documented in NOTES.md). Add / Wax / Test are hidden —
+// tab on iOS (documented in NOTES.md). Add / Wax / Test are hidden -
 // you don't log your own equipment in coaching mode.
 const COACHING_TABS = [
   {key: 'dashboard', label: 'Athletes', icon: 'people-outline', activeIcon: 'people', route: 'CoachDashboard'},
   {key: 'profile', label: 'Profile', icon: 'person-outline', activeIcon: 'person', route: 'Profile'},
 ];
 
-// Wax Truck mode: head-to-head wax testing. Tests list + profile —
+// Wax Truck mode: head-to-head wax testing. Tests list + profile -
 // you don't manage athletes or your own fleet from here.
 const WAXTRUCK_TABS = [
   {key: 'tests', label: 'Tests', icon: 'git-network-outline', activeIcon: 'git-network', route: 'WaxTruck'},
   {key: 'profile', label: 'Profile', icon: 'person-outline', activeIcon: 'person', route: 'Profile'},
 ];
 
-// Home route for each mode — used when the toggle switches contexts.
+// Home route for each mode - used when the toggle switches contexts.
 const MODE_HOME = {
   personal: 'Home',
   coaching: 'CoachDashboard',
@@ -118,7 +118,7 @@ const TabBar = () => {
 
     // 2) Defer the stack reset OUT of this touch/setState frame.
     //    Previously this ran synchronously here, right after a native
-    //    layout-animation config call — and on a real device the Fabric
+    //    layout-animation config call - and on a real device the Fabric
     //    layout-animation driver tried to animate the whole stack teardown +
     //    remount, aborting the mounting transaction on the main thread
     //    (mounting pullTransaction -> SIGABRT). The layout animation is gone
@@ -128,7 +128,7 @@ const TabBar = () => {
     requestAnimationFrame(() => {
       if (navigation) {
         // A mode switch is a top-level context change, so RESET the stack to
-        // the new mode's home (clean single-screen stack — no stale screens
+        // the new mode's home (clean single-screen stack - no stale screens
         // underneath, no back button that crosses modes).
         trace('mode navigation start', {to: target});
         navigation.reset({index: 0, routes: [{name: target}]});
@@ -147,7 +147,7 @@ const TabBar = () => {
         // at a glance even before looking at the segmented control.
         mode !== 'personal' && {borderTopColor: accent},
       ]}>
-      {/* Mode switcher — only for users with the coaching capability. */}
+      {/* Mode switcher - only for users with the coaching capability. */}
       {isCoach && (
         <View style={styles.switcherWrap}>
           <View style={styles.switcher}>

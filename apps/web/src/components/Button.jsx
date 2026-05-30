@@ -1,5 +1,5 @@
 // Primary / secondary / ghost button. Mirrors apps/mobile's Button
-// atom — same red, same pill shape at lg/md, same disabled opacity.
+// atom - same red, same pill shape at lg/md, same disabled opacity.
 
 const SIZE = {
   lg: 'h-13 px-6 text-base',
