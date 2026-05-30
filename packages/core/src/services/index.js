@@ -24,4 +24,5 @@ module.exports = {
   ...require('./analytics'),
   ...require('./inviteOperations'),
   ...require('./feedbackOperations'),
+  ...require('./coachPermissions'),
 };
