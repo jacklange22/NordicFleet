@@ -1,0 +1,40 @@
+
+> nordicfleet@0.0.0 lint
+> npm run lint --workspaces --if-present
+
+
+> @nordicfleet/marketing@0.1.0 lint
+> next lint || true
+
+Invalid project directory provided, no such directory: /Users/jacklange/NordicFleet/apps/marketing/lint
+
+> @nordicfleet/mobile@0.0.1 lint
+> eslint .
+
+
+/Users/jacklange/NordicFleet/apps/mobile/__tests__/App.test.tsx
+  18:1  warning  Disabled test  jest/no-disabled-tests
+
+/Users/jacklange/NordicFleet/apps/mobile/src/screens/composeAdvisory.js
+  446:13  warning  Inline style: { backgroundColor: "role ? accentColor : 'transparent'" }  react-native/no-inline-styles
+
+/Users/jacklange/NordicFleet/apps/mobile/src/screens/login.js
+  77:16  warning  Inline style: { flex: 1 }  react-native/no-inline-styles
+
+/Users/jacklange/NordicFleet/apps/mobile/src/screens/roleSelect.js
+  85:16  warning  Inline style: { flex: 1 }  react-native/no-inline-styles
+
+/Users/jacklange/NordicFleet/apps/mobile/src/screens/signup.js
+  72:16  warning  Inline style: { flex: 1 }  react-native/no-inline-styles
+
+✖ 5 problems (0 errors, 5 warnings)
+
+
+> @nordicfleet/web@0.1.0 lint
+> next lint || true
+
+Invalid project directory provided, no such directory: /Users/jacklange/NordicFleet/apps/web/lint
+
+> @nordicfleet/core@0.1.0 lint
+> eslint src/ --no-eslintrc -c .eslintrc.js
+
