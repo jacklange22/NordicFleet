@@ -22,4 +22,6 @@ module.exports = {
   ...require('./dataExport'),
   ...require('./errorReport'),
   ...require('./analytics'),
+  ...require('./inviteOperations'),
+  ...require('./feedbackOperations'),
 };

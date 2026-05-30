@@ -63,6 +63,22 @@ describe('SettingsScreen (#4)', () => {
     expect(tree.getByLabelText('New password')).toBeTruthy();
   });
 
+  it('Send beta feedback opens an entry point that never depends on nordicfleet.com', async () => {
+    authMock.__setCurrentUser({uid: 'u1', email: 'a@b.com'});
+    const {Linking} = require('react-native');
+    const openSpy = jest
+      .spyOn(Linking, 'openURL')
+      .mockResolvedValue(undefined);
+    const tree = renderSettings();
+    await act(async () => {
+      fireEvent.press(tree.getByLabelText('Send beta feedback'));
+    });
+    expect(openSpy).toHaveBeenCalled();
+    const url = openSpy.mock.calls[0][0];
+    expect(url).not.toContain('nordicfleet.com');
+    openSpy.mockRestore();
+  });
+
   it('Sign out asks for confirmation before signing out', async () => {
     authMock.__setCurrentUser({uid: 'u1', email: 'a@b.com'});
     const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});

@@ -19,10 +19,11 @@ import {useAuth} from '../context/AuthContext';
 import {exportAndShareUserData} from '../services/dataExportService';
 import {deleteAccount} from '../services/userService';
 import {auth} from '../services/firebase';
+import {buildFeedbackMailto} from '@nordicfleet/core';
 import {Header, Card, ListItem, SectionHeader, Button, Input} from '../components/ui';
 import {colors, radius, spacing, typography} from '../theme';
 import {BUILD_TAG} from '../buildInfo';
-import {legalUrl} from '../config/urls';
+import {legalUrl, MARKETING_URL, FEEDBACK_EMAIL} from '../config/urls';
 
 // Settings groups the account-management actions that used to clutter the
 // Profile screen (issue #4): credentials, data/privacy, and the dangerous
@@ -50,6 +51,20 @@ const SettingsScreen = () => {
 
   const openLegal = useCallback(path => {
     Linking.openURL(legalUrl(path)).catch(() => {});
+  }, []);
+
+  // Beta feedback / bug report. Opens the user's mail composer with a
+  // draft (build tag + platform pre-filled) so reports carry version
+  // context. We never claim it was sent - the user sends it. When no
+  // feedback inbox is configured we open the marketing site instead of
+  // drafting to an address we don't own.
+  const openFeedback = useCallback(kind => {
+    const mailto = buildFeedbackMailto(FEEDBACK_EMAIL, {
+      kind,
+      buildTag: BUILD_TAG,
+      platform: Platform.OS,
+    });
+    Linking.openURL(mailto || MARKETING_URL).catch(() => {});
   }, []);
 
   const handleExportData = useCallback(async () => {
@@ -284,18 +299,30 @@ const SettingsScreen = () => {
               title="Terms of Service"
               onPress={() => openLegal('/terms')}
               accessibilityLabel="Terms of Service"
+              chevron={false}
+            />
+          </View>
+        </Card>
+
+        {/* Feedback - beta entry point. Opens a mail draft (or the site
+            when no inbox is configured); nothing is sent automatically. */}
+        <SectionHeader title="Feedback" />
+        <Card padding={0}>
+          <View style={styles.rowOuter}>
+            <ListItem
+              icon="chatbox-ellipses-outline"
+              title="Send beta feedback"
+              subtitle="Tell us what is working and what is not"
+              onPress={() => openFeedback('feedback')}
+              accessibilityLabel="Send beta feedback"
               showDivider
             />
           </View>
           <View style={styles.rowOuter}>
             <ListItem
-              icon="mail-outline"
+              icon="bug-outline"
               title="Report a problem"
-              onPress={() =>
-                Linking.openURL(
-                  'mailto:support@nordicfleet.com?subject=NordicFleet%20issue%20report',
-                ).catch(() => {})
-              }
+              onPress={() => openFeedback('bug')}
               accessibilityLabel="Report a problem"
               chevron={false}
             />

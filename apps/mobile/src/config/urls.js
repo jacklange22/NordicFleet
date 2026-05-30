@@ -12,6 +12,13 @@ export const MARKETING_URL =
 export const APP_URL =
   process.env.NORDICFLEET_APP_URL || 'https://nordicfleet-web.vercel.app';
 
+// Beta feedback / bug-report inbox. Empty by default on purpose: we do
+// not own a support mailbox yet, so rather than draft email to an address
+// that bounces, the feedback entry point falls back to the marketing site
+// when this is unset. Set NORDICFLEET_FEEDBACK_EMAIL to turn on the
+// in-app email draft.
+export const FEEDBACK_EMAIL = process.env.NORDICFLEET_FEEDBACK_EMAIL || '';
+
 /** Build a marketing-site URL, e.g. legalUrl('/privacy'). */
 export const legalUrl = path => `${MARKETING_URL}${path}`;
 
