@@ -31,6 +31,46 @@ describe('waxTestService', () => {
     expect(saved.createdAt).toBeTruthy();
   });
 
+  it('stores the bracket WITHOUT a nested array (the create-crash fix)', async () => {
+    // Firestore forbids nested arrays; bracket.rounds (Match[][]) was the
+    // Wax Truck create crash. The RAW stored doc must keep rounds as a MAP,
+    // and reading it back must restore the array form.
+    const id = await createWaxTest('u1', validInput());
+    const rawPath = [...firestoreMock.__getStore().keys()].find(
+      k => k.startsWith('users/u1/waxTests/') && k.endsWith(id),
+    );
+    const raw = firestoreMock.__getStore().get(rawPath);
+    // Stored rounds is a plain object (map), NOT an array → no nested array.
+    expect(Array.isArray(raw.bracket.rounds)).toBe(false);
+    expect(typeof raw.bracket.rounds).toBe('object');
+    // No top-level field is an array-of-arrays.
+    const hasNestedArray = v =>
+      Array.isArray(v) && v.some(el => Array.isArray(el));
+    expect(hasNestedArray(raw.bracket.rounds)).toBe(false);
+    // Read path restores the Match[][] form the runner expects.
+    const saved = await getWaxTest('u1', id);
+    expect(Array.isArray(saved.bracket.rounds)).toBe(true);
+    expect(saved.bracket.rounds[0][0].matchId).toBeTruthy();
+  });
+
+  it('round-trips a bye bracket (5 combinations → byes) safely', async () => {
+    const combos = [1, 2, 3, 4, 5].map(n => ({
+      id: `c${n}`,
+      layers: [{category: 'paraffin', waxName: `Wax ${n}`}],
+    }));
+    const id = await createWaxTest('u1', {
+      name: 'Five',
+      testType: 'paraffin',
+      fleetSize: 8,
+      combinations: combos,
+    });
+    const saved = await getWaxTest('u1', id);
+    // 5 combos → bracket of 8 slots → 4 first-round matches across rounds.
+    expect(Array.isArray(saved.bracket.rounds)).toBe(true);
+    expect(saved.bracket.rounds[0].length).toBe(4);
+    expect(saved.testType).toBe('paraffin');
+  });
+
   it('createWaxTest requires a uid', async () => {
     await expect(createWaxTest('', validInput())).rejects.toThrow(/uid/);
   });

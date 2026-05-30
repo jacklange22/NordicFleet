@@ -232,6 +232,48 @@ function bracketProgress(bracket) {
   };
 }
 
+// ─── Firestore (de)serialization ─────────────────────────────────────
+//
+// Firestore forbids NESTED ARRAYS (an array directly containing another
+// array). The bracket's `rounds` is Match[][], which is exactly that — so
+// writing it crashes/rejects on a real device. We store `rounds` as a MAP
+// keyed by round index ({"0": Match[], "1": Match[]}) — a map whose values
+// are arrays-of-objects is allowed — and restore the Match[][] array form on
+// read. Everything in memory (core + runner) keeps using the array form.
+
+/** Array-form bracket → Firestore-safe (rounds as a map). */
+function serializeBracket(bracket) {
+  if (!bracket || !Array.isArray(bracket.rounds)) {
+    // Already serialized, or empty — pass a safe shape through.
+    return bracket && typeof bracket === 'object'
+      ? bracket
+      : {rounds: {}, winnerId: null};
+  }
+  const rounds = {};
+  bracket.rounds.forEach((round, i) => {
+    rounds[String(i)] = Array.isArray(round) ? round : [];
+  });
+  return {rounds, winnerId: bracket.winnerId == null ? null : bracket.winnerId};
+}
+
+/** Firestore-stored bracket (rounds map) → array-form Match[][]. */
+function deserializeBracket(stored) {
+  if (!stored || typeof stored !== 'object') {
+    return {rounds: [], winnerId: null};
+  }
+  // Back-compat / mock: already array form.
+  if (Array.isArray(stored.rounds)) {
+    return {rounds: stored.rounds, winnerId: stored.winnerId == null ? null : stored.winnerId};
+  }
+  const map = stored.rounds && typeof stored.rounds === 'object' ? stored.rounds : {};
+  const rounds = Object.keys(map)
+    .map(k => Number(k))
+    .filter(n => Number.isInteger(n) && n >= 0)
+    .sort((a, b) => a - b)
+    .map(n => (Array.isArray(map[String(n)]) ? map[String(n)] : []));
+  return {rounds, winnerId: stored.winnerId == null ? null : stored.winnerId};
+}
+
 // ─── Combination + payload shaping ───────────────────────────────────
 
 /**
@@ -345,6 +387,15 @@ function buildWaxTestCreatePayload(input) {
     ? input.status
     : 'setup';
 
+  // One test = one type (Kick / Paraffin / Topcoat / Structure). Use the
+  // explicit testType when valid; otherwise fall back to the first layer's
+  // category so older callers keep working.
+  const explicitType = String(input.testType || '').toLowerCase();
+  const testType = VALID_CATEGORIES.includes(explicitType)
+    ? explicitType
+    : (combinations[0] && combinations[0].layers[0] && combinations[0].layers[0].category) ||
+      'paraffin';
+
   const bracket =
     input.bracket && Array.isArray(input.bracket.rounds)
       ? input.bracket
@@ -352,7 +403,7 @@ function buildWaxTestCreatePayload(input) {
         ? generateBracket(combinations)
         : {rounds: [], winnerId: null};
 
-  return {name, fleetSize, conditions, combinations, bracket, status};
+  return {name, testType, fleetSize, conditions, combinations, bracket, status};
 }
 
 function numOrNull(v) {
@@ -379,4 +430,6 @@ module.exports = {
   bracketProgress,
   buildCombinationLabel,
   buildWaxTestCreatePayload,
+  serializeBracket,
+  deserializeBracket,
 };
