@@ -31,10 +31,10 @@ open NordicFleet.xcworkspace
 
 ## Confirm it's the LATEST build (don't skip)
 
-- Open the app → **Profile → ⚙ Settings** → scroll to the bottom. In a Debug
-  build it shows **`Build · 2026-05-30 · product-hardening-1`**
+- Open the app → **Profile → ⚙ Settings** → scroll to the bottom. It shows
+  **`Build · 2026-05-30 · implementation-pass-1`**
   (`src/buildInfo.js` `BUILD_TAG`). If you see an older tag or none, the phone
-  is running a stale build — repeat the clean reinstall.
+  is running a stale build - repeat the clean reinstall.
 - Quick UX spot-check: bottom nav reads **"Ski"** (not "Add"); ski cards show
   **brand · model** under the name.
 
