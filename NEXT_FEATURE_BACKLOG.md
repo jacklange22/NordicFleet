@@ -5,25 +5,25 @@ prerequisite is unmet; "Ready" means it can be picked up now. Security-
 sensitive items are explicitly tagged so they are not shipped without their
 gate (the Firestore rules test harness)._
 
-## P0 - Unblock the rules harness (gates everything security-sensitive)
+## P0 - Rules harness (RESOLVED 2026-05-30 completion pass)
 
-- **Install JDK 21** (`brew install openjdk@21`) or pin `firebase-tools@13`
-  locally, then run `npm run test:rules` green.
-  - _Why first:_ the emulator rules harness exists (`firestore-tests/`) but
-    fails today because firebase-tools needs JDK 21 and only JDK 11 is
-    installed. Until this is green, no new Firestore rules may ship. See
-    `FIRESTORE_RULES_TESTING_PLAN.md`.
-  - Status: **Blocked** (toolchain).
+- `npm run test:rules` is green (18 tests). JDK 21 (`brew openjdk@21`) is
+  installed but keg-only; the `test:rules` script now prepends its bin to PATH
+  automatically. See `FIRESTORE_RULES_TESTING_PLAN.md`.
+  - Status: **Done.** Rule-gated features may ship with emulator tests.
 
-## P1 - Coach invites (UI + rules) — security-sensitive
+## P1 - Coach invites — mostly SHIPPED, one deploy step left
 
-- Core already landed (`inviteOperations`: parse/link/email/mailto, no fake
-  send). Remaining: `athleteInvites` collection + rules (emulator-test first),
-  coach invite UI (paste emails, create links, **copy links / open email
-  draft** — never "sent"), invite list + revoke. Redemption reuses the existing
-  `coachRequests` flow. Design: `COACH_FEATURES_DESIGN.md` Part A.
-  - Status: **Blocked on P0**. Optional later: automated send via an email
-    provider + Cloud Function.
+- Shipped this pass: core (`makeInviteToken`/`buildInvitePayload`/parse/link/
+  email/mailto), `athleteInvites` rules (coach-private, no enumeration; tested
+  18/18), mobile `inviteService`, and the Invite athletes coach UI (paste ->
+  create links -> copy / email draft / revoke, no fake "sent").
+  - **Remaining (do first):** run `firebase deploy --only firestore:rules` so
+    the invite writes work in prod (tested, additive, safe-closed until then).
+  - **Then:** athlete-side redemption (signup `?invite=` -> "Connect with
+    coach" prefill, via the existing coach-request-by-email flow) and a web
+    invite UI. Optional later: automated send via an email provider + Cloud
+    Function. Design: `COACH_FEATURES_DESIGN.md` Part A.
 
 ## P2 - Athlete-granted coach permissions + suggestions — security-sensitive
 

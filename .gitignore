@@ -2,6 +2,12 @@
 #
 .DS_Store
 
+# Firebase emulator debug logs (created by npm run test:rules)
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+pglite-debug.log
+
 # Xcode
 #
 build/
