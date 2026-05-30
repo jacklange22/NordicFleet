@@ -147,8 +147,13 @@ const WaxHistoryScreen = () => {
           }
           title={skiName}
           subtitle={waxLogSubtitle(item)}
-          onPress={() => navigation.navigate('SkiInfo', {skiId: item.skiId})}
-          accessibilityLabel={`Open ${skiName}`}
+          onPress={() =>
+            navigation.navigate('EditWaxLog', {
+              logId: item.id,
+              skiId: item.skiId,
+            })
+          }
+          accessibilityLabel={`Edit wax on ${skiName}`}
         />
       </Card>
     );

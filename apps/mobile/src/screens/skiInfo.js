@@ -418,6 +418,20 @@ const SkiInfo = ({route, navigation}) => {
                   }
                   title={formatDate(log.date)}
                   subtitle={waxLogSubtitle(log)}
+                  onPress={
+                    isCoachView
+                      ? undefined
+                      : () =>
+                          navigation.navigate('EditWaxLog', {
+                            logId: log.id,
+                            skiId,
+                          })
+                  }
+                  accessibilityLabel={
+                    isCoachView
+                      ? undefined
+                      : `Edit wax from ${formatDate(log.date)}`
+                  }
                   showDivider={i < waxLogs.length - 1}
                 />
               </View>
@@ -439,6 +453,18 @@ const SkiInfo = ({route, navigation}) => {
                   leading={<RatingBadge value={log.glideRating} />}
                   title={testLogTitle(log)}
                   subtitle={testLogSubtitle(log)}
+                  onPress={
+                    isCoachView
+                      ? undefined
+                      : () =>
+                          navigation.navigate('EditTestLog', {
+                            logId: log.id,
+                            skiId,
+                          })
+                  }
+                  accessibilityLabel={
+                    isCoachView ? undefined : `Edit test: ${testLogTitle(log)}`
+                  }
                   showDivider={i < testLogs.length - 1}
                 />
               </View>

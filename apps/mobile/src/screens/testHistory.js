@@ -167,8 +167,13 @@ const TestHistoryScreen = () => {
           leading={<RatingBadge value={item.glideRating} />}
           title={skiName}
           subtitle={testLogSubtitle(item)}
-          onPress={() => navigation.navigate('SkiInfo', {skiId: item.skiId})}
-          accessibilityLabel={`Open ${skiName}`}
+          onPress={() =>
+            navigation.navigate('EditTestLog', {
+              logId: item.id,
+              skiId: item.skiId,
+            })
+          }
+          accessibilityLabel={`Edit test on ${skiName}`}
         />
       </Card>
     );

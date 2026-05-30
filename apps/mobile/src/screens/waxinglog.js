@@ -47,7 +47,7 @@ const BINDER_OPTIONS = [
 
 const MAX_LAYERS = 6;
 
-const emptyWaxEntry = () => ({
+export const emptyWaxEntry = () => ({
   binder: '',
   kickLayers: 1,
   kickWax: '',
@@ -115,7 +115,14 @@ const summarizeEntry = entry => {
   return parts.length ? parts.join(' · ') : 'Not filled in yet';
 };
 
-const WaxEntryCard = ({ski, entry, onChange, collapsible, expanded, onToggle}) => {
+export const WaxEntryCard = ({
+  ski,
+  entry,
+  onChange,
+  collapsible,
+  expanded,
+  onToggle,
+}) => {
   const isClassic = (ski.technique || '').toLowerCase() === 'classic';
 
   const setBinder = b => onChange({binder: entry.binder === b ? '' : b});

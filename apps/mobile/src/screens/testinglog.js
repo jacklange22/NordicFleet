@@ -35,7 +35,7 @@ import {colors, spacing, typography} from '../theme';
 const SNOW_OPTIONS = ['Old', 'New', 'Manmade'];
 const SURFACE_OPTIONS = ['Hardpack', 'Powder', 'Corduroy', 'Slush'];
 
-const emptyTestEntry = () => ({
+export const emptyTestEntry = () => ({
   glideWax: '',
   kickWax: '',
   glideRating: 5,
@@ -80,7 +80,7 @@ const RatingPicker = ({label, value, onChange}) => (
   </View>
 );
 
-const TestEntryCard = ({ski, entry, onChange}) => {
+export const TestEntryCard = ({ski, entry, onChange}) => {
   const tech = (ski.technique || '').toLowerCase();
   return (
     <Card style={styles.entryCard}>

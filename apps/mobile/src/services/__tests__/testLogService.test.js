@@ -3,6 +3,8 @@ import {
   listTestLogsForSki,
   listAllTestLogs,
   createTestLog,
+  getTestLog,
+  updateTestLog,
   subscribeTestLogsForSki,
   subscribeAllTestLogs,
 } from '../testLogService';
@@ -91,6 +93,65 @@ describe('testLogService', () => {
       expect(logs[0].humidity).toBeNull();
       expect(logs[0].kickRating).toBeNull();
       expect(typeof id).toBe('string');
+    });
+  });
+
+  describe('getTestLog', () => {
+    it('returns null for missing args or a missing doc', async () => {
+      expect(await getTestLog()).toBeNull();
+      expect(await getTestLog('u1', 'ghost')).toBeNull();
+    });
+
+    it('returns the stored log', async () => {
+      firestoreMock.__seedDoc('users/u1/testLogs/t1', {
+        skiId: 's1',
+        glideRating: 7,
+      });
+      const log = await getTestLog('u1', 't1');
+      expect(log.id).toBe('t1');
+      expect(log.glideRating).toBe(7);
+    });
+  });
+
+  describe('updateTestLog', () => {
+    it('throws without uid or logId', async () => {
+      await expect(updateTestLog()).rejects.toThrow('uid is required');
+      await expect(updateTestLog('u1')).rejects.toThrow('logId is required');
+    });
+
+    it('edits conditions/ratings, stamps updatedAt, preserves skiId/date/createdAt/location', async () => {
+      firestoreMock.__seedDoc('users/u1/testLogs/t1', {
+        skiId: 's1',
+        date: {seconds: 222},
+        createdAt: {seconds: 200},
+        location: {latitude: 1, longitude: 2},
+        temperature: -2,
+        glideRating: 5,
+        notes: 'old',
+      });
+      await updateTestLog('u1', 't1', {
+        temperature: '-8',
+        humidity: '60',
+        snowType: 'Old',
+        surface: 'Hardpack',
+        glideRating: '9',
+        notes: 'updated',
+      });
+      const stored = firestoreMock.__getStore().get('users/u1/testLogs/t1');
+      // Edited (coerced + lowercased).
+      expect(stored.temperature).toBe(-8);
+      expect(stored.humidity).toBe(60);
+      expect(stored.snowType).toBe('old');
+      expect(stored.surface).toBe('hardpack');
+      expect(stored.glideRating).toBe(9);
+      expect(stored.notes).toBe('updated');
+      // Preserved.
+      expect(stored.skiId).toBe('s1');
+      expect(stored.date).toEqual({seconds: 222});
+      expect(stored.createdAt).toEqual({seconds: 200});
+      expect(stored.location).toEqual({latitude: 1, longitude: 2});
+      // Bumped.
+      expect(stored.updatedAt).toBeDefined();
     });
   });
 

@@ -3,6 +3,8 @@ import {
   listWaxLogsForSki,
   listAllWaxLogs,
   createWaxLog,
+  getWaxLog,
+  updateWaxLog,
   subscribeWaxLogsForSki,
   subscribeAllWaxLogs,
 } from '../waxLogService';
@@ -83,6 +85,61 @@ describe('waxLogService', () => {
       const logs = await listWaxLogsForSki('u1', 'ski1');
       expect(logs[0].glideWaxes).toEqual([]);
       expect(typeof id).toBe('string');
+    });
+  });
+
+  describe('getWaxLog', () => {
+    it('returns null for missing args or a missing doc', async () => {
+      expect(await getWaxLog()).toBeNull();
+      expect(await getWaxLog('u1', 'ghost')).toBeNull();
+    });
+
+    it('returns the stored log', async () => {
+      firestoreMock.__seedDoc('users/u1/waxLogs/w1', {
+        skiId: 's1',
+        binder: 'VG Swix',
+      });
+      const log = await getWaxLog('u1', 'w1');
+      expect(log.id).toBe('w1');
+      expect(log.binder).toBe('VG Swix');
+    });
+  });
+
+  describe('updateWaxLog', () => {
+    it('throws without uid or logId', async () => {
+      await expect(updateWaxLog()).rejects.toThrow('uid is required');
+      await expect(updateWaxLog('u1')).rejects.toThrow('logId is required');
+    });
+
+    it('edits wax fields, stamps updatedAt, preserves skiId/date/createdAt', async () => {
+      firestoreMock.__seedDoc('users/u1/waxLogs/w1', {
+        skiId: 's1',
+        date: {seconds: 111},
+        createdAt: {seconds: 100},
+        binder: 'VG Swix',
+        glideWaxes: ['CH8'],
+        notes: 'old',
+      });
+      await updateWaxLog('u1', 'w1', {
+        binder: 'Toko Base',
+        glideWaxes: ['HF6', 'HF4'],
+        glideLayers: 2,
+        kickLayers: 2,
+        kickWax: 'VR40',
+        notes: 'new note',
+      });
+      const stored = firestoreMock.__getStore().get('users/u1/waxLogs/w1');
+      // Edited.
+      expect(stored.binder).toBe('Toko Base');
+      expect(stored.glideWaxes).toEqual(['HF6', 'HF4']);
+      expect(stored.kickLayers).toBe(2);
+      expect(stored.notes).toBe('new note');
+      // Preserved.
+      expect(stored.skiId).toBe('s1');
+      expect(stored.date).toEqual({seconds: 111});
+      expect(stored.createdAt).toEqual({seconds: 100});
+      // Bumped.
+      expect(stored.updatedAt).toBeDefined();
     });
   });
 

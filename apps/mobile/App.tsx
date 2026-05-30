@@ -16,6 +16,8 @@ import TestingLogScreen from './src/screens/testinglog.js';
 import WaxLogScreen from './src/screens/waxinglog.js';
 import WaxHistoryScreen from './src/screens/waxHistory.js';
 import TestHistoryScreen from './src/screens/testHistory.js';
+import EditWaxLogScreen from './src/screens/editWaxLog.js';
+import EditTestLogScreen from './src/screens/editTestLog.js';
 import SkiInfo from './src/screens/skiInfo.js';
 import AddSkiForm from './src/screens/newSki.js';
 import ScanSkiScreen from './src/screens/scanSki.js';
@@ -113,6 +115,8 @@ const App = () => {
               <Stack.Screen name="WaxLog" component={WaxLogScreen} />
               <Stack.Screen name="WaxHistory" component={WaxHistoryScreen} />
               <Stack.Screen name="TestHistory" component={TestHistoryScreen} />
+              <Stack.Screen name="EditWaxLog" component={EditWaxLogScreen} />
+              <Stack.Screen name="EditTestLog" component={EditTestLogScreen} />
               <Stack.Screen name="SkiInfo" component={SkiInfo} />
               <Stack.Screen name="newSki" component={AddSkiForm} />
               <Stack.Screen name="ScanSki" component={ScanSkiScreen} />
