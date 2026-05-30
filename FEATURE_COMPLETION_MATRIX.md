@@ -19,7 +19,9 @@ rules), **Design** (doc only), **Deferred** (next pass)._
 | Beta feedback + debug info | **Shipped** | Settings: Send feedback / Report a problem (mail draft, build+platform) + Copy debug info (PII-free). No fake send; no nordicfleet.com. |
 | Coach athlete invites | **Shipped\*** | Coach UI (paste -> create links -> copy/email-draft/revoke). `athleteInvites` rules tested 18/18. **Needs `firebase deploy --only firestore:rules`** to work in prod. Athlete redemption via existing coach-request-by-email (no token lookup, no enumeration). |
 | Rules test harness | **Shipped** | `npm run test:rules` green (auto-resolves keg-only JDK 21). 18 tests. |
-| Coach permission model | **Core only** | view/comment/edit ladder + suggestion builder/sanitizer tested in core. UI + `fleetSuggestions`/`coachAccess` rules **Deferred**. |
+| Coach permissions | **Shipped** | view/comment ladder (default view), athlete-set on Profile, coach read-only. Edit tier "coming soon". No rule change (rides user-doc rules); rules-tested. |
+| Fleet suggestions | **Shipped\*** | Coach "Suggest a change" (comment+) -> athlete inbox -> accept (applied) / reject. `fleetSuggestions` rules tested 18->27. **Needs `firebase deploy --only firestore:rules`** to work in prod. |
+| Edit draft autosave | **Shipped** | Edit screens autosave a local draft (restore on return, clear on save) instead of a discard prompt. |
 | Public sharing | **Design** | `PUBLIC_SHARING_DESIGN.md`. Needs `publicShares` rules + sanitizer + marketing routes. **Deferred**. |
 | Web parity | **Partial** | Unit prefs + feedback on web shipped. Unified messaging + log-edit + invite UI on web **Deferred** (`NEXT_FEATURE_BACKLOG.md`). |
 | Observability (real sink) | **Deferred** | `errorReport` shaping exists; wiring Sentry/Crashlytics deferred. |

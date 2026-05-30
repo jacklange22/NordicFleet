@@ -113,3 +113,24 @@ must expose only owner-selected fields via a dedicated `publicShares`
 collection with strict rules (design in `PUBLIC_SHARING_DESIGN.md`). The
 privacy policy language was updated to be accurate (aggregated/de-identified,
 not "anonymous"; admin access acknowledged) rather than reassuring-but-false.
+
+## Update: coach-collaboration rules (2026-05-30)
+
+New Firestore rules added this pass are **additive and emulator-tested**
+(`npm run test:rules` = 27/27); no existing rule was weakened:
+
+- `coachPermission` on the athlete user doc rides the existing owner-write /
+  coach-read rules (athlete sets it; a coach can read but never raise their
+  own). No rule change.
+- `athleteInvites` (prior pass): coach-private, no public/athlete read, no
+  enumeration.
+- `fleetSuggestions` (this pass): comment-coach create (gated by the athlete's
+  `coachPermission`), athlete-only accept/reject, immutable parties on update,
+  both-parties read, no delete. The coach NEVER writes athlete data directly -
+  accept applies the change through the athlete's own owner-write update
+  service, which also rebuilds a known-field payload (defense against field
+  injection on top of the scalar-only sanitizer).
+
+These are **tested but not deployed**; `firebase deploy --only
+firestore:rules` is required for invites/suggestions to function. The coach
+`edit` permission tier is intentionally NOT shipped (no coach-write rule).

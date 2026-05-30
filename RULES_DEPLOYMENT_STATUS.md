@@ -28,18 +28,21 @@ deploy when you choose.
 - **`athleteInvites`** (added completion pass): coach-private tracking;
   coach-only create (pending) / read / list / revoke; no enumeration.
 
-This coach-collaboration pass ADDS (and emulator-tests) more rules:
+This coach-collaboration pass LANDED (emulator-tested) more rules:
 
-- **`athleteInvites` get-by-token** for athlete acceptance (single-doc get by
-  unguessable token id; LIST stays coach-only - no enumeration). _[if Phase 2
-  ships]_
-- **`users/{uid}.coachPermission`** read/write boundary (athlete sets own;
-  coach cannot set their own; coach can read). _[Phase 3]_
-- **`fleetSuggestions`** (comment-coach create; athlete accept/reject; sanitized
-  fields). _[Phase 4]_
+- **`coachPermission`** boundary (Phase 3): rides the EXISTING user-doc rules
+  (athlete owner-write, coach/owner read) - no rule CHANGE, just new tests
+  (athlete sets own; coach reads but cannot raise; unrelated denied). Nothing
+  to deploy for this.
+- **`coachHasComment()` + `fleetSuggestions`** (Phase 4, NEW rule): comment-
+  coach create, athlete-only accept/reject, immutable parties on update, both
+  parties read, no delete. NEEDS DEPLOY.
+- Athlete-side invite acceptance (a `get`-by-unguessable-token read) is
+  **deferred** (Phase 2 not shipped) - see the backlog.
 
-See `COACH_COLLABORATION_REPORT.md` (end of this pass) for the final inventory
-and the exact test count.
+**Total: `npm run test:rules` = 27/27.** The only NEW collection rule needing
+deploy this pass is `fleetSuggestions` (plus the still-undeployed
+`athleteInvites` from the prior pass).
 
 ## What needs deploying for features to work
 

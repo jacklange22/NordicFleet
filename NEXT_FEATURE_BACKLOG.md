@@ -25,16 +25,26 @@ gate (the Firestore rules test harness)._
     invite UI. Optional later: automated send via an email provider + Cloud
     Function. Design: `COACH_FEATURES_DESIGN.md` Part A.
 
-## P2 - Athlete-granted coach permissions + suggestions — security-sensitive
+## P1b - Athlete invite ACCEPTANCE flow — security-sensitive
 
-- Core already landed (`coachPermissions`: view/comment/edit ladder default
-  view, `fleetSuggestions` payload + sanitizer + apply). Remaining:
-  `fleetSuggestions` + `coachAccess` collections + rules (emulator-test first),
-  athlete "Manage coach access" + Suggestions inbox (accept applies via the
-  athlete's own write), coach "Suggest a change". Ship `view`+`comment` first;
-  the `edit` tier (coach direct write) is last and behind an explicit grant.
-  Design: `COACH_FEATURES_DESIGN.md` Part B.
-  - Status: **Blocked on P0**.
+- Coach invite side shipped. Remaining: web `/signup?invite=TOKEN` handling,
+  an accept screen that shows who invited them + the polished copy, and a
+  SECURE redemption rule: make the `athleteInvites` doc id == the token and
+  allow a single-doc `get` (authed) with NO `list` for non-owners (so tokens
+  cannot be enumerated), then create the coach link + set permission on accept.
+  - Status: **Ready** (rules harness green; deploy the invite rules too).
+
+## P2 - Coach permissions + suggestions — SHIPPED (deploy pending)
+
+- Permissions: athlete-set view/comment on Profile (default view), rides the
+  existing user-doc rules (no rule change). **Shipped + rules-tested.**
+- Suggestions: coach "Suggest a change" -> athlete inbox -> accept/reject;
+  `fleetSuggestions` rules tested. **Shipped**, but writes need
+  `firebase deploy --only firestore:rules`.
+- Remaining: deploy the rules; add wax/test suggestion entry points (only ski
+  has a coach "Suggest" button today; the inbox already handles all types); the
+  `edit` tier (coach direct write) behind an explicit grant + a coach-write
+  rule. Design: `COACH_FEATURES_DESIGN.md` Part B.
 
 ## P3 - Public share pages — security-sensitive
 
