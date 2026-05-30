@@ -57,7 +57,7 @@ export default function HomePage() {
             {
               icon: '🎿',
               title: 'Your fleet, organized',
-              body: 'Every ski with its grind, flex, and history in one place. Scan a base sticker or import a spreadsheet to get started in minutes.',
+              body: 'Every ski with its grind, flex, and history in one place. Scan a ski sticker or import a spreadsheet to get started in minutes.',
             },
             {
               icon: '🧪',

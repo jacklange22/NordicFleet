@@ -18,7 +18,7 @@ const PLANS = [
     features: [
       'Unlimited skis in your fleet',
       'Wax & test logs with conditions',
-      'Base-sticker scan & spreadsheet import',
+      'Ski-sticker scan & spreadsheet import',
       'Run your own wax tests',
       'iPhone & web',
     ],

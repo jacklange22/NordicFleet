@@ -20,7 +20,7 @@ const GROUPS = [
       },
       {
         icon: '📷',
-        title: 'Scan a base sticker',
+        title: 'Scan a ski sticker',
         body: 'Point your camera at a serial sticker and let on-device text recognition pull the model details so you are not typing them by hand.',
       },
       {
