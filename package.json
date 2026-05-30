@@ -15,9 +15,13 @@
     "test:core": "npm run test --workspace=@nordicfleet/core",
     "test:mobile": "npm run test --workspace=@nordicfleet/mobile",
     "test:web": "npm run test --workspace=@nordicfleet/web",
+    "test:rules": "firebase emulators:exec --only firestore \"npx jest -c firestore-tests/jest.config.js\"",
     "lint": "npm run lint --workspaces --if-present",
     "lint:core": "npm run lint --workspace=@nordicfleet/core",
     "lint:mobile": "npm run lint --workspace=@nordicfleet/mobile",
     "lint:web": "npm run lint --workspace=@nordicfleet/web"
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^5.0.1"
   }
 }
