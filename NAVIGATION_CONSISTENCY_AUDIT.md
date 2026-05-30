@@ -60,12 +60,15 @@ felt. Now visibility is uniform per the matrix below.
 
 ## Unsaved-changes protection on edit screens
 
-EditWaxLog / EditTestLog show the bar but use `useUnsavedGuard(dirty)`
-(`src/hooks/useUnsavedGuard.js`), a `beforeRemove` listener that prompts
-"Discard changes?" if a tab tap (or back) would pop the screen with unsaved
-edits. A successful Save clears the dirty flag first, so saving never prompts.
-The heavy CREATE flows keep the bar hidden instead, which is the simpler
-guarantee for a longer multi-step entry.
+EditWaxLog / EditTestLog show the bar and **autosave a local draft**
+(`src/services/draftStore.js`) instead of a destructive "Discard changes?"
+prompt: every edit is saved to an in-memory draft keyed by the log id, so
+leaving via a tab tap (or back) preserves the work. Re-opening the screen
+restores the draft and shows "Draft restored." with a Discard action; a
+successful Save clears the draft. (Drafts are in-memory: they survive
+unmount/remount within a session; persisting across app restarts via
+AsyncStorage is a future upgrade.) The heavy CREATE flows keep the bar hidden,
+which is the simpler guarantee for a longer multi-step entry.
 
 ## Mode awareness preserved
 

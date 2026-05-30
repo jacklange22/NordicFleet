@@ -9,8 +9,9 @@
 //   - heavy multi-step CREATE / entry flows (multi-ski wax/test logging,
 //     advisory composer, wax-truck setup/runner): these have an explicit
 //     Save and a Cancel (back), and a stray tab tap mid-entry would discard
-//     a lot of unsaved work. Single-record EDIT screens DO show the bar, but
-//     guard unsaved changes (see useUnsavedGuard).
+//     a lot of unsaved work. Single-record EDIT screens DO show the bar and
+//     autosave a local draft so leaving via a tab never loses work (see
+//     services/draftStore).
 //
 // TabBar consults this so the policy lives in exactly one place; screens just
 // render <TabBar /> and the bar decides whether to draw itself.

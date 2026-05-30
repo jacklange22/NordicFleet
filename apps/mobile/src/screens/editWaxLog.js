@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useMemo} from 'react';
+import React, {useState, useEffect, useMemo, useRef} from 'react';
 import {
   StyleSheet,
   Text,
@@ -16,7 +16,12 @@ import Toast from 'react-native-toast-message';
 
 import {useAuth} from '../context/AuthContext';
 import useSkis from '../hooks/useSkis';
-import useUnsavedGuard from '../hooks/useUnsavedGuard';
+import {
+  waxDraftKey,
+  getDraft,
+  setDraft,
+  clearDraft,
+} from '../services/draftStore';
 import {waxLogHasContent} from '@nordicfleet/core';
 import {getWaxLog, updateWaxLog} from '../services/waxLogService';
 import {WaxEntryCard, emptyWaxEntry} from './waxinglog';
@@ -38,9 +43,17 @@ const EditWaxLogScreen = ({route}) => {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [dirty, setDirty] = useState(false);
+  const [draftRestored, setDraftRestored] = useState(false);
+  const loadedEntryRef = useRef(null);
+  const draftKey = waxDraftKey(logId);
 
-  // Warn before a tab tap / back discards an in-progress edit.
-  useUnsavedGuard(dirty);
+  // Autosave the in-progress edit locally so leaving via the bottom nav (or
+  // back) does not lose it; it is restored on return and cleared on Save.
+  useEffect(() => {
+    if (dirty && entry && draftKey) {
+      setDraft(draftKey, entry);
+    }
+  }, [dirty, entry, draftKey]);
 
   const ski = useMemo(
     () =>
@@ -66,7 +79,7 @@ const EditWaxLogScreen = ({route}) => {
         }
         if (log) {
           const base = emptyWaxEntry();
-          setEntry({
+          const fromLog = {
             ...base,
             binder: log.binder || '',
             kickLayers: log.kickLayers ?? base.kickLayers,
@@ -77,7 +90,16 @@ const EditWaxLogScreen = ({route}) => {
                 ? log.glideWaxes
                 : base.glideWaxes,
             notes: log.notes || '',
-          });
+          };
+          loadedEntryRef.current = fromLog;
+          const draft = getDraft(draftKey);
+          if (draft) {
+            setEntry(draft);
+            setDirty(true);
+            setDraftRestored(true);
+          } else {
+            setEntry(fromLog);
+          }
         } else {
           setEntry(null);
         }
@@ -92,11 +114,20 @@ const EditWaxLogScreen = ({route}) => {
     return () => {
       active = false;
     };
-  }, [uid, logId]);
+  }, [uid, logId, draftKey]);
 
   const handleChange = partial => {
     setEntry(prev => ({...prev, ...partial}));
     setDirty(true);
+  };
+
+  const discardDraft = () => {
+    clearDraft(draftKey);
+    if (loadedEntryRef.current) {
+      setEntry(loadedEntryRef.current);
+    }
+    setDirty(false);
+    setDraftRestored(false);
   };
 
   const canSave = !!uid && !!logId && !!entry && !submitting;
@@ -131,7 +162,8 @@ const EditWaxLogScreen = ({route}) => {
       }
     }
     setSubmitting(false);
-    setDirty(false); // saved - don't prompt on the goBack pop
+    setDirty(false);
+    clearDraft(draftKey); // saved - drop the local draft
     Toast.show({
       type: 'success',
       text1: 'Wax updated',
@@ -177,6 +209,18 @@ const EditWaxLogScreen = ({route}) => {
             <Text style={styles.notFound}>This wax log could not be found.</Text>
           ) : (
             <>
+              {draftRestored && (
+                <View style={styles.draftBanner}>
+                  <Text style={styles.draftText}>Draft restored.</Text>
+                  <Pressable
+                    onPress={discardDraft}
+                    hitSlop={8}
+                    accessibilityRole="button"
+                    accessibilityLabel="Discard draft">
+                    <Text style={styles.draftDiscard}>Discard</Text>
+                  </Pressable>
+                </View>
+              )}
               <WaxEntryCard
                 ski={ski}
                 entry={entry}
@@ -235,6 +279,27 @@ const styles = StyleSheet.create({
     marginTop: spacing['4xl'],
   },
   fieldSpacer: {height: spacing.lg},
+  draftBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  draftText: {
+    ...typography.bodySm,
+    color: colors.textSecondary,
+  },
+  draftDiscard: {
+    ...typography.bodySm,
+    color: colors.red,
+    fontWeight: '700',
+  },
   error: {
     ...typography.body,
     color: colors.red,

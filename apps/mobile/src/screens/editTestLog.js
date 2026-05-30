@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useMemo} from 'react';
+import React, {useState, useEffect, useMemo, useRef} from 'react';
 import {
   StyleSheet,
   Text,
@@ -16,7 +16,12 @@ import Toast from 'react-native-toast-message';
 
 import {useAuth} from '../context/AuthContext';
 import useSkis from '../hooks/useSkis';
-import useUnsavedGuard from '../hooks/useUnsavedGuard';
+import {
+  testDraftKey,
+  getDraft,
+  setDraft,
+  clearDraft,
+} from '../services/draftStore';
 import {getTestLog, updateTestLog} from '../services/testLogService';
 import {TestEntryCard, emptyTestEntry} from './testinglog';
 import {
@@ -58,9 +63,18 @@ const EditTestLogScreen = ({route}) => {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [dirty, setDirty] = useState(false);
+  const [draftRestored, setDraftRestored] = useState(false);
+  const loadedRef = useRef(null);
+  const draftKey = testDraftKey(logId);
 
-  // Warn before a tab tap / back discards an in-progress edit.
-  useUnsavedGuard(dirty);
+  // Autosave the in-progress edit (entry + conditions) locally so leaving via
+  // the bottom nav (or back) does not lose it; restored on return, cleared on
+  // Save.
+  useEffect(() => {
+    if (dirty && entry && draftKey) {
+      setDraft(draftKey, {entry, conditions});
+    }
+  }, [dirty, entry, conditions, draftKey]);
 
   const ski = useMemo(
     () =>
@@ -86,7 +100,7 @@ const EditTestLogScreen = ({route}) => {
         }
         if (log) {
           const base = emptyTestEntry();
-          setEntry({
+          const fromLogEntry = {
             ...base,
             glideWax: log.glideWax || '',
             kickWax: log.kickWax || '',
@@ -95,8 +109,8 @@ const EditTestLogScreen = ({route}) => {
             stabilityRating: log.stabilityRating ?? base.stabilityRating,
             climbingRating: log.climbingRating ?? base.climbingRating,
             notes: log.notes || '',
-          });
-          setConditions({
+          };
+          const fromLogConditions = {
             temperature:
               log.temperature === null || log.temperature === undefined
                 ? ''
@@ -107,7 +121,21 @@ const EditTestLogScreen = ({route}) => {
                 : String(log.humidity),
             snowType: toOption(SNOW_OPTIONS, log.snowType),
             surface: toOption(SURFACE_OPTIONS, log.surface),
-          });
+          };
+          loadedRef.current = {
+            entry: fromLogEntry,
+            conditions: fromLogConditions,
+          };
+          const draft = getDraft(draftKey);
+          if (draft) {
+            setEntry(draft.entry);
+            setConditions(draft.conditions || fromLogConditions);
+            setDirty(true);
+            setDraftRestored(true);
+          } else {
+            setEntry(fromLogEntry);
+            setConditions(fromLogConditions);
+          }
         } else {
           setEntry(null);
         }
@@ -122,7 +150,7 @@ const EditTestLogScreen = ({route}) => {
     return () => {
       active = false;
     };
-  }, [uid, logId]);
+  }, [uid, logId, draftKey]);
 
   const setCondition = (k, v) => {
     setConditions(prev => ({...prev, [k]: v}));
@@ -135,6 +163,16 @@ const EditTestLogScreen = ({route}) => {
   const handleEntryChange = partial => {
     setEntry(prev => ({...prev, ...partial}));
     setDirty(true);
+  };
+
+  const discardDraft = () => {
+    clearDraft(draftKey);
+    if (loadedRef.current) {
+      setEntry(loadedRef.current.entry);
+      setConditions(loadedRef.current.conditions);
+    }
+    setDirty(false);
+    setDraftRestored(false);
   };
 
   const canSave = !!uid && !!logId && !!entry && !submitting;
@@ -171,7 +209,8 @@ const EditTestLogScreen = ({route}) => {
       }
     }
     setSubmitting(false);
-    setDirty(false); // saved - don't prompt on the goBack pop
+    setDirty(false);
+    clearDraft(draftKey); // saved - drop the local draft
     Toast.show({
       type: 'success',
       text1: 'Test updated',
@@ -218,6 +257,18 @@ const EditTestLogScreen = ({route}) => {
             </Text>
           ) : (
             <>
+              {draftRestored && (
+                <View style={styles.draftBanner}>
+                  <Text style={styles.draftText}>Draft restored.</Text>
+                  <Pressable
+                    onPress={discardDraft}
+                    hitSlop={8}
+                    accessibilityRole="button"
+                    accessibilityLabel="Discard draft">
+                    <Text style={styles.draftDiscard}>Discard</Text>
+                  </Pressable>
+                </View>
+              )}
               <SectionHeader title="Conditions" />
               <Card>
                 <View style={styles.row2}>
@@ -330,6 +381,27 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     textAlign: 'center',
     marginTop: spacing['4xl'],
+  },
+  draftBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  draftText: {
+    ...typography.bodySm,
+    color: colors.textSecondary,
+  },
+  draftDiscard: {
+    ...typography.bodySm,
+    color: colors.red,
+    fontWeight: '700',
   },
   row2: {flexDirection: 'row'},
   row2Cell: {flex: 1},
