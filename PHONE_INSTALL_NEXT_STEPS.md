@@ -32,7 +32,7 @@ open NordicFleet.xcworkspace
 ## Confirm it's the LATEST build (don't skip)
 
 - Open the app → **Profile → ⚙ Settings** → scroll to the bottom. In a Debug
-  build it shows **`DEV build · 2026-05-30 · overnight-stabilization`**
+  build it shows **`Build · 2026-05-30 · product-hardening-1`**
   (`src/buildInfo.js` `BUILD_TAG`). If you see an older tag or none, the phone
   is running a stale build — repeat the clean reinstall.
 - Quick UX spot-check: bottom nav reads **"Ski"** (not "Add"); ski cards show

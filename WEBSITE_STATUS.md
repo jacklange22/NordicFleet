@@ -36,12 +36,14 @@ domains, which are not yet wired:
    today fails. Fix: either set `NEXT_PUBLIC_APP_URL=https://nordicfleet-web.vercel.app`
    in the marketing Vercel project **now**, or point `app.nordicfleet.com` at
    the web app (preferred, below).
-2. **App legal links point to `nordicfleet.com`.** Web profile
-   (`apps/web/src/app/profile/page.js`) and the iOS Settings screen
-   (`apps/mobile/src/screens/settings.js`) link to
-   `NEXT_PUBLIC_MARKETING_URL` / `NORDICFLEET_MARKETING_URL` →
-   default `https://nordicfleet.com/privacy|/terms` — also dead until DNS.
-   Interim: set those env vars to `https://marketing-black-eight.vercel.app`.
+2. **App legal links — FIXED (now default to the live marketing URL).** iOS
+   Settings (`apps/mobile/src/config/urls.js` → `legalUrl`) and the web
+   profile (`apps/web/src/app/profile/page.js`) now default to
+   **`https://marketing-black-eight.vercel.app/privacy|/terms`** (no more dead
+   `nordicfleet.com`), still env-overridable via `NEXT_PUBLIC_MARKETING_URL` /
+   `NORDICFLEET_MARKETING_URL`. ⚠️ The **live web app** shows this only after a
+   **web redeploy** (push to `main` if it auto-deploys, or `vercel --prod`
+   from `apps/web`); the iOS app picks it up on the next build.
 3. **Firebase env vars must be set in BOTH Vercel projects.** The code reads
    `NEXT_PUBLIC_FIREBASE_*` (6 keys) for web and marketing. Routes load (200)
    but **client Firebase init + email capture + sign-in only work if those

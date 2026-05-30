@@ -1,0 +1,51 @@
+
+> nordicfleet@0.0.0 web:build
+> npm run build --workspace=@nordicfleet/web
+
+
+> @nordicfleet/web@0.1.0 build
+> next build
+
+▲ Next.js 16.2.6 (Turbopack)
+- Environments: .env.local
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 2.2s
+  Running TypeScript ...
+  Finished TypeScript in 50ms ...
+  Collecting page data using 11 workers ...
+  Generating static pages using 11 workers (0/18) ...
+  Generating static pages using 11 workers (4/18) 
+  Generating static pages using 11 workers (8/18) 
+  Generating static pages using 11 workers (13/18) 
+✓ Generating static pages using 11 workers (18/18) in 242ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ○ /coach
+├ ƒ /coach/[athleteId]
+├ ƒ /coach/[athleteId]/compose
+├ ○ /coach/requests
+├ ○ /forgot-password
+├ ○ /home
+├ ○ /import
+├ ○ /log/test
+├ ○ /log/wax
+├ ○ /login
+├ ○ /messages
+├ ƒ /messages/[messageId]
+├ ○ /profile
+├ ○ /signup
+├ ƒ /ski/[id]
+├ ƒ /ski/[id]/edit
+├ ○ /ski/new
+├ ○ /wax-truck
+├ ƒ /wax-truck/[testId]
+└ ○ /wax-truck/new
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+

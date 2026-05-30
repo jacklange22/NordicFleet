@@ -1,0 +1,102 @@
+
+> nordicfleet@0.0.0 test
+> npm run test --workspaces --if-present
+
+
+> @nordicfleet/mobile@0.0.1 test
+> jest
+
+PASS src/screens/__tests__/forgotPassword.test.js
+PASS src/screens/__tests__/signup.test.js
+PASS src/screens/__tests__/waxinglog.test.js
+PASS src/screens/__tests__/login.test.js
+PASS src/screens/__tests__/skiInfo.test.js
+PASS src/screens/__tests__/newSki.test.js
+PASS src/screens/__tests__/homescreen.test.js
+PASS src/screens/__tests__/profile.test.js
+PASS src/context/__tests__/ModeContext.test.js
+PASS src/services/__tests__/ocrService.test.js
+PASS src/screens/__tests__/skiInfo.share.test.js
+PASS src/components/__tests__/checkboxDropdown.test.js
+PASS src/screens/__tests__/testinglog.test.js
+PASS src/components/ui/__tests__/TabBar.test.js
+PASS src/components/__tests__/searchbar.test.js
+PASS src/screens/__tests__/profile.settings.test.js
+PASS src/components/__tests__/dropdown.test.js
+PASS src/screens/__tests__/settings.test.js
+PASS src/screens/__tests__/profile.coach.test.js
+PASS src/components/__tests__/testInput.test.js
+PASS src/context/__tests__/AuthContext.test.js
+PASS src/screens/__tests__/settings.deleteAccount.test.js
+PASS src/components/__tests__/skisaveButton.test.js
+PASS src/components/__tests__/waxinput.test.js
+PASS src/components/ui/__tests__/SkiSelector.test.js
+PASS src/components/__tests__/filtermenu.test.js
+PASS src/components/__tests__/ErrorBoundary.test.js
+PASS src/hooks/__tests__/useSkis.test.js
+PASS src/services/__tests__/seed.test.js
+PASS src/services/__tests__/userService.test.js
+PASS src/services/__tests__/messageService.test.js
+PASS src/components/__tests__/skiitem.test.js
+PASS src/services/__tests__/userService.deleteAccount.test.js
+PASS src/services/__tests__/coach.test.js
+PASS src/services/__tests__/skiService.errors.test.js
+PASS src/services/__tests__/skiService.test.js
+PASS src/components/ui/__tests__/Input.test.js
+PASS src/services/__tests__/coachRequestService.test.js
+PASS src/hooks/__tests__/useProfile.test.js
+PASS src/components/__tests__/LoadingScreen.test.js
+PASS src/services/__tests__/testLogService.test.js
+PASS src/services/__tests__/waxLogService.test.js
+PASS src/services/__tests__/waxTestService.test.js
+PASS src/services/__tests__/testLogService.errors.test.js
+PASS src/services/__tests__/locationService.test.js
+PASS src/services/__tests__/shareService.test.js
+PASS src/services/__tests__/userService.errors.test.js
+PASS src/components/ui/__tests__/StatCard.test.js
+PASS __mocks__/__tests__/firestoreMock.test.js
+PASS src/services/__tests__/waxLogService.errors.test.js
+PASS src/services/__tests__/userService.coachCapability.test.js
+
+Test Suites: 1 skipped, 51 passed, 51 of 52 total
+Tests:       1 skipped, 296 passed, 297 total
+Snapshots:   0 total
+Time:        3.405 s, estimated 4 s
+Ran all test suites.
+
+> @nordicfleet/web@0.1.0 test
+> jest --passWithNoTests
+
+No tests found, exiting with code 0
+
+> @nordicfleet/core@0.1.0 test
+> jest
+
+PASS src/parsers/__tests__/spreadsheetParser.tokenize.test.js
+PASS src/services/__tests__/analytics.test.js
+PASS src/constants/__tests__/waxDictionary.test.js
+PASS src/validation/__tests__/email.test.js
+PASS src/parsers/__tests__/stickerParser.test.js
+PASS src/parsers/__tests__/spreadsheetParser.normalize.test.js
+PASS src/services/__tests__/profileOperations.test.js
+PASS src/services/__tests__/advisoryOperations.test.js
+PASS src/parsers/__tests__/spreadsheetParser.realData.test.js
+PASS src/constants/__tests__/constants.test.js
+PASS src/constants/__tests__/skiModels.test.js
+PASS src/parsers/__tests__/spreadsheetParser.integration.test.js
+PASS src/validation/__tests__/ski.test.js
+PASS src/services/__tests__/skiOperations.test.js
+PASS src/services/__tests__/waxTestOperations.test.js
+PASS src/services/__tests__/dataExport.test.js
+PASS src/services/__tests__/coachOperations.test.js
+PASS src/services/__tests__/errorReport.test.js
+PASS src/validation/__tests__/testLog.test.js
+PASS src/validation/__tests__/waxLog.test.js
+PASS src/validation/__tests__/password.test.js
+PASS src/services/__tests__/messageOperations.test.js
+
+Test Suites: 22 passed, 22 total
+Tests:       336 passed, 336 total
+Snapshots:   0 total
+Time:        0.684 s, estimated 1 s
+Ran all test suites.
