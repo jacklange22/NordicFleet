@@ -12,7 +12,7 @@ const {
   assertFails,
   assertSucceeds,
 } = require('@firebase/rules-unit-testing');
-const {doc, setDoc, getDoc} = require('firebase/firestore');
+const {doc, setDoc, getDoc, updateDoc} = require('firebase/firestore');
 
 let testEnv;
 
@@ -109,6 +109,60 @@ describe('athlete subcollections + coach access', () => {
 
   it('an unrelated user cannot read athlete data', async () => {
     await assertFails(getDoc(doc(asBob(), 'users/alice/skis/s1')));
+  });
+});
+
+describe('edit access (update) — ship-edit confidence', () => {
+  beforeEach(async () => {
+    await seed(async db => {
+      await setDoc(doc(db, 'users/alice'), {
+        email: 'a@b.com',
+        role: 'athlete',
+        coachId: 'coach',
+      });
+      await setDoc(doc(db, 'users/alice/skis/s1'), {name: 'Ski', flex: 70});
+      await setDoc(doc(db, 'users/alice/waxLogs/w1'), {
+        skiId: 's1',
+        notes: 'old',
+      });
+      await setDoc(doc(db, 'users/alice/testLogs/t1'), {
+        skiId: 's1',
+        glideRating: 5,
+      });
+    });
+  });
+
+  it('owner CAN update own ski / waxLog / testLog', async () => {
+    await assertSucceeds(
+      updateDoc(doc(asAlice(), 'users/alice/skis/s1'), {flex: 80}),
+    );
+    await assertSucceeds(
+      updateDoc(doc(asAlice(), 'users/alice/waxLogs/w1'), {notes: 'new'}),
+    );
+    await assertSucceeds(
+      updateDoc(doc(asAlice(), 'users/alice/testLogs/t1'), {glideRating: 9}),
+    );
+  });
+
+  it('linked coach CANNOT update athlete ski / waxLog / testLog', async () => {
+    await assertFails(
+      updateDoc(doc(asCoach(), 'users/alice/skis/s1'), {flex: 99}),
+    );
+    await assertFails(
+      updateDoc(doc(asCoach(), 'users/alice/waxLogs/w1'), {notes: 'x'}),
+    );
+    await assertFails(
+      updateDoc(doc(asCoach(), 'users/alice/testLogs/t1'), {glideRating: 1}),
+    );
+  });
+
+  it('an unrelated user CANNOT update athlete data', async () => {
+    await assertFails(
+      updateDoc(doc(asBob(), 'users/alice/skis/s1'), {flex: 1}),
+    );
+    await assertFails(
+      updateDoc(doc(asBob(), 'users/alice/waxLogs/w1'), {notes: 'x'}),
+    );
   });
 });
 
