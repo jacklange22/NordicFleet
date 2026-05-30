@@ -1,6 +1,7 @@
 const {
   buildFeedbackEmail,
   buildFeedbackMailto,
+  buildDebugReport,
 } = require('../feedbackOperations');
 
 describe('buildFeedbackEmail', () => {
@@ -47,5 +48,28 @@ describe('buildFeedbackMailto', () => {
   test('returns empty string when no recipient is given', () => {
     expect(buildFeedbackMailto('', {buildTag: 't'})).toBe('');
     expect(buildFeedbackMailto(null)).toBe('');
+  });
+});
+
+describe('buildDebugReport', () => {
+  test('includes build / platform / mode / URLs and no PII', () => {
+    const out = buildDebugReport({
+      buildTag: 'completion-pass-1',
+      platform: 'ios',
+      mode: 'coaching',
+      appUrl: 'https://app.example',
+      marketingUrl: 'https://site.example',
+    });
+    expect(out).toContain('Build: completion-pass-1');
+    expect(out).toContain('Platform: ios');
+    expect(out).toContain('Mode: coaching');
+    expect(out).toContain('App URL: https://app.example');
+    expect(out).toContain('Marketing URL: https://site.example');
+  });
+
+  test('fills unknown for missing fields', () => {
+    const out = buildDebugReport({});
+    expect(out).toContain('Build: unknown');
+    expect(out).toContain('Platform: unknown');
   });
 });

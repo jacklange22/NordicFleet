@@ -3,6 +3,7 @@ import {render, fireEvent, act, waitFor} from '@testing-library/react-native';
 import {NavigationContainer} from '@react-navigation/native';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {Alert} from 'react-native';
+import RNShare from 'react-native-share';
 import authMock from '@react-native-firebase/auth';
 import firestoreMock from '@react-native-firebase/firestore';
 
@@ -25,6 +26,7 @@ jest.mock('@react-navigation/native', () => {
 beforeEach(() => {
   authMock.__resetAuthMock();
   firestoreMock.__resetFirestoreMock();
+  RNShare.__reset();
   Object.values(mockNav).forEach(fn => fn.mockClear && fn.mockClear());
 });
 
@@ -79,6 +81,18 @@ describe('SettingsScreen (#4)', () => {
     const url = openSpy.mock.calls[0][0];
     expect(url).not.toContain('nordicfleet.com');
     openSpy.mockRestore();
+  });
+
+  it('Copy debug info shares a PII-free build block', async () => {
+    authMock.__setCurrentUser({uid: 'u1', email: 'a@b.com'});
+    const tree = renderSettings();
+    await act(async () => {
+      fireEvent.press(tree.getByLabelText('Copy debug info'));
+    });
+    expect(RNShare.open).toHaveBeenCalled();
+    const arg = RNShare.open.mock.calls[0][0];
+    expect(arg.message).toContain('NordicFleet debug info');
+    expect(arg.message).toContain('Build:');
   });
 
   it('Sign out asks for confirmation before signing out', async () => {

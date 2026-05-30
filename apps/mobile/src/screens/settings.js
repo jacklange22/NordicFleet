@@ -15,11 +15,13 @@ import {SafeAreaView} from 'react-native-safe-area-context';
 import {useNavigation} from '@react-navigation/native';
 import Toast from 'react-native-toast-message';
 
+import Share from 'react-native-share';
 import {useAuth} from '../context/AuthContext';
+import {useMode} from '../context/ModeContext';
 import {exportAndShareUserData} from '../services/dataExportService';
 import {deleteAccount} from '../services/userService';
 import {auth} from '../services/firebase';
-import {buildFeedbackMailto} from '@nordicfleet/core';
+import {buildFeedbackMailto, buildDebugReport} from '@nordicfleet/core';
 import {
   Header,
   Card,
@@ -31,7 +33,7 @@ import {
 } from '../components/ui';
 import {colors, radius, spacing, typography} from '../theme';
 import {BUILD_TAG} from '../buildInfo';
-import {legalUrl, MARKETING_URL, FEEDBACK_EMAIL} from '../config/urls';
+import {legalUrl, MARKETING_URL, APP_URL, FEEDBACK_EMAIL} from '../config/urls';
 
 // Settings groups the account-management actions that used to clutter the
 // Profile screen (issue #4): credentials, data/privacy, and the dangerous
@@ -39,6 +41,7 @@ import {legalUrl, MARKETING_URL, FEEDBACK_EMAIL} from '../config/urls';
 const SettingsScreen = () => {
   const navigation = useNavigation();
   const {signOut} = useAuth();
+  const {mode} = useMode();
 
   // Change-password flow.
   const [pwModalOpen, setPwModalOpen] = useState(false);
@@ -74,6 +77,23 @@ const SettingsScreen = () => {
     });
     Linking.openURL(mailto || MARKETING_URL).catch(() => {});
   }, []);
+
+  // PII-free build/context block to copy into a bug report. Shares via the
+  // sheet (which offers Copy) since there is no clipboard dependency.
+  const copyDebugInfo = useCallback(async () => {
+    const message = buildDebugReport({
+      buildTag: BUILD_TAG,
+      platform: Platform.OS,
+      mode,
+      appUrl: APP_URL,
+      marketingUrl: MARKETING_URL,
+    });
+    try {
+      await Share.open({title: 'NordicFleet debug info', message});
+    } catch {
+      // user dismissed the share sheet - not an error
+    }
+  }, [mode]);
 
   const handleExportData = useCallback(async () => {
     const uid = auth().currentUser?.uid;
@@ -332,6 +352,16 @@ const SettingsScreen = () => {
               title="Report a problem"
               onPress={() => openFeedback('bug')}
               accessibilityLabel="Report a problem"
+              showDivider
+            />
+          </View>
+          <View style={styles.rowOuter}>
+            <ListItem
+              icon="copy-outline"
+              title="Copy debug info"
+              subtitle="Build, platform, and mode - no personal data"
+              onPress={copyDebugInfo}
+              accessibilityLabel="Copy debug info"
               chevron={false}
             />
           </View>

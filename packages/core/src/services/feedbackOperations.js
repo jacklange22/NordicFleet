@@ -55,7 +55,33 @@ function buildFeedbackMailto(toEmail, opts = {}) {
   )}&body=${encodeURIComponent(body)}`;
 }
 
+/**
+ * Build a plain-text debug block the user can copy / share when reporting a
+ * problem during the beta. Deliberately PII-free: build tag, platform, mode,
+ * and the app's URL config only - never user data, names, emails, or content.
+ *
+ * @param {Object} [opts]
+ * @param {string} [opts.buildTag]
+ * @param {string} [opts.platform]
+ * @param {string} [opts.mode]
+ * @param {string} [opts.appUrl]
+ * @param {string} [opts.marketingUrl]
+ * @returns {string}
+ */
+function buildDebugReport(opts = {}) {
+  const line = (label, value) => `${label}: ${value || 'unknown'}`;
+  return [
+    'NordicFleet debug info',
+    line('Build', opts.buildTag),
+    line('Platform', opts.platform),
+    line('Mode', opts.mode),
+    line('App URL', opts.appUrl),
+    line('Marketing URL', opts.marketingUrl),
+  ].join('\n');
+}
+
 module.exports = {
   buildFeedbackEmail,
   buildFeedbackMailto,
+  buildDebugReport,
 };
