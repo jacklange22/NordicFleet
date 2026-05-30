@@ -1,84 +1,75 @@
 # NordicFleet — Phone Install Next Steps
 
-_Last updated: 2026-05-29. Short + exact. Do the Xcode steps in §6._
+_Operator quick-reference. Updated 2026-05-30 (overnight stabilization)._
+_Goal: get the hardened build onto the iPhone cleanly and CONFIRM it's the
+latest build. Full freeze-debug detail is in `PHONE_FREEZE_DEBUG_STEPS.md`._
 
-## 1. What this session completed
-
-- Removed junk (`apps/mobile/.gitignore` + stray `apps/mobile/.vercel/` — both were untracked/ignored accidental Vercel cruft).
-- Verified the gate: lint 0 errors, mobile 261 tests + core 334 tests pass, web build clean.
-- iOS **simulator** build: **PASSED** (`** BUILD SUCCEEDED **`).
-- Deployed the **web app** and the **marketing site** to Vercel (URLs below).
-- Added two helper scripts (`scripts/build-ios-simulator.sh`, `scripts/open-ios-workspace.sh`).
-- Confirmed Firebase project + rules are current (no rules change needed).
-
-## 2. Web app — DEPLOYED ✅
-
-**https://nordicfleet-web.vercel.app** (Vercel project `nordicfleet-web`)
-
-All routes verified serving (HTTP 200): `/`, `/login`, `/signup`, `/home`, `/import`, `/wax-truck`, `/profile`. It auto-deploys when you push to `main`. (The local `apps/web` link was corrected to point at `nordicfleet-web`, not the orphaned `web` project.)
-
-## 3. Marketing site — DEPLOYED ✅
-
-**https://marketing-black-eight.vercel.app** (new Vercel project `marketing`)
-
-All routes verified serving (HTTP 200): `/`, `/features`, `/coaches`, `/pricing`, `/about`, `/privacy`, `/terms`. The 6 `NEXT_PUBLIC_FIREBASE_*` env vars were set (same `nordicfleet-11e67` project) so email capture works. Custom domain (nordicfleet.com) not configured — optional, do later in the Vercel dashboard.
-
-## 4. iOS simulator build — PASSED ✅
+## Do this — clean reinstall (fixes a stale-bundle "freeze")
 
 ```bash
-./scripts/build-ios-simulator.sh          # or "iPhone 16", etc.
+# 1. On the iPhone: long-press the NordicFleet app → Remove App → Delete App.
+
+# 2. Start Metro with a cleared cache (leave running in its own terminal):
+cd /Users/jacklange/NordicFleet/apps/mobile
+watchman watch-del-all 2>/dev/null || true
+npm start -- --reset-cache
+
+# 3. In a second terminal: clean the build folder + derived data:
+cd /Users/jacklange/NordicFleet/apps/mobile/ios
+rm -rf ~/Library/Developer/Xcode/DerivedData/NordicFleet-*
+xcodebuild clean -workspace NordicFleet.xcworkspace -scheme NordicFleet
+
+# 4. Run on the phone from Xcode:
+open NordicFleet.xcworkspace
+#    → select your iPhone as the destination → Product → Run (⌘R)
 ```
 
-## 5. Physical device signing — BLOCKED (needs you, ~2 min in Xcode)
+5. **Trust the developer cert** (first run only): on the iPhone,
+   **Settings → General → VPN & Device Management → [your Apple ID] → Trust**,
+   then tap the app again. (Developer Mode must be ON:
+   Settings → Privacy & Security → Developer Mode.)
 
-Root cause: the Xcode project has **no `DEVELOPMENT_TEAM`** and there is **no Apple signing identity in your local keychain** (`security find-identity` → 0 valid identities). I can't set a real team — only you can, by signing into Xcode with your Apple ID. Everything else is ready:
-- Bundle ID `com.NordicFleet.app` ✓
-- `GoogleService-Info.plist` bundle ID matches (`com.NordicFleet.app`, project `nordicfleet-11e67`) ✓
-- Keychain entitlement present (the earlier sign-in fix) ✓
-- Automatic signing (Xcode default) ✓
+## Confirm it's the LATEST build (don't skip)
 
-## 6. Exact Xcode steps (do these)
+- Open the app → **Profile → ⚙ Settings** → scroll to the bottom. In a Debug
+  build it shows **`DEV build · 2026-05-30 · overnight-stabilization`**
+  (`src/buildInfo.js` `BUILD_TAG`). If you see an older tag or none, the phone
+  is running a stale build — repeat the clean reinstall.
+- Quick UX spot-check: bottom nav reads **"Ski"** (not "Add"); ski cards show
+  **brand · model** under the name.
 
-1. Open the workspace (NOT the .xcodeproj):
-   ```bash
-   ./scripts/open-ios-workspace.sh
-   # or: open apps/mobile/ios/NordicFleet.xcworkspace
-   ```
-2. In the left sidebar, select the **NordicFleet** project → **NordicFleet** target.
-3. **Signing & Capabilities** tab.
-4. Check **Automatically manage signing**.
-5. **Team** dropdown → if empty, click **Add an Account…**, sign in with your Apple ID, then pick your **Personal Team** (free Apple ID works).
-   - If Xcode shows a signing error, it usually offers a "Try Again"/"Fix" — let it.
-6. Plug in your iPhone via USB; trust the computer if prompted.
-7. On the iPhone: **Settings → Privacy & Security → Developer Mode → On**, then restart the phone.
-8. In Xcode's top device selector, choose **your iPhone**.
-9. Press **▶ Run**.
-10. First launch: the app won't open — on the iPhone go **Settings → General → VPN & Device Management → [your Apple ID] → Trust**. Then tap the app again.
+## If it still freezes — collect logs
 
-Note: a free Apple ID re-signs every 7 days (the app stops opening until you Run from Xcode again). For longer installs / TestFlight you need the paid Apple Developer Program ($99/yr).
+The freeze leaves **no crash report** (confirmed: zero NordicFleet `.ips`,
+not in any Jetsam event — see `debug/overnight-*/CRASH_ANALYSIS.md`), so we
+need a live trace:
 
-## 7. If Xcode forces a bundle ID change
+- Watch the **Metro terminal** (or Xcode console) during launch for
+  **`[NF_BOOT]`** lines. **Report the LAST `[NF_BOOT]` line printed** — it
+  pins the hang stage (decision tree in `PHONE_FREEZE_DEBUG_STEPS.md` §4).
+- Or detached: `idevicesyslog | grep -iE "NF_BOOT|NordicFleet|Jetsam"`
+  (needs `brew install libimobiledevice`).
 
-Only if Xcode says `com.NordicFleet.app` is unavailable for your team:
-1. Let Xcode set a unique bundle ID (e.g. `com.<yourname>.nordicfleet`).
-2. Firebase console → Project `nordicfleet-11e67` → Add app → iOS → enter the **new** bundle ID → download the replacement `GoogleService-Info.plist`.
-3. Replace the file at `apps/mobile/ios/NordicFleet/GoogleService-Info.plist`.
-4. Update `keychain-access-groups` in `apps/mobile/ios/NordicFleet/NordicFleet.entitlements` to the new id (`$(AppIdentifierPrefix)<new-bundle-id>`).
-5. Rebuild. (Avoid this if you can — keeping `com.NordicFleet.app` means no Firebase changes.)
+## Signing / identity status (all verified this session)
 
-## 8. Real-phone smoke test (once it runs)
+| Item | Status |
+|---|---|
+| `DEVELOPMENT_TEAM = BW4688H3JP` | ✅ set **and committed** (Debug + Release) |
+| `CODE_SIGN_ENTITLEMENTS` | ✅ set both configs |
+| Keychain entitlement (`keychain-access-groups`) | ✅ intact — sign-in fix preserved |
+| App bundle ID | `com.NordicFleet.app` |
+| `GoogleService-Info.plist` bundle ID | ✅ matches `com.NordicFleet.app` |
+| Firebase project | `nordicfleet-11e67` |
 
-- [ ] Sign up (new account)
-- [ ] Sign out
-- [ ] Sign in (the keychain fix — must NOT show "Sign-in failed")
-- [ ] Add a ski
-- [ ] Scan a real base sticker (OCR — never field-tested; note accuracy)
-- [ ] Log a wax (try a free-text wax not in the list)
-- [ ] Log a test
-- [ ] View the ski's history
-- [ ] Export my data (Profile)
-- [ ] (optional, throwaway account) Delete account
+> Signing is configured in the repo — no Xcode signing step needed unless
+> Xcode reports the bundle ID is unavailable for your team (then see the
+> bundle-ID note below). A free Apple ID re-signs every 7 days.
 
-## 9. Honest status
+## Only if Xcode says the bundle ID is unavailable
 
-The app is **ready to run on your iPhone except for the one human step**: selecting a signing Team in Xcode (§6). I did **not** and cannot install it on your phone — that requires you + Xcode + the physical device. The simulator build passes, both web surfaces are live, and the repo is pushed.
+1. Let Xcode pick a unique bundle ID (e.g. `com.<you>.nordicfleet`).
+2. Firebase console → project `nordicfleet-11e67` → add iOS app with the new
+   bundle ID → download the replacement `GoogleService-Info.plist` → replace
+   `apps/mobile/ios/NordicFleet/GoogleService-Info.plist`.
+3. Update `keychain-access-groups` in `NordicFleet.entitlements` to
+   `$(AppIdentifierPrefix)<new-bundle-id>`. Rebuild. (Avoid if possible.)

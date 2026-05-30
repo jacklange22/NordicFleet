@@ -1,0 +1,11 @@
+Firebase project: nordicfleet-11e67 (CLI current, logged in)
+Rules unchanged since last live verification da38d13: YES (git diff empty)
+
+Safe read-only rule probe (no writes):
+  unauthenticated GET /users/<uid> -> HTTP 403  (expect 401/403 = rules deny anon reads)
+  unauthenticated LIST /users      -> HTTP 403    (expect 401/403)
+
+Decision: live-write verify scripts (coach-pairing, wax-truck, data-integrity)
+NOT re-run this session — rules unchanged since da38d13, and coach-pairing/
+wax-truck create .test users without cleanup (would pollute the live beta DB).
+Re-run is a deliberate human action; they self-document their checks.
