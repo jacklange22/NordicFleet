@@ -117,10 +117,11 @@ function buildInviteEmail(opts = {}) {
   const subject = coach
     ? `${coach} invited you to NordicFleet`
     : 'You are invited to NordicFleet';
+  const lead = coach
+    ? `${coach} would like to use NordicFleet to help you organize your skis, wax notes, and testing.`
+    : 'Your coach would like to use NordicFleet to help you organize your skis, wax notes, and testing.';
   const body = [
-    coach
-      ? `${coach} wants to coach your skis on NordicFleet.`
-      : 'You have been invited to NordicFleet.',
+    lead,
     '',
     'NordicFleet keeps your ski fleet, wax logs, and test results in one place, and lets your coach send wax tips and race plans.',
     '',

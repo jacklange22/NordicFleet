@@ -98,8 +98,8 @@ const InviteAthletesScreen = () => {
   const shareLink = async inv => {
     const link = linkFor(inv);
     const message = coachName
-      ? `${coachName} invited you to NordicFleet. Get started: ${link}`
-      : `You are invited to NordicFleet. Get started: ${link}`;
+      ? `${coachName} would like to use NordicFleet to help you organize your skis, wax notes, and testing. Get started: ${link}`
+      : `Your coach would like to use NordicFleet to help you organize your skis, wax notes, and testing. Get started: ${link}`;
     try {
       await Share.open({title: 'NordicFleet invite', message});
     } catch {

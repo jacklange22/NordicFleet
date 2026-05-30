@@ -111,14 +111,18 @@ describe('buildInviteEmail', () => {
       inviteLink: 'https://s.example/invite?coach=c1',
     });
     expect(subject).toBe('Coach Pat invited you to NordicFleet');
-    expect(body).toContain('Coach Pat wants to coach your skis');
+    expect(body).toContain(
+      'Coach Pat would like to use NordicFleet to help you organize your skis, wax notes, and testing.',
+    );
     expect(body).toContain('https://s.example/invite?coach=c1');
   });
 
   test('falls back to a generic message with no coach name', () => {
     const {subject, body} = buildInviteEmail({});
     expect(subject).toBe('You are invited to NordicFleet');
-    expect(body).toContain('You have been invited');
+    expect(body).toContain(
+      'Your coach would like to use NordicFleet to help you organize your skis, wax notes, and testing.',
+    );
   });
 
   test('uses no em dashes in user-facing copy', () => {
