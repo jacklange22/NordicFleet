@@ -27,6 +27,7 @@ import {
   Button,
   Pill,
   SectionHeader,
+  SkiSelector,
   EmptyState,
 } from '../components/ui';
 import {colors, spacing, typography} from '../theme';
@@ -449,27 +450,16 @@ const TestingLogScreen = () => {
 
               <SectionHeader title="Select skis" />
               <Card style={styles.selectorCard}>
-                <View style={styles.chipRow}>
-                  {skisForUser.map(ski => {
-                    const selected = selectedSkis.includes(ski.id);
-                    return (
-                      <View key={ski.id} style={styles.chipWrap}>
-                        <Pill
-                          variant={selected ? 'solid' : 'outline'}
-                          color="red"
-                          onPress={() => toggleSki(ski.id)}
-                          accessibilityLabel={ski.name || ski.id}>
-                          {ski.name || ski.id}
-                        </Pill>
-                      </View>
-                    );
-                  })}
-                </View>
-                {selectedSkis.length === 0 && (
-                  <Text style={styles.hint}>
-                    Tap one or more skis to rate.
-                  </Text>
-                )}
+                <SkiSelector
+                  skis={skisForUser}
+                  selectedIds={selectedSkis}
+                  onToggle={toggleSki}
+                  onSelectAll={() =>
+                    setSelectedSkis(skisForUser.map(s => s.id))
+                  }
+                  onClearAll={() => setSelectedSkis([])}
+                  hint="Tap one or more skis to rate."
+                />
               </Card>
 
               {selectedSkis.length > 0 && (

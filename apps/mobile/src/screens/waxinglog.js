@@ -27,6 +27,7 @@ import {
   Button,
   Pill,
   SectionHeader,
+  SkiSelector,
   EmptyState,
   WaxPicker,
 } from '../components/ui';
@@ -465,27 +466,16 @@ const WaxLogScreen = () => {
             <>
               <SectionHeader title="Step 1 · Select skis" />
               <Card style={styles.selectorCard}>
-                <View style={styles.chipRow}>
-                  {skisForUser.map(ski => {
-                    const selected = selectedSkis.includes(ski.id);
-                    return (
-                      <View key={ski.id} style={styles.chipWrap}>
-                        <Pill
-                          variant={selected ? 'solid' : 'outline'}
-                          color="red"
-                          onPress={() => toggleSki(ski.id)}
-                          accessibilityLabel={ski.name || ski.id}>
-                          {ski.name || ski.id}
-                        </Pill>
-                      </View>
-                    );
-                  })}
-                </View>
-                {selectedSkis.length === 0 && (
-                  <Text style={styles.hint}>
-                    Tap one or more skis to log a wax for.
-                  </Text>
-                )}
+                <SkiSelector
+                  skis={skisForUser}
+                  selectedIds={selectedSkis}
+                  onToggle={toggleSki}
+                  onSelectAll={() =>
+                    setSelectedSkis(skisForUser.map(s => s.id))
+                  }
+                  onClearAll={() => setSelectedSkis([])}
+                  hint="Tap one or more skis to log a wax for."
+                />
               </Card>
 
               {selectedSkis.length > 0 && (

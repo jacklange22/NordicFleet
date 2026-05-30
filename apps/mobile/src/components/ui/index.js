@@ -7,6 +7,7 @@ export {default as Input} from './Input';
 export {default as ListItem} from './ListItem';
 export {default as Pill} from './Pill';
 export {default as SectionHeader} from './SectionHeader';
+export {default as SkiSelector} from './SkiSelector';
 export {default as StatCard} from './StatCard';
 export {default as TabBar} from './TabBar';
 export {default as WaxPicker} from './WaxPicker';
