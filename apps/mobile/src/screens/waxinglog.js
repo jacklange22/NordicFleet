@@ -17,6 +17,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import Toast from 'react-native-toast-message';
 import {useAuth} from '../context/AuthContext';
 import useSkis from '../hooks/useSkis';
+import {waxLogHasContent} from '@nordicfleet/core';
 import {createWaxLog} from '../services/waxLogService';
 import {firestore} from '../services/firebase';
 import {
@@ -212,6 +213,9 @@ const WaxEntryCard = ({ski, entry, onChange, collapsible, expanded, onToggle}) =
             value={entry.kickLayers ?? 0}
             onChange={setKickLayers}
           />
+          <Text style={styles.hint}>
+            How many coats of the same kick wax.
+          </Text>
           {entry.kickLayers > 0 && (
             <>
               <View style={styles.fieldSpacer} />
@@ -236,6 +240,10 @@ const WaxEntryCard = ({ski, entry, onChange, collapsible, expanded, onToggle}) =
         onChange={setGlideLayers}
         min={1}
       />
+      <Text style={styles.hint}>
+        Each layer is its own wax, base coat to finish. Pick the same wax
+        twice to record two coats of it.
+      </Text>
       <View style={styles.fieldSpacer} />
       {resizeArr(entry.glideWaxes || [], entry.glideLayers).map((g, i) => {
         const glideIds = entry.glideWaxIds || [];
@@ -347,6 +355,20 @@ const WaxLogScreen = () => {
       setError('Pick at least one ski');
       return;
     }
+    // Block empty logs (#13): every selected ski needs at least one
+    // meaningful field (binder, kick, glide, or a note).
+    const emptyIds = selectedSkis.filter(
+      id => !waxLogHasContent(waxLog[id] || emptyWaxEntry()),
+    );
+    if (emptyIds.length > 0) {
+      const names = emptyIds
+        .map(id => skiById[id]?.name || 'a ski')
+        .join(', ');
+      setError(
+        `Add a wax (binder, kick, or glide) or a note for ${names} before saving.`,
+      );
+      return;
+    }
     setSubmitting(true);
     const date = firestore.FieldValue.serverTimestamp();
     const writes = selectedSkis.map(skiId => {
@@ -376,14 +398,24 @@ const WaxLogScreen = () => {
       }
     }
     setSubmitting(false);
+    const onlySkiId = selectedSkis.length === 1 ? selectedSkis[0] : null;
     Toast.show({
       type: 'success',
       text1: 'Wax logged',
-      text2: `${selectedSkis.length} ski${selectedSkis.length === 1 ? '' : 's'}`,
+      text2: onlySkiId
+        ? 'Opening its history…'
+        : `${selectedSkis.length} skis`,
       position: 'top',
       visibilityTime: 2200,
     });
-    navigation.navigate('Home');
+    // Post-save context (#12): a single-ski log opens that ski's detail
+    // so the new entry is visible in its history, instead of dropping the
+    // user back on Home where the log feels like it vanished.
+    if (onlySkiId) {
+      navigation.navigate('SkiInfo', {skiId: onlySkiId});
+    } else {
+      navigation.navigate('Home');
+    }
   };
 
   return (

@@ -39,7 +39,7 @@ const formatLastWax = d => {
   if (days === 0) {
     const hours = Math.floor(diff / (60 * 60 * 1000));
     if (hours === 0) {
-      return 'now';
+      return 'today';
     }
     return `${hours}h ago`;
   }
