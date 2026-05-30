@@ -228,13 +228,13 @@ const CoachDashboardScreen = () => {
         right={
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Settings"
+            accessibilityLabel="Open profile"
             onPress={() => navigation.navigate('Profile')}
             hitSlop={8}
             style={({pressed}) => pressed && {opacity: 0.6}}>
             <Ionicons
-              name="settings-outline"
-              size={22}
+              name="person-circle-outline"
+              size={24}
               color={colors.textPrimary}
             />
           </Pressable>

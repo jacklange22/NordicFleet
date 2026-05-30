@@ -21,6 +21,7 @@ import {deleteAccount} from '../services/userService';
 import {auth} from '../services/firebase';
 import {Header, Card, ListItem, SectionHeader, Button, Input} from '../components/ui';
 import {colors, radius, spacing, typography} from '../theme';
+import {BUILD_TAG} from '../buildInfo';
 
 // Settings groups the account-management actions that used to clutter the
 // Profile screen (issue #4): credentials, data/privacy, and the dangerous
@@ -302,6 +303,14 @@ const SettingsScreen = () => {
             />
           </View>
         </Card>
+
+        {/* Dev-only build label — proves the phone is running THIS build.
+            Stripped from Release. Bump BUILD_TAG in src/buildInfo.js. */}
+        {__DEV__ && (
+          <Text style={styles.buildTag} accessibilityLabel={`Build ${BUILD_TAG}`}>
+            DEV build · {BUILD_TAG}
+          </Text>
+        )}
       </ScrollView>
 
       {/* Password modal */}
@@ -434,6 +443,12 @@ const SettingsScreen = () => {
 
 const styles = StyleSheet.create({
   safe: {flex: 1, backgroundColor: colors.bg},
+  buildTag: {
+    ...typography.caption,
+    color: colors.textTertiary,
+    textAlign: 'center',
+    marginTop: spacing.xl,
+  },
   scroll: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.lg,
