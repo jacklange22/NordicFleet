@@ -19,7 +19,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import Toast from 'react-native-toast-message';
 import {isValidEmail} from '@nordicfleet/core';
 import LoadingScreen from '../components/LoadingScreen';
-import {shareSnapshot} from '../services/shareService';
+import {shareSnapshot, fleetShareMessage} from '../services/shareService';
 import FleetShareCard from '../components/share/FleetShareCard';
 import {useAuth} from '../context/AuthContext';
 import useProfile from '../hooks/useProfile';
@@ -134,7 +134,7 @@ const ProfileScreen = () => {
     try {
       await shareSnapshot(fleetShareRef, 'my_fleet', {
         title: 'My fleet · NordicFleet',
-        message: 'My ski fleet — shared from NordicFleet',
+        message: fleetShareMessage(),
       });
     } catch (err) {
       Toast.show({

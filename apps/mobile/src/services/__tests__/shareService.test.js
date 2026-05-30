@@ -1,6 +1,11 @@
 import RNShare from 'react-native-share';
 import {captureRef} from 'react-native-view-shot';
-import {shareSnapshot} from '../shareService';
+import {
+  shareSnapshot,
+  fleetShareMessage,
+  skiShareMessage,
+  inviteUrl,
+} from '../shareService';
 
 beforeEach(() => {
   RNShare.__reset();
@@ -66,5 +71,26 @@ describe('shareSnapshot', () => {
         message: 'hi',
       }),
     );
+  });
+});
+
+// Issue #6: a shared screenshot must carry context + a way to try the app.
+describe('share invite captions', () => {
+  it('fleet caption names the app and includes the invite URL', () => {
+    const msg = fleetShareMessage();
+    expect(msg).toMatch(/NordicFleet/);
+    expect(msg).toContain(inviteUrl());
+  });
+
+  it('ski caption includes the ski name, the app, and the invite URL', () => {
+    const msg = skiShareMessage('Madshus Skate');
+    expect(msg).toContain('Madshus Skate');
+    expect(msg).toMatch(/NordicFleet/);
+    expect(msg).toContain(inviteUrl());
+  });
+
+  it('ski caption falls back to a default name when blank', () => {
+    expect(skiShareMessage('')).toContain('My ski');
+    expect(skiShareMessage(undefined)).toContain('My ski');
   });
 });

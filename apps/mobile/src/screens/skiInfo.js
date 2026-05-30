@@ -16,7 +16,7 @@ import {useAuth} from '../context/AuthContext';
 import {subscribeSki} from '../services/skiService';
 import {subscribeWaxLogsForSki} from '../services/waxLogService';
 import {subscribeTestLogsForSki} from '../services/testLogService';
-import {shareSnapshot} from '../services/shareService';
+import {shareSnapshot, skiShareMessage} from '../services/shareService';
 import SkiShareCard from '../components/share/SkiShareCard';
 import {
   Header,
@@ -144,7 +144,7 @@ const SkiInfo = ({route, navigation}) => {
         (ski.name || 'ski').replace(/\s+/g, '_').toLowerCase(),
         {
           title: `${ski.name || 'My ski'} · NordicFleet`,
-          message: `${ski.name || 'My ski'} — shared from NordicFleet`,
+          message: skiShareMessage(ski.name),
         },
       );
     } catch (err) {
