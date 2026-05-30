@@ -1,13 +1,5 @@
-import React, {useEffect, useState} from 'react';
-import {
-  View,
-  Pressable,
-  Text,
-  StyleSheet,
-  LayoutAnimation,
-  UIManager,
-  Platform,
-} from 'react-native';
+import React, {useEffect, useRef, useState} from 'react';
+import {View, Pressable, Text, StyleSheet} from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import {useNavigation, useRoute} from '@react-navigation/native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
@@ -15,10 +7,12 @@ import {colors, spacing, typography} from '../../theme';
 import {useAuth} from '../../context/AuthContext';
 import {useMode} from '../../context/ModeContext';
 import {subscribeUnreadCountForAthlete} from '../../services/messageService';
+import {shouldShowTabBar} from '../../config/navTabs';
+import {trace} from '../../services/devTrace';
 
 // Both useNavigation and useRoute throw when the component isn't inside a
 // NavigationContainer / Screen. Tests sometimes render screens standalone,
-// so wrap defensively — TabBar should degrade rather than crash.
+// so wrap defensively - TabBar should degrade rather than crash.
 const useSafeNavigation = () => {
   try {
     return useNavigation();
@@ -41,17 +35,10 @@ const useSafeMode = () => {
   }
 };
 
-if (
-  Platform.OS === 'android' &&
-  UIManager.setLayoutAnimationEnabledExperimental
-) {
-  UIManager.setLayoutAnimationEnabledExperimental(true);
-}
-
 // Personal mode: the full skier experience.
 const PERSONAL_TABS = [
   {key: 'home', label: 'Fleet', icon: 'home-outline', activeIcon: 'home', route: 'Home'},
-  {key: 'add', label: 'Add', icon: 'add-circle-outline', activeIcon: 'add-circle', route: 'newSki'},
+  {key: 'add', label: 'Ski', icon: 'add-circle-outline', activeIcon: 'add-circle', route: 'newSki'},
   {key: 'wax', label: 'Wax', icon: 'flask-outline', activeIcon: 'flask', route: 'WaxLog'},
   {key: 'test', label: 'Test', icon: 'analytics-outline', activeIcon: 'analytics', route: 'TestingLog'},
   {key: 'messages', label: 'Messages', icon: 'chatbubble-outline', activeIcon: 'chatbubble', route: 'Messages', badgeKey: 'unread'},
@@ -60,21 +47,21 @@ const PERSONAL_TABS = [
 
 // Coaching mode: managing other skiers. The Athletes dashboard
 // surfaces pending requests inline, so there's no separate Requests
-// tab on iOS (documented in NOTES.md). Add / Wax / Test are hidden —
+// tab on iOS (documented in NOTES.md). Add / Wax / Test are hidden -
 // you don't log your own equipment in coaching mode.
 const COACHING_TABS = [
   {key: 'dashboard', label: 'Athletes', icon: 'people-outline', activeIcon: 'people', route: 'CoachDashboard'},
   {key: 'profile', label: 'Profile', icon: 'person-outline', activeIcon: 'person', route: 'Profile'},
 ];
 
-// Wax Truck mode: head-to-head wax testing. Tests list + profile —
+// Wax Truck mode: head-to-head wax testing. Tests list + profile -
 // you don't manage athletes or your own fleet from here.
 const WAXTRUCK_TABS = [
   {key: 'tests', label: 'Tests', icon: 'git-network-outline', activeIcon: 'git-network', route: 'WaxTruck'},
   {key: 'profile', label: 'Profile', icon: 'person-outline', activeIcon: 'person', route: 'Profile'},
 ];
 
-// Home route for each mode — used when the toggle switches contexts.
+// Home route for each mode - used when the toggle switches contexts.
 const MODE_HOME = {
   personal: 'Home',
   coaching: 'CoachDashboard',
@@ -100,6 +87,11 @@ const TabBar = () => {
   const {user} = useAuth() || {};
   const {mode, setMode, isCoach} = useSafeMode();
   const [unread, setUnread] = useState(0);
+  // Re-entrancy guard: a fast double-tap on the switcher (e.g. Coaching then
+  // Wax Truck) must not queue two stack resets. Set true on the first valid
+  // switch, released after the deferred navigation runs (or on unmount, when
+  // the reset tears this TabBar down).
+  const switchingRef = useRef(false);
 
   useEffect(() => {
     if (mode !== 'personal' || !user?.uid) {
@@ -109,22 +101,50 @@ const TabBar = () => {
     return subscribeUnreadCountForAthlete(user.uid, setUnread);
   }, [user?.uid, mode]);
 
+  // Central visibility policy (src/config/navTabs.js): hide on auth, the
+  // camera scanner, and heavy create/entry flows. Only ever hide on a KNOWN
+  // hidden route - when the route is unknown (standalone test render) the bar
+  // still draws, matching prior behavior.
+  if (!shouldShowTabBar(route?.name)) {
+    return null;
+  }
+
   const accent = MODE_ACCENT[mode] || colors.red;
   const tabs = MODE_TABS[mode] || PERSONAL_TABS;
 
   const switchMode = next => {
-    if (next === mode) {
+    // No-op when already in this mode, or while a switch is already in flight.
+    if (next === mode || switchingRef.current) {
       return;
     }
-    LayoutAnimation.configureNext(
-      LayoutAnimation.create(180, 'easeInEaseOut', 'opacity'),
-    );
+    switchingRef.current = true;
+    trace('mode switch requested', {from: mode, to: next});
+
+    // 1) Persist + update the mode first (so the restored-mode + the screen
+    //    we reset to agree).
     setMode(next);
-    if (navigation) {
-      // Reframe to the destination mode's home so the user isn't left
-      // on a screen that doesn't belong to the new mode.
-      navigation.navigate(MODE_HOME[next]);
-    }
+    trace('mode persisted', {mode: next});
+
+    // 2) Defer the stack reset OUT of this touch/setState frame.
+    //    Previously this ran synchronously here, right after a native
+    //    layout-animation config call - and on a real device the Fabric
+    //    layout-animation driver tried to animate the whole stack teardown +
+    //    remount, aborting the mounting transaction on the main thread
+    //    (mounting pullTransaction -> SIGABRT). The layout animation is gone
+    //    now, and running reset() on the next frame lets the current frame's
+    //    mutations settle before the big remount.
+    const target = MODE_HOME[next];
+    requestAnimationFrame(() => {
+      if (navigation) {
+        // A mode switch is a top-level context change, so RESET the stack to
+        // the new mode's home (clean single-screen stack - no stale screens
+        // underneath, no back button that crosses modes).
+        trace('mode navigation start', {to: target});
+        navigation.reset({index: 0, routes: [{name: target}]});
+        trace('mode navigation complete', {to: target});
+      }
+      switchingRef.current = false;
+    });
   };
 
   return (
@@ -136,7 +156,7 @@ const TabBar = () => {
         // at a glance even before looking at the segmented control.
         mode !== 'personal' && {borderTopColor: accent},
       ]}>
-      {/* Mode switcher — only for users with the coaching capability. */}
+      {/* Mode switcher - only for users with the coaching capability. */}
       {isCoach && (
         <View style={styles.switcherWrap}>
           <View style={styles.switcher}>

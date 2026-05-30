@@ -17,6 +17,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import Toast from 'react-native-toast-message';
 import {useAuth} from '../context/AuthContext';
 import useSkis from '../hooks/useSkis';
+import {waxLogHasContent} from '@nordicfleet/core';
 import {createWaxLog} from '../services/waxLogService';
 import {firestore} from '../services/firebase';
 import {
@@ -26,6 +27,7 @@ import {
   Button,
   Pill,
   SectionHeader,
+  SkiSelector,
   EmptyState,
   WaxPicker,
 } from '../components/ui';
@@ -45,7 +47,7 @@ const BINDER_OPTIONS = [
 
 const MAX_LAYERS = 6;
 
-const emptyWaxEntry = () => ({
+export const emptyWaxEntry = () => ({
   binder: '',
   kickLayers: 1,
   kickWax: '',
@@ -96,7 +98,7 @@ const resizeArr = (arr, n, fill = '') => {
   return out;
 };
 
-// Short one-line summary of what's been entered — shown on a collapsed
+// Short one-line summary of what's been entered - shown on a collapsed
 // accordion card so the coach can scan filled vs. empty without expanding.
 const summarizeEntry = entry => {
   const parts = [];
@@ -113,7 +115,14 @@ const summarizeEntry = entry => {
   return parts.length ? parts.join(' · ') : 'Not filled in yet';
 };
 
-const WaxEntryCard = ({ski, entry, onChange, collapsible, expanded, onToggle}) => {
+export const WaxEntryCard = ({
+  ski,
+  entry,
+  onChange,
+  collapsible,
+  expanded,
+  onToggle,
+}) => {
   const isClassic = (ski.technique || '').toLowerCase() === 'classic';
 
   const setBinder = b => onChange({binder: entry.binder === b ? '' : b});
@@ -168,10 +177,12 @@ const WaxEntryCard = ({ski, entry, onChange, collapsible, expanded, onToggle}) =
 
       {!expanded ? null : (
         <>
+      {/* Read-only ski attributes - ghost variant so they read as quiet
+          labels, NOT like the tappable outline/solid selector pills. */}
       <View style={styles.entryPillRow}>
         {!!ski.technique && (
           <View style={styles.entryPillWrap}>
-            <Pill variant="outline" color="red">
+            <Pill variant="ghost" color="neutral">
               {ski.technique}
             </Pill>
           </View>
@@ -210,6 +221,9 @@ const WaxEntryCard = ({ski, entry, onChange, collapsible, expanded, onToggle}) =
             value={entry.kickLayers ?? 0}
             onChange={setKickLayers}
           />
+          <Text style={styles.hint}>
+            How many coats of the same kick wax.
+          </Text>
           {entry.kickLayers > 0 && (
             <>
               <View style={styles.fieldSpacer} />
@@ -234,6 +248,10 @@ const WaxEntryCard = ({ski, entry, onChange, collapsible, expanded, onToggle}) =
         onChange={setGlideLayers}
         min={1}
       />
+      <Text style={styles.hint}>
+        Each layer is its own wax, base coat to finish. Pick the same wax
+        twice to record two coats of it.
+      </Text>
       <View style={styles.fieldSpacer} />
       {resizeArr(entry.glideWaxes || [], entry.glideLayers).map((g, i) => {
         const glideIds = entry.glideWaxIds || [];
@@ -296,7 +314,7 @@ const WaxLogScreen = () => {
     if (!accordion) {
       return;
     }
-    // Keep a valid ski expanded — default to the first selected.
+    // Keep a valid ski expanded - default to the first selected.
     setExpandedSki(prev =>
       prev && selectedSkis.includes(prev) ? prev : selectedSkis[0],
     );
@@ -345,6 +363,20 @@ const WaxLogScreen = () => {
       setError('Pick at least one ski');
       return;
     }
+    // Block empty logs (#13): every selected ski needs at least one
+    // meaningful field (binder, kick, glide, or a note).
+    const emptyIds = selectedSkis.filter(
+      id => !waxLogHasContent(waxLog[id] || emptyWaxEntry()),
+    );
+    if (emptyIds.length > 0) {
+      const names = emptyIds
+        .map(id => skiById[id]?.name || 'a ski')
+        .join(', ');
+      setError(
+        `Add a wax (binder, kick, or glide) or a note for ${names} before saving.`,
+      );
+      return;
+    }
     setSubmitting(true);
     const date = firestore.FieldValue.serverTimestamp();
     const writes = selectedSkis.map(skiId => {
@@ -374,14 +406,24 @@ const WaxLogScreen = () => {
       }
     }
     setSubmitting(false);
+    const onlySkiId = selectedSkis.length === 1 ? selectedSkis[0] : null;
     Toast.show({
       type: 'success',
       text1: 'Wax logged',
-      text2: `${selectedSkis.length} ski${selectedSkis.length === 1 ? '' : 's'}`,
+      text2: onlySkiId
+        ? 'Opening its history…'
+        : `${selectedSkis.length} skis`,
       position: 'top',
       visibilityTime: 2200,
     });
-    navigation.navigate('Home');
+    // Post-save context (#12): a single-ski log opens that ski's detail
+    // so the new entry is visible in its history, instead of dropping the
+    // user back on Home where the log feels like it vanished.
+    if (onlySkiId) {
+      navigation.navigate('SkiInfo', {skiId: onlySkiId});
+    } else {
+      navigation.navigate('Home');
+    }
   };
 
   return (
@@ -410,6 +452,7 @@ const WaxLogScreen = () => {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView
           contentContainerStyle={styles.scroll}
+          keyboardDismissMode="on-drag"
           keyboardShouldPersistTaps="handled">
           {loadingSkis ? (
             <View style={styles.loadingWrap}>
@@ -430,27 +473,16 @@ const WaxLogScreen = () => {
             <>
               <SectionHeader title="Step 1 · Select skis" />
               <Card style={styles.selectorCard}>
-                <View style={styles.chipRow}>
-                  {skisForUser.map(ski => {
-                    const selected = selectedSkis.includes(ski.id);
-                    return (
-                      <View key={ski.id} style={styles.chipWrap}>
-                        <Pill
-                          variant={selected ? 'solid' : 'outline'}
-                          color="red"
-                          onPress={() => toggleSki(ski.id)}
-                          accessibilityLabel={ski.name || ski.id}>
-                          {ski.name || ski.id}
-                        </Pill>
-                      </View>
-                    );
-                  })}
-                </View>
-                {selectedSkis.length === 0 && (
-                  <Text style={styles.hint}>
-                    Tap one or more skis to log a wax for.
-                  </Text>
-                )}
+                <SkiSelector
+                  skis={skisForUser}
+                  selectedIds={selectedSkis}
+                  onToggle={toggleSki}
+                  onSelectAll={() =>
+                    setSelectedSkis(skisForUser.map(s => s.id))
+                  }
+                  onClearAll={() => setSelectedSkis([])}
+                  hint="Tap one or more skis to log a wax for."
+                />
               </Card>
 
               {selectedSkis.length > 0 && (

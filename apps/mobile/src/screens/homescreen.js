@@ -31,7 +31,7 @@ import {colors, spacing, typography, radius} from '../theme';
 
 const formatLastWax = d => {
   if (!d) {
-    return '—';
+    return '-';
   }
   const diff = Math.max(0, Date.now() - d.getTime());
   const day = 24 * 60 * 60 * 1000;
@@ -39,7 +39,7 @@ const formatLastWax = d => {
   if (days === 0) {
     const hours = Math.floor(diff / (60 * 60 * 1000));
     if (hours === 0) {
-      return 'now';
+      return 'today';
     }
     return `${hours}h ago`;
   }
@@ -61,18 +61,30 @@ const SkiSeparator = () => <View style={styles.rowSpacer} />;
 const SkiCard = ({ski, onPress}) => {
   const tech = (ski.technique || '').toLowerCase();
   const accentColor = tech === 'skate' ? colors.redDim : colors.red;
+  const name = (ski.name || '').trim();
+  const brand = (ski.brand || '').trim();
+  const model = (ski.model || '').trim();
+  // With a display name, brand·model is a secondary line; without one, the
+  // brand+model reads as the title (space-joined, like a product name).
+  const title = name || [brand, model].filter(Boolean).join(' ') || 'Unnamed ski';
+  const subtitle = name ? [brand, model].filter(Boolean).join(' · ') : '';
   return (
     <Card
       onPress={onPress}
-      accessibilityLabel={`Open ${ski.name || 'ski'}`}
+      accessibilityLabel={`Open ${title}`}
       style={styles.skiCardOuter}
       padding={0}>
       <View style={styles.skiCardBody}>
         <View style={[styles.accentBar, {backgroundColor: accentColor}]} />
         <View style={styles.skiCardMain}>
           <Text style={styles.skiName} numberOfLines={1}>
-            {ski.name || 'Unnamed ski'}
+            {title}
           </Text>
+          {!!subtitle && (
+            <Text style={styles.skiBrandModel} numberOfLines={1}>
+              {subtitle}
+            </Text>
+          )}
           <View style={styles.pillRow}>
             {!!ski.technique && (
               <View style={styles.pillWrap}>
@@ -228,14 +240,44 @@ const HomeScreen = () => {
           <StatCard value={skis.length} label="Total skis" />
         </View>
         <View style={styles.statsCell}>
-          <StatCard
-            value={formatLastWax(lastWaxAt)}
-            label="Last wax"
-            valueStyle={styles.lastWaxValue}
-          />
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="View wax history"
+            onPress={() => navigation.navigate('WaxHistory')}
+            style={({pressed}) => [
+              styles.statPressable,
+              pressed && {opacity: 0.7},
+            ]}>
+            <StatCard
+              value={formatLastWax(lastWaxAt)}
+              label="Last wax"
+              valueStyle={styles.lastWaxValue}
+            />
+            <Ionicons
+              name="chevron-forward"
+              size={14}
+              color={colors.textTertiary}
+              style={styles.statChevron}
+            />
+          </Pressable>
         </View>
         <View style={styles.statsCell}>
-          <StatCard value={totalTests} label="Tests logged" />
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="View test history"
+            onPress={() => navigation.navigate('TestHistory')}
+            style={({pressed}) => [
+              styles.statPressable,
+              pressed && {opacity: 0.7},
+            ]}>
+            <StatCard value={totalTests} label="Tests logged" />
+            <Ionicons
+              name="chevron-forward"
+              size={14}
+              color={colors.textTertiary}
+              style={styles.statChevron}
+            />
+          </Pressable>
         </View>
       </View>
 
@@ -323,6 +365,8 @@ const HomeScreen = () => {
           data={filteredSkis}
           keyExtractor={item => item.id.toString()}
           renderItem={renderSkiRow}
+          keyboardDismissMode="on-drag"
+          keyboardShouldPersistTaps="handled"
           ListHeaderComponent={ListHeader}
           ItemSeparatorComponent={SkiSeparator}
           ListEmptyComponent={
@@ -405,6 +449,15 @@ const styles = StyleSheet.create({
     flex: 1,
     marginHorizontal: spacing.xs,
   },
+  statPressable: {
+    flex: 1,
+    position: 'relative',
+  },
+  statChevron: {
+    position: 'absolute',
+    top: spacing.sm,
+    right: spacing.sm,
+  },
   lastWaxValue: {
     fontSize: 22,
     letterSpacing: -0.3,
@@ -431,12 +484,17 @@ const styles = StyleSheet.create({
   skiName: {
     ...typography.headingMd,
     color: colors.textPrimary,
-    marginBottom: spacing.sm,
+    marginBottom: 2,
+  },
+  skiBrandModel: {
+    ...typography.bodySm,
+    color: colors.textSecondary,
+    marginBottom: spacing.xs,
   },
   pillRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginTop: 2,
+    marginTop: spacing.xs,
   },
   pillWrap: {
     marginRight: spacing.xs,

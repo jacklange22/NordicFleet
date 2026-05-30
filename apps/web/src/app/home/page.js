@@ -39,7 +39,7 @@ function HomeInner() {
   }, [user]);
 
   // Capability model: coaches have their own fleet too. /home is the
-  // personal-mode surface for everyone — no auto-bounce to /coach.
+  // personal-mode surface for everyone - no auto-bounce to /coach.
   // Coaches reach the dashboard via the mode switcher in the header.
 
   const firstName = profile?.name?.split(/\s+/)?.[0];
@@ -56,8 +56,8 @@ function HomeInner() {
 
         <div className="grid grid-cols-3 gap-3 mb-8">
           <StatCard value={skis.length} label="Total skis" />
-          <StatCard value="—" label="Last wax" />
-          <StatCard value="—" label="Tests logged" />
+          <StatCard value="-" label="Last wax" />
+          <StatCard value="-" label="Tests logged" />
         </div>
 
         {loaded && skis.length > 0 && (
@@ -118,7 +118,7 @@ function HomeInner() {
             <h3 className="text-xl font-bold mb-2">No skis yet</h3>
             <p className="text-text-secondary text-sm mb-4">
               Add your first ski, or paste a whole fleet from a
-              spreadsheet — both work from web.
+              spreadsheet - both work from web.
             </p>
             <div className="flex flex-wrap gap-3">
               <Link href="/ski/new">

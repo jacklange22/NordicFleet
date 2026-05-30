@@ -11,14 +11,22 @@ import ForgotPasswordScreen from './src/screens/forgotPassword.js';
 import AuthLoadingScreen from './src/screens/AuthLoadingScreen';
 import HomeScreen from './src/screens/homescreen.js';
 import ProfileScreen from './src/screens/profile.js';
+import SettingsScreen from './src/screens/settings.js';
 import TestingLogScreen from './src/screens/testinglog.js';
 import WaxLogScreen from './src/screens/waxinglog.js';
+import WaxHistoryScreen from './src/screens/waxHistory.js';
+import TestHistoryScreen from './src/screens/testHistory.js';
+import EditWaxLogScreen from './src/screens/editWaxLog.js';
+import EditTestLogScreen from './src/screens/editTestLog.js';
 import SkiInfo from './src/screens/skiInfo.js';
 import AddSkiForm from './src/screens/newSki.js';
 import ScanSkiScreen from './src/screens/scanSki.js';
 import RoleSelectScreen from './src/screens/roleSelect.js';
 import CoachDashboardScreen from './src/screens/coachDashboard.js';
 import AthleteDetailScreen from './src/screens/athleteDetail.js';
+import InviteAthletesScreen from './src/screens/inviteAthletes.js';
+import SuggestionsScreen from './src/screens/suggestions.js';
+import SuggestChangeScreen from './src/screens/suggestChange.js';
 import MessagesScreen from './src/screens/messages.js';
 import MessageDetailScreen from './src/screens/messageDetail.js';
 import ComposeAdvisoryScreen from './src/screens/composeAdvisory.js';
@@ -31,6 +39,17 @@ import ErrorBoundary from './src/components/ErrorBoundary';
 import Toast from 'react-native-toast-message';
 import {toastConfig} from './src/components/ui/toastConfig';
 import {colors} from './src/theme';
+import {trace} from './src/services/devTrace';
+
+// TEMPORARY freeze diagnostics (PHONE_FREEZE_DEBUG_STEPS.md): the deepest
+// active route name, for the navigator onStateChange trace.
+const getActiveRouteName = (state: any): string | undefined => {
+  if (!state || typeof state.index !== 'number') {
+    return undefined;
+  }
+  const route = state.routes[state.index];
+  return route?.state ? getActiveRouteName(route.state) : route?.name;
+};
 
 const navTheme = {
   ...DefaultTheme,
@@ -48,13 +67,36 @@ const navTheme = {
 const Stack = createStackNavigator();
 
 const App = () => {
+  const routedRef = React.useRef(false);
+  React.useEffect(() => {
+    trace('app mounted');
+    // Dev-only boot watchdog: if we never reach a route, the app is hung on
+    // auth/profile/mode. Log loudly (does NOT mask production errors — it's
+    // __DEV__-only and only fires when boot stalls). The AuthLoadingScreen
+    // also has a 12s getProfile fallback so the splash can't sit forever.
+    if (__DEV__) {
+      const id = setTimeout(() => {
+        if (!routedRef.current) {
+          trace('WATCHDOG boot stalled — no route after 15000ms (check the last line above)');
+        }
+      }, 15000);
+      return () => clearTimeout(id);
+    }
+    return undefined;
+  }, []);
   return (
     <ErrorBoundary>
       <SafeAreaProvider>
         <StatusBar barStyle="light-content" backgroundColor={colors.bg} />
         <AuthProvider>
           <ModeProvider>
-          <NavigationContainer theme={navTheme}>
+          <NavigationContainer
+            theme={navTheme}
+            onReady={() => trace('navigator ready')}
+            onStateChange={state => {
+              routedRef.current = true;
+              trace('route changed', {route: getActiveRouteName(state)});
+            }}>
             <Stack.Navigator
               initialRouteName="AuthLoading"
               screenOptions={{
@@ -71,8 +113,13 @@ const App = () => {
               />
               <Stack.Screen name="Home" component={HomeScreen} />
               <Stack.Screen name="Profile" component={ProfileScreen} />
+              <Stack.Screen name="Settings" component={SettingsScreen} />
               <Stack.Screen name="TestingLog" component={TestingLogScreen} />
               <Stack.Screen name="WaxLog" component={WaxLogScreen} />
+              <Stack.Screen name="WaxHistory" component={WaxHistoryScreen} />
+              <Stack.Screen name="TestHistory" component={TestHistoryScreen} />
+              <Stack.Screen name="EditWaxLog" component={EditWaxLogScreen} />
+              <Stack.Screen name="EditTestLog" component={EditTestLogScreen} />
               <Stack.Screen name="SkiInfo" component={SkiInfo} />
               <Stack.Screen name="newSki" component={AddSkiForm} />
               <Stack.Screen name="ScanSki" component={ScanSkiScreen} />
@@ -84,6 +131,15 @@ const App = () => {
               <Stack.Screen
                 name="AthleteDetail"
                 component={AthleteDetailScreen}
+              />
+              <Stack.Screen
+                name="InviteAthletes"
+                component={InviteAthletesScreen}
+              />
+              <Stack.Screen name="Suggestions" component={SuggestionsScreen} />
+              <Stack.Screen
+                name="SuggestChange"
+                component={SuggestChangeScreen}
               />
               <Stack.Screen name="Messages" component={MessagesScreen} />
               <Stack.Screen

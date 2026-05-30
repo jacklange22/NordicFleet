@@ -6,7 +6,7 @@ import {Alert} from 'react-native';
 import authMock from '@react-native-firebase/auth';
 import firestoreMock from '@react-native-firebase/firestore';
 
-import ProfileScreen from '../profile';
+import SettingsScreen from '../settings';
 import {AuthProvider} from '../../context/AuthContext';
 
 // Stub navigation so navigation.reset() is a spy we can assert, instead
@@ -40,18 +40,18 @@ const SA_METRICS = {
   insets: {top: 0, left: 0, right: 0, bottom: 0},
 };
 
-const renderProfile = () =>
+const renderSettings = () =>
   render(
     <SafeAreaProvider initialMetrics={SA_METRICS}>
       <NavigationContainer>
         <AuthProvider>
-          <ProfileScreen />
+          <SettingsScreen />
         </AuthProvider>
       </NavigationContainer>
     </SafeAreaProvider>,
   );
 
-describe('ProfileScreen — delete account', () => {
+describe('SettingsScreen — delete account (#4)', () => {
   it('first alert + cancel: does not call deleteAccount', async () => {
     authMock.__setCurrentUser({uid: 'a1', email: 'a@b.com'});
     firestoreMock.__seedDoc('users/a1', {email: 'a@b.com', role: 'athlete'});
@@ -61,7 +61,7 @@ describe('ProfileScreen — delete account', () => {
       cancelButton = buttons.find(b => b.text === 'Cancel');
     });
 
-    const tree = renderProfile();
+    const tree = renderSettings();
     await waitFor(() => tree.getByLabelText('Delete account'));
     fireEvent.press(tree.getByLabelText('Delete account'));
 
@@ -76,18 +76,73 @@ describe('ProfileScreen — delete account', () => {
     expect(firestoreMock.__getStore().has('users/a1')).toBe(true);
   });
 
-  it('proceeds to reauth modal after confirming the first alert', async () => {
+  it('first confirm shows a SECOND confirmation, not the password modal', async () => {
     authMock.__setCurrentUser({uid: 'a1', email: 'a@b.com'});
     firestoreMock.__seedDoc('users/a1', {email: 'a@b.com', role: 'athlete'});
 
+    const alertCalls = [];
+    // Fire only the first alert's destructive button; stop there.
     Alert.alert = jest.fn((title, msg, buttons) => {
-      const confirm = buttons.find(b => b.text === 'I want to delete');
+      alertCalls.push(title);
+      if (alertCalls.length === 1) {
+        buttons.find(b => b.style === 'destructive').onPress();
+      }
+    });
+
+    const tree = renderSettings();
+    await waitFor(() => tree.getByLabelText('Delete account'));
+    await act(async () => {
+      fireEvent.press(tree.getByLabelText('Delete account'));
+    });
+
+    // A second alert was raised…
+    expect(Alert.alert).toHaveBeenCalledTimes(2);
+    expect(alertCalls[1]).toMatch(/absolutely sure/i);
+    // …and the password modal is NOT open yet (need the 2nd confirm).
+    expect(tree.queryByLabelText('Password')).toBeNull();
+  });
+
+  it('cancel at the second confirmation stops the flow (no modal)', async () => {
+    authMock.__setCurrentUser({uid: 'a1', email: 'a@b.com'});
+    firestoreMock.__seedDoc('users/a1', {email: 'a@b.com', role: 'athlete'});
+
+    let n = 0;
+    Alert.alert = jest.fn((title, msg, buttons) => {
+      n += 1;
+      // Confirm the first, cancel the second.
+      const btn =
+        n === 1
+          ? buttons.find(b => b.style === 'destructive')
+          : buttons.find(b => b.style === 'cancel');
+      if (btn && btn.onPress) {
+        btn.onPress();
+      }
+    });
+
+    const tree = renderSettings();
+    await waitFor(() => tree.getByLabelText('Delete account'));
+    await act(async () => {
+      fireEvent.press(tree.getByLabelText('Delete account'));
+    });
+
+    expect(tree.queryByLabelText('Password')).toBeNull();
+    expect(firestoreMock.__getStore().has('users/a1')).toBe(true);
+  });
+
+  it('proceeds to reauth modal after confirming BOTH alerts', async () => {
+    authMock.__setCurrentUser({uid: 'a1', email: 'a@b.com'});
+    firestoreMock.__seedDoc('users/a1', {email: 'a@b.com', role: 'athlete'});
+
+    // Two chained destructive alerts now ("Delete forever" then
+    // "Yes, delete forever"). Auto-confirm the destructive button each time.
+    Alert.alert = jest.fn((title, msg, buttons) => {
+      const confirm = buttons.find(b => b.style === 'destructive');
       if (confirm && confirm.onPress) {
         confirm.onPress();
       }
     });
 
-    const tree = renderProfile();
+    const tree = renderSettings();
     await waitFor(() => tree.getByLabelText('Delete account'));
     await act(async () => {
       fireEvent.press(tree.getByLabelText('Delete account'));
@@ -108,14 +163,16 @@ describe('ProfileScreen — delete account', () => {
     firestoreMock.__seedDoc(`users/${aUid}`, {email: 'a@b.com', role: 'athlete'});
     firestoreMock.__seedDoc(`users/${aUid}/skis/s1`, {name: 'A'});
 
+    // Two chained destructive alerts now ("Delete forever" then
+    // "Yes, delete forever"). Auto-confirm the destructive button each time.
     Alert.alert = jest.fn((title, msg, buttons) => {
-      const confirm = buttons.find(b => b.text === 'I want to delete');
+      const confirm = buttons.find(b => b.style === 'destructive');
       if (confirm && confirm.onPress) {
         confirm.onPress();
       }
     });
 
-    const tree = renderProfile();
+    const tree = renderSettings();
     await waitFor(() => tree.getByLabelText('Delete account'));
     await act(async () => {
       fireEvent.press(tree.getByLabelText('Delete account'));

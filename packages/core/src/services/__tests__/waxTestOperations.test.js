@@ -262,11 +262,68 @@ describe('buildWaxTestCreatePayload', () => {
   });
 });
 
+describe('bracket (de)serialization — Firestore nested-array fix', () => {
+  const {
+    serializeBracket,
+    deserializeBracket,
+  } = require('../waxTestOperations');
+
+  test('serialize turns rounds (array of arrays) into a map → no nested array', () => {
+    const bracket = generateBracket([{id: 'a'}, {id: 'b'}, {id: 'c'}]);
+    expect(Array.isArray(bracket.rounds)).toBe(true); // in-memory form
+    const stored = serializeBracket(bracket);
+    expect(Array.isArray(stored.rounds)).toBe(false); // map form
+    expect(stored.rounds['0']).toBeDefined();
+    Object.values(stored.rounds).forEach(round => {
+      expect(Array.isArray(round)).toBe(true);
+      round.forEach(m => expect(Array.isArray(m)).toBe(false));
+    });
+  });
+
+  test('serialize → deserialize is a round-trip back to Match[][]', () => {
+    const bracket = generateBracket([1, 2, 3, 4, 5].map(n => ({id: `c${n}`})));
+    expect(deserializeBracket(serializeBracket(bracket))).toEqual(bracket);
+  });
+
+  test('deserialize tolerates the legacy array form + empties', () => {
+    expect(
+      deserializeBracket({rounds: [[{matchId: 'm'}]], winnerId: 'x'}),
+    ).toEqual({rounds: [[{matchId: 'm'}]], winnerId: 'x'});
+    expect(deserializeBracket(null)).toEqual({rounds: [], winnerId: null});
+    expect(deserializeBracket({})).toEqual({rounds: [], winnerId: null});
+  });
+});
+
+describe('buildWaxTestCreatePayload — test type', () => {
+  const validInput = () => ({
+    name: 'T',
+    fleetSize: 4,
+    combinations: [
+      {id: 'c1', layers: [{category: 'kick', waxName: 'VR40'}]},
+      {id: 'c2', layers: [{category: 'kick', waxName: 'VR45'}]},
+    ],
+  });
+
+  test('keeps an explicit valid testType', () => {
+    expect(
+      buildWaxTestCreatePayload({...validInput(), testType: 'kick'}).testType,
+    ).toBe('kick');
+  });
+
+  test('falls back to the first layer category when testType missing/invalid', () => {
+    expect(
+      buildWaxTestCreatePayload({...validInput(), testType: 'banana'}).testType,
+    ).toBe('kick');
+  });
+});
+
 describe('@nordicfleet/core barrel', () => {
   test('re-exports the wax-test API', () => {
     const core = require('../../');
     expect(typeof core.generateBracket).toBe('function');
     expect(typeof core.advanceWinner).toBe('function');
     expect(typeof core.buildWaxTestCreatePayload).toBe('function');
+    expect(typeof core.serializeBracket).toBe('function');
+    expect(typeof core.deserializeBracket).toBe('function');
   });
 });

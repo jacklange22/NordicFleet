@@ -21,7 +21,7 @@ const mapSignupError = code => {
     case 'auth/weak-password':
       return 'Password is too weak';
     case 'auth/network-request-failed':
-      return 'No connection — please try again';
+      return 'No connection - please try again';
     case 'auth/too-many-requests':
       return 'Too many attempts, try again in a minute';
     case 'auth/invalid-email':
@@ -73,6 +73,7 @@ const SignupScreen = ({navigation}) => {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView
           contentContainerStyle={styles.scroll}
+          keyboardDismissMode="on-drag"
           keyboardShouldPersistTaps="handled">
           <View style={styles.intro}>
             <Text style={styles.title}>Create your account</Text>

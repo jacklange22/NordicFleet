@@ -2,9 +2,7 @@ import Link from 'next/link';
 import {Container, Eyebrow, FeatureCard} from '@/components/ui';
 import {Reveal} from '@/components/Reveal';
 import {EmailCapture} from '@/components/EmailCapture';
-
-const APP_URL =
-  process.env.NEXT_PUBLIC_APP_URL || 'https://app.nordicfleet.com';
+import {APP_URL} from '@/lib/urls';
 
 export default function HomePage() {
   return (
@@ -59,7 +57,7 @@ export default function HomePage() {
             {
               icon: '🎿',
               title: 'Your fleet, organized',
-              body: 'Every ski with its grind, flex, and history in one place. Scan a base sticker or import a spreadsheet to get started in minutes.',
+              body: 'Every ski with its grind, flex, and history in one place. Scan a ski sticker or import a spreadsheet to get started in minutes.',
             },
             {
               icon: '🧪',
@@ -69,7 +67,7 @@ export default function HomePage() {
             {
               icon: '🏁',
               title: 'Wax tests that decide',
-              body: 'Bracket your wax combinations head-to-head and let the results pick the winner — no more "I think the blue was faster."',
+              body: 'Bracket your wax combinations head-to-head and let the results pick the winner, no more "I think the blue was faster."',
             },
           ].map((f, i) => (
             <Reveal key={f.title} delay={i * 80}>
@@ -97,15 +95,15 @@ export default function HomePage() {
                   as="p"
                   delay={80}
                   className="mt-4 text-text-secondary leading-relaxed">
-                  Build your candidate waxes — paraffin, topcoat, structure,
-                  anything you can name — and NordicFleet seeds them into a
+                  Build your candidate waxes, paraffin, topcoat, structure,
+                  anything you can name, and NordicFleet seeds them into a
                   single-elimination bracket. Test two skis at a time, pick
                   the faster one, and advance. When the dust settles you have
                   a winner you can defend, plus the conditions it won in.
                 </Reveal>
                 <ul className="mt-6 space-y-3">
                   {[
-                    'Any wax, any brand — type in what you actually have',
+                    'Any wax, any brand, type in what you actually have',
                     'Byes handled automatically for odd fleet sizes',
                     'Record glide-out numbers alongside the head-to-heads',
                     'Send the winner straight to your athletes',
@@ -151,7 +149,7 @@ export default function HomePage() {
               </h3>
               <p className="mt-3 text-text-secondary leading-relaxed">
                 Link your athletes, review their fleets, and send race-day
-                advisories with the exact wax call — informed by the tests
+                advisories with the exact wax call, informed by the tests
                 you ran that morning.
               </p>
               <Link
@@ -185,7 +183,7 @@ export default function HomePage() {
   );
 }
 
-// A small static bracket illustration — pure CSS, no data.
+// A small static bracket illustration, pure CSS, no data.
 function BracketMock() {
   const Row = ({label, win}) => (
     <div

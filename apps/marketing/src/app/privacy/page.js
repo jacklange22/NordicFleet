@@ -7,14 +7,14 @@ export const metadata = {
 
 export default function PrivacyPage() {
   return (
-    <LegalLayout title="Privacy Policy" updated="May 29, 2026">
+    <LegalLayout title="Privacy Policy" updated="May 30, 2026">
       <p className="text-text-secondary leading-relaxed">
         This Privacy Policy explains what information NordicFleet
         (&quot;NordicFleet,&quot; &quot;we,&quot; &quot;us&quot;) collects
         when you use our mobile and web applications and this website
         (together, the &quot;Service&quot;), how we use it, and the choices
-        you have. By using the Service you agree to the practices described
-        here.
+        you have. We try to keep this plain and honest. By using the Service
+        you agree to the practices described here.
       </p>
 
       <LegalSection heading="Information we collect">
@@ -29,7 +29,7 @@ export default function PrivacyPage() {
           <li>
             <strong>Profile information.</strong> A display name and whether
             you use the Service as a coach, plus optional details you choose
-            to add.
+            to add (for example weight or height).
           </li>
           <li>
             <strong>Content you create.</strong> Your skis, wax logs, test
@@ -43,7 +43,7 @@ export default function PrivacyPage() {
           </li>
           <li>
             <strong>Technical data.</strong> Standard log and device data
-            generated when software talks to our backend (for example, error
+            generated when the app talks to our backend (for example error
             reports and timestamps). We do not build advertising profiles.
           </li>
         </ul>
@@ -65,17 +65,58 @@ export default function PrivacyPage() {
         </ul>
         <p>
           We do not sell your personal information, and we do not use your
-          ski, wax, or test content for advertising.
+          ski, wax, or test content for advertising. We use your account data
+          to provide the Service to you.
         </p>
       </LegalSection>
 
-      <LegalSection heading="How your content is shared">
+      <LegalSection heading="What coaches can see">
         <p>
-          Your fleet and logs are private by default. They are visible only
-          to you and, if you explicitly link a coach, to that coach. Coach
-          access is read-only for an athlete&apos;s equipment and logs.
-          Coach profiles are visible to signed-in users so athletes can find
-          their coach by email. You can end a coaching link at any time.
+          Your fleet and logs are private by default. They are visible only to
+          you unless you explicitly link a coach. When you link a coach, that
+          coach can view your skis, wax logs, and test logs and send you
+          advisories. Coach access is read-only: a coach cannot edit your
+          equipment or logs. Coach profiles are visible to signed-in users so
+          that athletes can find their coach by email. You can end a coaching
+          link at any time, which removes that coach&apos;s access going
+          forward.
+        </p>
+      </LegalSection>
+
+      <LegalSection heading="Sharing links">
+        <p>
+          If we offer public share links, a link shows only the specific
+          information you choose to include for that share (for example a
+          ski&apos;s make and model, or a test result). It does not expose your
+          account, your email, or data you did not select. You control how long
+          a share link works and can revoke it. Until you create a share link,
+          nothing about your fleet is public.
+        </p>
+      </LegalSection>
+
+      <LegalSection heading="Analytics and product development">
+        <p>
+          We may analyze how the Service is used to fix problems and decide
+          what to build. When we develop analytics or product features from
+          usage, our goal is to work with aggregated or de-identified data
+          (data combined across many users, or with direct identifiers
+          removed) rather than your individual account records. We are not
+          claiming this data is fully anonymous: because the Service is tied to
+          your account, some data is account-linked, and re-identification can
+          be possible in principle. We do not sell this data.
+        </p>
+      </LegalSection>
+
+      <LegalSection heading="Administrator access">
+        <p>
+          We want to be straight with you: the Service is not architected so
+          that we are technically unable to see your data. Authorized members
+          of our team (system administrators) can access account-level data
+          when it is genuinely needed, for example to provide support you
+          request, to investigate a security issue or abuse, or to debug a
+          problem. We aim to limit this to the people and situations that
+          require it (a least-privilege goal), and we do not browse user data
+          for unrelated reasons.
         </p>
       </LegalSection>
 
@@ -89,33 +130,34 @@ export default function PrivacyPage() {
         </p>
       </LegalSection>
 
-      <LegalSection heading="Data retention">
+      <LegalSection heading="Data retention, export, and deletion">
         <p>
           We keep your content for as long as your account is active. You can
-          delete individual records in the app. You can also delete your
+          edit or delete individual records in the app, and you can export all
+          of your data from within the app as a JSON file. You can delete your
           account, which removes your profile and associated content from our
-          active database; backups and provider logs may persist for a
-          limited period before being overwritten.
+          active database. Provider backups and logs may persist for a limited
+          period before being overwritten.
         </p>
       </LegalSection>
 
       <LegalSection heading="Your rights and choices">
         <ul className="list-disc pl-5 space-y-2">
           <li>
-            <strong>Access &amp; export.</strong> You can export your data
-            from within the app as a JSON file.
+            <strong>Access and export.</strong> Export your data from within
+            the app as a JSON file.
           </li>
           <li>
-            <strong>Correction.</strong> You can edit your profile and
-            content at any time.
+            <strong>Correction.</strong> Edit your profile and content at any
+            time.
           </li>
           <li>
-            <strong>Deletion.</strong> You can delete your account and
-            content from the app&apos;s settings.
+            <strong>Deletion.</strong> Delete your account and content from the
+            app&apos;s settings.
           </li>
           <li>
-            <strong>Marketing.</strong> You can unsubscribe from any product
-            email we send.
+            <strong>Marketing.</strong> Unsubscribe from any product email we
+            send.
           </li>
         </ul>
         <p>
@@ -135,10 +177,13 @@ export default function PrivacyPage() {
 
       <LegalSection heading="Security">
         <p>
-          We rely on industry-standard measures provided by our
-          infrastructure partners, including encryption in transit and
-          access controls scoped to each user. No system is perfectly secure,
-          but we work to protect your data and to limit who can see it.
+          We rely on industry-standard measures including encryption in transit
+          and authentication for every request. Access to your data is enforced
+          by per-user security rules: you can reach your own records, a linked
+          coach can read (not write) the athlete data shared with them, and
+          public website submissions cannot be read back from the client. We
+          aim for least privilege across the system. No system is perfectly
+          secure, but we work to protect your data and to limit who can see it.
         </p>
       </LegalSection>
 

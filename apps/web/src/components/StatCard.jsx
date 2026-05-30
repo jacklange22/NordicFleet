@@ -1,4 +1,4 @@
-// Big-number-and-label stat tile — Whoop-style. Mirror of the mobile
+// Big-number-and-label stat tile - Whoop-style. Mirror of the mobile
 // StatCard atom.
 
 export function StatCard({value, label, accent}) {

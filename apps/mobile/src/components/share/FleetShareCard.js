@@ -88,12 +88,12 @@ const FleetShareCard = forwardRef(
                   <Text style={styles.fleetMeta} numberOfLines={1}>
                     {[ski.technique, ski.type, ski.grind]
                       .filter(Boolean)
-                      .join(' · ') || '—'}
+                      .join(' · ') || '-'}
                   </Text>
                 </View>
                 <View style={styles.fleetRight}>
                   <Text style={styles.fleetSpec}>
-                    {ski.length ? `${ski.length}cm` : '—'}
+                    {ski.length ? `${ski.length}cm` : '-'}
                   </Text>
                   <Text style={styles.fleetSpecLabel}>length</Text>
                 </View>

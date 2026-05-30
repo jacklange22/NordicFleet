@@ -7,7 +7,7 @@ import {useAuth} from './providers';
 import {Button} from '@/components/Button';
 
 // Marketing landing. Bounces signed-in users to /home; everyone else
-// gets a one-screen pitch + Get-started CTA. Keep this lean — the
+// gets a one-screen pitch + Get-started CTA. Keep this lean - the
 // purpose is to demo NordicFleet to people who can't or won't install
 // the iOS app yet.
 

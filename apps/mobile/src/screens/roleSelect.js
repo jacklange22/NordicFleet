@@ -22,8 +22,8 @@ import {colors, spacing, typography} from '../theme';
 
 // Onboarding after signup. The capability model means there's no
 // athlete-vs-coach fork: everyone is a skier with a personal fleet.
-// We ask the one thing that actually branches the experience — "do
-// you coach a team?" — defaulting to no, and offer the optional
+// We ask the one thing that actually branches the experience - "do
+// you coach a team?" - defaulting to no, and offer the optional
 // coach link that every user can set.
 const OnboardingScreen = ({navigation}) => {
   const {user} = useAuth();
@@ -43,7 +43,7 @@ const OnboardingScreen = ({navigation}) => {
       // Set the coaching capability (default off).
       await setCoachCapability(user.uid, coachesTeam);
 
-      // Optional coach link — available to everyone, coach or not.
+      // Optional coach link - available to everyone, coach or not.
       const trimmed = coachEmail.trim();
       if (trimmed) {
         if (!isValidEmail(trimmed)) {
@@ -86,9 +86,10 @@ const OnboardingScreen = ({navigation}) => {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView
           contentContainerStyle={styles.scroll}
+          keyboardDismissMode="on-drag"
           keyboardShouldPersistTaps="handled">
           <Text style={styles.intro}>
-            NordicFleet starts with your own fleet — your skis, your wax
+            NordicFleet starts with your own fleet - your skis, your wax
             and test logs. A couple of quick things to set up.
           </Text>
 

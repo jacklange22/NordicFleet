@@ -68,7 +68,9 @@ describe('SkiInfo', () => {
     });
     // Note: each field can appear twice — once in the visible UI, once
     // in the off-screen SkiShareCard. Just assert "present at least once".
-    expect(tree.getAllByText('Fischer').length).toBeGreaterThan(0);
+    // Brand + model now render as a single "brand · model" line (issue #8),
+    // matching the share card's subhead.
+    expect(tree.getAllByText('Fischer · Speedmax').length).toBeGreaterThan(0);
     expect(tree.getAllByText('Universal').length).toBeGreaterThan(0);
     expect(tree.getByText('Some notes')).toBeTruthy();
   });

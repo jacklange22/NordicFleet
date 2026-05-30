@@ -1,0 +1,36 @@
+branch: claude-rewrite
+node: v20.20.2
+npm: 10.8.2
+xcode: Xcode 26.5 Build version 17F42 
+date: Sat May 30 00:46:14 EDT 2026
+ahead: 12 commits, unpushed
+94aada2 fix(ios): harden boot/mode against silent hangs + add freeze diagnostics
+d6369c8 feat(ios): searchable ski multi-select for wax/test flows (#9)
+2091ce3 fix(ios): clearer ski display hierarchy — name, then brand·model (#8)
+18fad6f fix(ios): share a snapshot with an invite caption + link (#6)
+fc39dd3 feat(ios): move account/privacy/delete into a Settings screen (#4)
+f4d15d4 fix(ios): clearer athlete-vs-coach coach-link copy (#3)
+d242dff fix(ios): "Done" return key + dismiss keyboard on scroll (#2)
+5bcfa33 test(ios): lock stat cards as non-tappable figures (#1)
+dbb8f9f fix(ios): block empty wax logs, open ski detail after save, clearer copy (#11,#12,#13)
+fb4f99e fix(ios): drop "Ignored text" from scan-sticker review (#7)
+6130ef6 fix(ios): read-only ski-attribute chips read as labels, not buttons (#10)
+c3b371c fix(ios): mode switch resets stack + rename bottom-nav Add→Ski (#5, #14)
+49f1d53 docs: PHONE_INSTALL_NEXT_STEPS — deploy URLs + exact Xcode device steps
+11d5951 chore: add iOS build helper scripts
+8b46edb test: clean mobile Jest output without weakening tests
+5e53cb7 docs: AUTONOMOUS_SESSION_REPORT — beta-readiness hardening session
+2bfff4c chore: add .firebaserc + correct README layout (small safe fixes)
+a595c4a docs: PRODUCT_COMMAND_CENTER — the first-read decision file
+4b4865d docs: DEPLOYMENT_READINESS — web/marketing/Firebase status + human steps
+d0f3b9c docs: beta package — tester guide, feedback form, operator test script
+46a424c docs: ANALYTICS_PLAN — event→call-site map + thin-wrapper spec
+ff72783 observability: web error boundaries + reportError funnels (iOS BUILD SUCCEEDED)
+69b511d core: PII-safe error-report + analytics contracts (tested, no deps)
+8cc0694 docs: BETA_READINESS_REPORT — strict 20-flow iOS/web audit
+6ba4870 Docs: iOS sign-in fix documented
+3684e0e Verify: iOS sign-in + sign-up succeed against live Firebase
+ed2782d Fix: iOS sign-in (root cause: missing keychain entitlement) + specific auth errors
+456deb9 Quality: drop unused useMemo import in athleteDetail
+da38d13 Phase 6: live rule verification + honest LAUNCH_AUDIT
+0260203 Compliance: data export (both platforms), web account deletion, legal links

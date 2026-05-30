@@ -70,4 +70,77 @@ describe('ProfileScreen', () => {
     const stored = firestoreMock.__getStore().get('users/u1');
     expect(stored.weight).toBe(72);
   });
+
+  it('renders a stored metric weight in pounds when the profile prefers lb', async () => {
+    authMock.__setCurrentUser({uid: 'u1', email: 'a@b.com'});
+    firestoreMock.__seedDoc('users/u1', {
+      email: 'a@b.com',
+      weight: 70, // stored as kg
+      weightUnit: 'lb',
+    });
+    const tree = renderProfile();
+    // 70 kg displayed in pounds.
+    await waitFor(() => tree.getByText('154.3 lb'));
+  });
+
+  it('converts an lb entry back to kilograms on save', async () => {
+    authMock.__setCurrentUser({uid: 'u1', email: 'a@b.com'});
+    firestoreMock.__seedDoc('users/u1', {email: 'a@b.com', weightUnit: 'lb'});
+    const tree = renderProfile();
+    await waitFor(() => tree.getByLabelText('Edit Weight (lb):'));
+    fireEvent.press(tree.getByLabelText('Edit Weight (lb):'));
+    const inputs = tree.UNSAFE_getAllByType(require('react-native').TextInput);
+    fireEvent.changeText(inputs[inputs.length - 1], '154.3');
+    fireEvent.press(tree.getByText('Save'));
+    await act(async () => {});
+    const stored = firestoreMock.__getStore().get('users/u1');
+    // Stored back in kg, not the raw pounds figure.
+    expect(stored.weight).toBeCloseTo(70, 0);
+  });
+
+  it('persists the weight unit preference when a unit chip is tapped', async () => {
+    authMock.__setCurrentUser({uid: 'u1', email: 'a@b.com'});
+    firestoreMock.__seedDoc('users/u1', {email: 'a@b.com', weight: 70});
+    const tree = renderProfile();
+    await waitFor(() => tree.getByText('70 kg'));
+    fireEvent.press(tree.getByLabelText('Height in inches'));
+    await act(async () => {});
+    const stored = firestoreMock.__getStore().get('users/u1');
+    expect(stored.heightUnit).toBe('in');
+  });
+
+  it('lets a linked athlete set their coach permission to comment', async () => {
+    authMock.__setCurrentUser({uid: 'u1', email: 'a@b.com'});
+    firestoreMock.__seedDoc('users/u1', {
+      email: 'a@b.com',
+      coachId: 'coach1',
+    });
+    firestoreMock.__seedDoc('users/coach1', {
+      email: 'c@b.com',
+      role: 'coach',
+      name: 'Coach Pat',
+    });
+    // An accepted request keeps coachId set (the profile re-syncs coachId
+    // from requests on load, nulling it when there is no accepted one).
+    firestoreMock.__seedDoc('coachRequests/r1', {
+      athleteUid: 'u1',
+      coachUid: 'coach1',
+      status: 'accepted',
+      athleteEmail: 'a@b.com',
+      coachEmail: 'c@b.com',
+      updatedAt: {seconds: 100},
+    });
+    const tree = renderProfile();
+    const chip = await tree.findByLabelText(
+      'Coach access: Can suggest',
+      {},
+      {timeout: 4000},
+    );
+    fireEvent.press(chip);
+    await waitFor(() =>
+      expect(
+        firestoreMock.__getStore().get('users/u1').coachPermission,
+      ).toBe('comment'),
+    );
+  });
 });

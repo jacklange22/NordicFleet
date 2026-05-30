@@ -13,7 +13,7 @@ function mapResetError(code) {
     case 'auth/invalid-email':
       return 'Please enter a valid email';
     case 'auth/network-request-failed':
-      return 'No connection — please try again';
+      return 'No connection - please try again';
     case 'auth/too-many-requests':
       return 'Too many attempts, try again in a minute';
     default:

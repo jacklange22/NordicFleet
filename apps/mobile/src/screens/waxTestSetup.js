@@ -1,4 +1,4 @@
-// WaxTestSetup — name a test, set conditions + fleet size, and build
+// WaxTestSetup - name a test, set conditions + fleet size, and build
 // the wax combinations that will compete in the bracket.
 //
 // The category selector (Kick / Paraffin / Topcoat / Structure) filters
@@ -24,10 +24,11 @@ import {SafeAreaView} from 'react-native-safe-area-context';
 import {useNavigation} from '@react-navigation/native';
 import Toast from 'react-native-toast-message';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import {WAX_CATEGORIES, buildCombinationLabel} from '@nordicfleet/core';
+import {buildCombinationLabel} from '@nordicfleet/core';
 
 import {useAuth} from '../context/AuthContext';
 import {createWaxTest} from '../services/waxTestService';
+import {reportError} from '../services/reportError';
 import {
   Header,
   Card,
@@ -54,6 +55,16 @@ const CATEGORY_ICON = {
   topcoat: 'sparkles-outline',
   structure: 'grid-outline',
 };
+// One test = one type. Order as the coach requested.
+const TEST_TYPES = ['kick', 'paraffin', 'structure', 'topcoat'];
+// What the single "layer" represents, per type (just clearer copy - the
+// underlying model is the same wax-layer in every case).
+const PICK_PLACEHOLDER = {
+  kick: 'Pick or type a kick wax / binder',
+  paraffin: 'Pick or type a glide paraffin',
+  topcoat: 'Pick or type a topcoat',
+  structure: 'Type a structure pattern (e.g. L2 / 1mm)',
+};
 
 let _uid = 0;
 const nextId = prefix => `${prefix}${Date.now().toString(36)}${(_uid++).toString(36)}`;
@@ -65,10 +76,10 @@ const makeLayer = (category = 'paraffin') => ({
   waxName: '',
 });
 
-const makeCombination = () => ({
+const makeCombination = (category = 'paraffin') => ({
   id: nextId('c'),
   label: '',
-  layers: [makeLayer('paraffin')],
+  layers: [makeLayer(category)],
   performanceNumber: '',
 });
 
@@ -78,6 +89,7 @@ const WaxTestSetupScreen = () => {
   const uid = user?.uid;
 
   const [name, setName] = useState('');
+  const [testType, setTestType] = useState(null);
   const [temperature, setTemperature] = useState('');
   const [humidity, setHumidity] = useState('');
   const [snowType, setSnowType] = useState('');
@@ -97,6 +109,9 @@ const WaxTestSetupScreen = () => {
     if (!name.trim()) {
       return false;
     }
+    if (!testType) {
+      return false;
+    }
     if (!Number.isFinite(fleetNum) || fleetNum < 2) {
       return false;
     }
@@ -107,7 +122,18 @@ const WaxTestSetupScreen = () => {
     return combinations.every(c =>
       c.layers.some(l => (l.waxName || '').trim()),
     );
-  }, [name, fleetNum, combinations]);
+  }, [name, testType, fleetNum, combinations]);
+
+  // Pick the single test type → lock every layer to that category.
+  const chooseType = t => {
+    setTestType(t);
+    setCombinations(prev =>
+      prev.map(c => ({
+        ...c,
+        layers: c.layers.map(l => ({...l, category: t})),
+      })),
+    );
+  };
 
   const updateCombination = (id, patch) => {
     setCombinations(prev =>
@@ -120,7 +146,7 @@ const WaxTestSetupScreen = () => {
       if (prev.length >= fleetNum) {
         return prev;
       }
-      return [...prev, makeCombination()];
+      return [...prev, makeCombination(testType || 'paraffin')];
     });
   };
 
@@ -134,7 +160,7 @@ const WaxTestSetupScreen = () => {
     setCombinations(prev =>
       prev.map(c =>
         c.id === comboId
-          ? {...c, layers: [...c.layers, makeLayer('paraffin')]}
+          ? {...c, layers: [...c.layers, makeLayer(testType || 'paraffin')]}
           : c,
       ),
     );
@@ -180,25 +206,29 @@ const WaxTestSetupScreen = () => {
     if (!isValid) {
       if (!name.trim()) {
         setError('Give the test a name.');
+      } else if (!testType) {
+        setError('Pick a test type (Kick, Paraffin, Structure, or Topcoat).');
       } else if (!Number.isFinite(fleetNum) || fleetNum < 2) {
         setError('Fleet size must be at least 2.');
+      } else if (combinations.length < 2) {
+        setError('Add at least 2 combinations to compare.');
       } else if (combinations.length > fleetNum) {
         setError('You have more combinations than the fleet size allows.');
       } else {
-        setError('Every combination needs at least one wax layer.');
+        setError('Every combination needs at least one wax entry.');
       }
       return;
     }
     setSubmitting(true);
     try {
-      const payloadCombos = combinations.map((c, idx) => ({
+      const payloadCombos = combinations.map(c => ({
         id: c.id,
         label: c.label.trim() || undefined,
         performanceNumber: c.performanceNumber,
         layers: c.layers
           .filter(l => (l.waxName || '').trim())
           .map((l, i) => ({
-            category: l.category,
+            category: testType,
             waxId: l.waxId || null,
             waxName: l.waxName.trim(),
             order: i,
@@ -206,6 +236,7 @@ const WaxTestSetupScreen = () => {
       }));
       const testId = await createWaxTest(uid, {
         name: name.trim(),
+        testType,
         fleetSize: fleetNum,
         conditions: {
           temperature,
@@ -219,13 +250,17 @@ const WaxTestSetupScreen = () => {
       Toast.show({
         type: 'success',
         text1: 'Test created',
-        text2: 'Bracket generated — time to arrange and run.',
+        text2: 'Bracket generated - time to arrange and run.',
         position: 'top',
         visibilityTime: 2200,
       });
       navigation.replace('WaxTestRunner', {testId});
     } catch (err) {
-      setError(String(err.message || err));
+      // Never crash on create - surface a clear error and report it.
+      reportError(err, {boundary: 'waxTestSetup.create'});
+      setError(
+        "Couldn't create the test. Please check your connection and try again.",
+      );
     } finally {
       setSubmitting(false);
     }
@@ -258,6 +293,7 @@ const WaxTestSetupScreen = () => {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView
           contentContainerStyle={styles.scroll}
+          keyboardDismissMode="on-drag"
           keyboardShouldPersistTaps="handled">
           <SectionHeader title="Test" />
           <Input
@@ -268,6 +304,43 @@ const WaxTestSetupScreen = () => {
             onChangeText={setName}
             autoCapitalize="sentences"
           />
+          <View style={styles.spacer} />
+          <Text style={styles.miniLabel}>Test type (required)</Text>
+          <View style={styles.categoryRow}>
+            {TEST_TYPES.map(t => {
+              const active = testType === t;
+              return (
+                <Pressable
+                  key={t}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${CATEGORY_LABEL[t]} test type`}
+                  accessibilityState={{selected: active}}
+                  onPress={() => chooseType(t)}
+                  style={({pressed}) => [
+                    styles.catChip,
+                    active && styles.catChipActive,
+                    pressed && {opacity: 0.7},
+                  ]}>
+                  <Ionicons
+                    name={CATEGORY_ICON[t]}
+                    size={14}
+                    color={active ? colors.bg : colors.textSecondary}
+                  />
+                  <Text
+                    style={[
+                      styles.catChipText,
+                      {color: active ? colors.bg : colors.textSecondary},
+                    ]}>
+                    {CATEGORY_LABEL[t]}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+          <Text style={styles.helpText}>
+            One test compares combinations of a single type. Run separate
+            tests for kick, paraffin, structure, or topcoat.
+          </Text>
           <View style={styles.spacer} />
           <Input
             label="Location (optional)"
@@ -360,7 +433,7 @@ const WaxTestSetupScreen = () => {
 
           <SectionHeader
             title={`Combinations (${combinations.length}/${
-              Number.isFinite(fleetNum) ? fleetNum : '—'
+              Number.isFinite(fleetNum) ? fleetNum : '-'
             })`}
           />
           {combinations.map((combo, idx) => (
@@ -486,44 +559,13 @@ const CombinationCard = ({
 
 const LayerEditor = ({layer, showRemove, onChange, onRemove}) => (
   <View style={styles.layerBlock}>
-    <View style={styles.categoryRow}>
-      {WAX_CATEGORIES.map(cat => {
-        const active = layer.category === cat;
-        return (
-          <Pressable
-            key={cat}
-            accessibilityRole="button"
-            accessibilityLabel={`${CATEGORY_LABEL[cat]} category`}
-            accessibilityState={{selected: active}}
-            onPress={() => onChange({category: cat})}
-            style={({pressed}) => [
-              styles.catChip,
-              active && styles.catChipActive,
-              pressed && {opacity: 0.7},
-            ]}>
-            <Ionicons
-              name={CATEGORY_ICON[cat]}
-              size={14}
-              color={active ? colors.bg : colors.textSecondary}
-            />
-            <Text
-              style={[
-                styles.catChipText,
-                {color: active ? colors.bg : colors.textSecondary},
-              ]}>
-              {CATEGORY_LABEL[cat]}
-            </Text>
-          </Pressable>
-        );
-      })}
-    </View>
     <View style={styles.layerPickerRow}>
       <View style={styles.layerPickerCell}>
         <WaxPicker
-          label={CATEGORY_LABEL[layer.category]}
+          label={CATEGORY_LABEL[layer.category] || 'Wax'}
           category={layer.category}
           icon={CATEGORY_ICON[layer.category]}
-          placeholder="Pick or type any wax"
+          placeholder={PICK_PLACEHOLDER[layer.category] || 'Pick or type any wax'}
           value={{id: layer.waxId, name: layer.waxName}}
           onChange={next =>
             onChange({waxId: next.id, waxName: next.name})

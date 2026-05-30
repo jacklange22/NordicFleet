@@ -26,7 +26,7 @@ export async function getProfile(uid) {
 }
 
 /**
- * Create an initial profile doc. Idempotent — uses set with merge so we never
+ * Create an initial profile doc. Idempotent - uses set with merge so we never
  * blow away an existing record.
  * @param {string} uid
  * @param {{email?: string, displayName?: string, role?: 'athlete'|'coach'}} data
@@ -53,7 +53,7 @@ export async function createProfile(uid, data = {}) {
 /**
  * Migrate-on-read: when the app loads a profile that predates the
  * isCoach field, derive it from the legacy role and write it back
- * once. Safe to call on every login — it no-ops when isCoach already
+ * once. Safe to call on every login - it no-ops when isCoach already
  * exists. Returns the derived isCoach so the caller can use it
  * immediately without waiting for the write.
  *
@@ -117,7 +117,7 @@ export async function setCoachCapability(uid, isCoach) {
         clearedAthletes = athletes.size;
       }
     } catch {
-      // Tolerate — if there are no athletes or the query fails, we
+      // Tolerate - if there are no athletes or the query fails, we
       // still drop the capability below.
     }
   }
@@ -181,7 +181,7 @@ export function subscribeProfile(uid, callback) {
  * (not case-insensitive) because Firestore where() doesn't support case
  * folding without an extension.
  *
- * This is a thin helper — most callers want `findCoachByEmail`, which
+ * This is a thin helper - most callers want `findCoachByEmail`, which
  * also filters by role so Firestore rules permit the read.
  *
  * @param {string} email
@@ -201,7 +201,7 @@ export async function findProfileByEmail(email) {
 
 /**
  * Find a coach by email. Two filters: email match + role=='coach'. The
- * role filter lets Firestore rules permit the read — coach profiles are
+ * role filter lets Firestore rules permit the read - coach profiles are
  * effectively public to authenticated users for lookup purposes.
  *
  * @param {string} email
@@ -273,7 +273,27 @@ export async function removeCoach(athleteUid) {
   if (!athleteUid) {
     throw new Error('removeCoach: athleteUid is required');
   }
-  await updateProfile(athleteUid, {coachId: null});
+  // Clear the permission too so the next coach starts at the default (view).
+  await updateProfile(athleteUid, {coachId: null, coachPermission: null});
+}
+
+const COACH_PERMISSION_LEVELS = ['view', 'comment', 'edit'];
+
+/**
+ * Athlete sets how much access their coach has. Stored on the athlete's own
+ * user doc (owner-write), so a coach can never raise their own permission.
+ * Invalid values fall back to 'view'.
+ *
+ * @param {string} athleteUid
+ * @param {'view'|'comment'|'edit'} level
+ * @returns {Promise<void>}
+ */
+export async function setCoachPermission(athleteUid, level) {
+  if (!athleteUid) {
+    throw new Error('setCoachPermission: athleteUid is required');
+  }
+  const value = COACH_PERMISSION_LEVELS.includes(level) ? level : 'view';
+  await updateProfile(athleteUid, {coachPermission: value});
 }
 
 /**
@@ -324,12 +344,12 @@ export function subscribeAthletesForCoach(coachUid, callback) {
 /**
  * Permanently delete the current user's account and ALL their data.
  *
- * Steps (in order — see Self-recovery in the brief: don't skip any
+ * Steps (in order - see Self-recovery in the brief: don't skip any
  * because partial deletes leave orphan data):
  *   1. If the user is a coach, find every athlete with
  *      coachId == this uid and clear it. Firestore rules don't allow
  *      writing arbitrary user docs, so the coach can only do this
- *      while authenticated as themselves — hence we run it BEFORE
+ *      while authenticated as themselves - hence we run it BEFORE
  *      the auth user is deleted. (This step is also tolerant: if the
  *      query / write fails because no athletes reference this coach,
  *      we proceed.)
@@ -352,7 +372,7 @@ export async function deleteAccount() {
 
   // 1. If the user is a coach, unlink every athlete pointing at them.
   //    Tolerate failures here (the user may not be a coach, or the
-  //    query may be empty) — we just move on.
+  //    query may be empty) - we just move on.
   try {
     const athletes = await usersCollection()
       .where('coachId', '==', uid)
@@ -399,7 +419,7 @@ export async function deleteAccount() {
   await db.collection('users').doc(uid).delete();
 
   // 4. Delete the auth user. Throws auth/requires-recent-login if the
-  //    user hasn't reauth'd in the last ~5 minutes — the UI handles
+  //    user hasn't reauth'd in the last ~5 minutes - the UI handles
   //    that by gating the call behind a reauth modal.
   await user.delete();
 }

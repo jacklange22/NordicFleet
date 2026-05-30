@@ -1,7 +1,7 @@
 // Browser Firebase init.
 //
 // Importing this module is side-effect-free. Call getAuthClient() /
-// getDbClient() to actually initialize — both only succeed in the
+// getDbClient() to actually initialize - both only succeed in the
 // browser AND only when the NEXT_PUBLIC_FIREBASE_* env vars are set.
 //
 // This lets `next build` prerender pages without needing the env file,
@@ -86,7 +86,7 @@ export function getDbClient() {
 
 /**
  * True when the env file has been filled in and a browser Firebase
- * instance is available. Use this to gate UI ("Firebase not configured —
+ * instance is available. Use this to gate UI ("Firebase not configured -
  * fill in .env.local") in dev.
  */
 export function isFirebaseConfigured() {

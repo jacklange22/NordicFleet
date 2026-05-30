@@ -1,4 +1,4 @@
-// Pill / tag / chip — variants mirror the mobile Pill atom.
+// Pill / tag / chip - variants mirror the mobile Pill atom.
 
 const VARIANT = {
   solid: 'bg-red text-white border-red',

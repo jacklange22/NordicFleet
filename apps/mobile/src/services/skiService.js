@@ -88,7 +88,7 @@ export async function updateSki(uid, skiId, partial) {
 }
 
 /**
- * Soft delete — sets retired=true. Wired to the UI.
+ * Soft delete - sets retired=true. Wired to the UI.
  * @param {string} uid
  * @param {string} skiId
  * @returns {Promise<void>}
@@ -98,7 +98,7 @@ export async function deleteSki(uid, skiId) {
 }
 
 /**
- * Hard delete — permanently removes the ski doc. Not wired to UI.
+ * Hard delete - permanently removes the ski doc. Not wired to UI.
  * @param {string} uid
  * @param {string} skiId
  * @returns {Promise<void>}
@@ -112,7 +112,7 @@ export async function hardDeleteSki(uid, skiId) {
 
 /**
  * Coach read of an athlete's ski list. This is a thin alias of listSkis
- * with the athlete's uid — the access check happens in Firestore rules
+ * with the athlete's uid - the access check happens in Firestore rules
  * (only the owner or the athlete's coach can read). `coachUid` isn't
  * passed to Firestore (the rules use request.auth.uid), but the parameter
  * is here to make the call site self-documenting at the screen layer.

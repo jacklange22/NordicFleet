@@ -6,7 +6,7 @@
 //     points at the coach (i.e. the relationship is currently linked).
 //   - Athlete can flip `read: true` (and the platform updates updatedAt).
 //
-// No push notifications, no Cloud Functions — UI surfaces unread
+// No push notifications, no Cloud Functions - UI surfaces unread
 // counts via a live subscription.
 
 import {
@@ -42,7 +42,7 @@ export async function sendMessage(args) {
 
 /**
  * Coach-side: send a race-day advisory. Rides on the same `messages/`
- * collection as a plain message — the doc gets `type: 'advisory'` and
+ * collection as a plain message - the doc gets `type: 'advisory'` and
  * an `advisory` sub-object the athlete UI reads to render the
  * structured view. Firestore rules don't need changing; this is the
  * same write path as sendMessage.
@@ -105,8 +105,85 @@ export function subscribeMessagesForAthlete(athleteUid, callback) {
     );
 }
 
+// Normalize a Firestore Timestamp / mock string / Date into millis for sort.
+const tsMillis = v => {
+  if (!v) {
+    return 0;
+  }
+  if (typeof v.toMillis === 'function') {
+    return v.toMillis();
+  }
+  if (typeof v.toDate === 'function') {
+    return v.toDate().getTime();
+  }
+  // Plain serialized Timestamp shape ({seconds, nanoseconds}).
+  if (typeof v.seconds === 'number') {
+    return v.seconds * 1000 + Math.floor((v.nanoseconds || 0) / 1e6);
+  }
+  const t = new Date(v).getTime();
+  return isNaN(t) ? 0 : t;
+};
+
 /**
- * Subscribe to messages from this coach to one specific athlete —
+ * Subscribe to EVERY message the user is part of - received (toUid) and
+ * sent (fromUid) - merged into one chronological list (newest first). Each
+ * message is tagged `direction: 'received' | 'sent'`. Firestore can't OR two
+ * fields in one query, so we run two listeners and merge client-side.
+ */
+export function subscribeMessagesForUser(uid, callback) {
+  if (!uid) {
+    callback([]);
+    return () => {};
+  }
+  let received = [];
+  let sent = [];
+  const emit = () => {
+    const byId = new Map();
+    received.forEach(m => byId.set(m.id, m));
+    sent.forEach(m => byId.set(m.id, m));
+    const merged = [...byId.values()].sort(
+      (a, b) => tsMillis(b.createdAt) - tsMillis(a.createdAt),
+    );
+    callback(merged);
+  };
+  const unsubR = messagesCollection()
+    .where('toUid', '==', uid)
+    .orderBy('createdAt', 'desc')
+    .onSnapshot(
+      snap => {
+        received = [];
+        snap.forEach(d =>
+          received.push({id: d.id, ...d.data(), direction: 'received'}),
+        );
+        emit();
+      },
+      () => {
+        received = [];
+        emit();
+      },
+    );
+  const unsubS = messagesCollection()
+    .where('fromUid', '==', uid)
+    .orderBy('createdAt', 'desc')
+    .onSnapshot(
+      snap => {
+        sent = [];
+        snap.forEach(d => sent.push({id: d.id, ...d.data(), direction: 'sent'}));
+        emit();
+      },
+      () => {
+        sent = [];
+        emit();
+      },
+    );
+  return () => {
+    unsubR();
+    unsubS();
+  };
+}
+
+/**
+ * Subscribe to messages from this coach to one specific athlete -
  * used to render the "Sent" history on the coach's AthleteDetail.
  */
 export function subscribeMessagesFromCoach(coachUid, athleteUid, callback) {

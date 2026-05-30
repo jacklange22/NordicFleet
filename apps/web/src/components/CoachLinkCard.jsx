@@ -9,8 +9,8 @@
 //                                         + End button
 //   - outgoing request declined         → "Declined" with Dismiss
 //
-// The "athlete sync" cross-doc write — when status flips to accepted
-// or ended, write users/{uid}.coachId — is handled by
+// The "athlete sync" cross-doc write - when status flips to accepted
+// or ended, write users/{uid}.coachId - is handled by
 // syncCoachIdFromRequests, which we wire to the subscription
 // callback.
 
@@ -40,7 +40,7 @@ export function CoachLinkCard({profile}) {
     const unsub = subscribeOutgoingRequestsForAthlete(user.uid, list => {
       setRequests(list);
       // Keep users/{uid}.coachId in sync with the most-recent accepted
-      // request. Fire-and-forget — errors fall back to noop.
+      // request. Fire-and-forget - errors fall back to noop.
       syncCoachIdFromRequests(user.uid, list).catch(() => {});
     });
     return unsub;
@@ -92,7 +92,7 @@ export function CoachLinkCard({profile}) {
         <Card className="mb-8">
           <p className="text-text-secondary text-sm mb-4">
             Want a coach to see your fleet and send you race plans? Send a
-            request — they have to accept before they can see anything.
+            request - they have to accept before they can see anything.
           </p>
           <Button variant="primary" size="md" onClick={() => setAddOpen(true)}>
             Add a coach

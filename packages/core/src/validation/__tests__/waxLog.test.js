@@ -1,4 +1,21 @@
-const {validateWaxLogInput} = require('../waxLog');
+const {validateWaxLogInput, waxLogHasContent} = require('../waxLog');
+
+describe('waxLogHasContent (issue #13 — block empty wax logs)', () => {
+  test('empty entry → false', () => {
+    expect(waxLogHasContent({})).toBe(false);
+    expect(waxLogHasContent(null)).toBe(false);
+    expect(
+      waxLogHasContent({binder: '', kickWax: '', glideWaxes: ['', ''], notes: ''}),
+    ).toBe(false);
+    expect(waxLogHasContent({binder: 'None', glideWaxes: ['  ']})).toBe(false);
+  });
+  test('any meaningful field → true', () => {
+    expect(waxLogHasContent({binder: 'VG Swix'})).toBe(true);
+    expect(waxLogHasContent({kickWax: 'VR40'})).toBe(true);
+    expect(waxLogHasContent({glideWaxes: ['', 'HF8']})).toBe(true);
+    expect(waxLogHasContent({notes: 'cold dry'})).toBe(true);
+  });
+});
 
 describe('validateWaxLogInput', () => {
   test('requires skiId', () => {

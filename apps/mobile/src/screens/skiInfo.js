@@ -16,7 +16,9 @@ import {useAuth} from '../context/AuthContext';
 import {subscribeSki} from '../services/skiService';
 import {subscribeWaxLogsForSki} from '../services/waxLogService';
 import {subscribeTestLogsForSki} from '../services/testLogService';
-import {shareSnapshot} from '../services/shareService';
+import {getProfile} from '../services/userService';
+import {canComment, normalizePermission} from '@nordicfleet/core';
+import {shareSnapshot, skiShareMessage} from '../services/shareService';
 import SkiShareCard from '../components/share/SkiShareCard';
 import {
   Header,
@@ -31,7 +33,7 @@ import {colors, radius, spacing, typography} from '../theme';
 
 const formatDate = raw => {
   if (!raw) {
-    return '—';
+    return '-';
   }
   let d = null;
   if (typeof raw.toDate === 'function') {
@@ -45,7 +47,7 @@ const formatDate = raw => {
     }
   }
   if (!d) {
-    return '—';
+    return '-';
   }
   return d.toLocaleDateString(undefined, {
     month: 'short',
@@ -113,7 +115,7 @@ const RatingBadge = ({value}) => {
   return (
     <View style={[styles.ratingBadge, {backgroundColor: bg}]}>
       <Text style={styles.ratingBadgeText}>
-        {value === null || value === undefined || value === '' ? '—' : value}
+        {value === null || value === undefined || value === '' ? '-' : value}
       </Text>
     </View>
   );
@@ -144,7 +146,7 @@ const SkiInfo = ({route, navigation}) => {
         (ski.name || 'ski').replace(/\s+/g, '_').toLowerCase(),
         {
           title: `${ski.name || 'My ski'} · NordicFleet`,
-          message: `${ski.name || 'My ski'} — shared from NordicFleet`,
+          message: skiShareMessage(ski.name),
         },
       );
     } catch (err) {
@@ -183,8 +185,33 @@ const SkiInfo = ({route, navigation}) => {
     };
   }, [uid, skiId]);
 
+  // In coach view, learn how much access the athlete granted so we only
+  // offer "Suggest a change" when they allowed comment (or edit).
+  const [coachPermission, setCoachPermission] = useState(null);
+  useEffect(() => {
+    if (!isCoachView || !ownerUid) {
+      setCoachPermission(null);
+      return undefined;
+    }
+    let active = true;
+    getProfile(ownerUid)
+      .then(p => {
+        if (active) {
+          setCoachPermission(p?.coachPermission);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [isCoachView, ownerUid]);
+
+  const coachCanSuggest =
+    isCoachView && canComment(normalizePermission(coachPermission));
+
   const techLower = (ski?.technique || '').toLowerCase();
   const accentColor = techLower === 'skate' ? colors.redDim : colors.red;
+  const brandModel = [ski?.brand, ski?.model].filter(Boolean).join(' · ');
 
   const waxLogSubtitle = log => {
     const parts = [];
@@ -246,7 +273,7 @@ const SkiInfo = ({route, navigation}) => {
         <View style={styles.loadingWrap}>
           <ActivityIndicator color={colors.red} />
         </View>
-        {!isCoachView && <TabBar />}
+        <TabBar />
       </SafeAreaView>
     );
   }
@@ -260,7 +287,7 @@ const SkiInfo = ({route, navigation}) => {
         <View style={styles.notFoundWrap}>
           <Text style={styles.notFound}>Ski not found</Text>
         </View>
-        {!isCoachView && <TabBar />}
+        <TabBar />
       </SafeAreaView>
     );
   }
@@ -272,19 +299,60 @@ const SkiInfo = ({route, navigation}) => {
         title={ski.name || 'Ski'}
         right={
           !isCoachView ? (
+            <View style={styles.headerActions}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Edit ski"
+                onPress={() =>
+                  navigation.navigate('newSki', {editSkiId: skiId})
+                }
+                hitSlop={8}
+                style={({pressed}) => [
+                  styles.shareBtn,
+                  pressed && {opacity: 0.6},
+                ]}>
+                <Ionicons
+                  name="create-outline"
+                  size={22}
+                  color={colors.textPrimary}
+                />
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Share ski"
+                onPress={handleShare}
+                disabled={sharing}
+                hitSlop={8}
+                style={({pressed}) => [
+                  styles.shareBtn,
+                  sharing && {opacity: 0.5},
+                  pressed && {opacity: 0.6},
+                ]}>
+                <Ionicons
+                  name="share-outline"
+                  size={22}
+                  color={colors.textPrimary}
+                />
+              </Pressable>
+            </View>
+          ) : coachCanSuggest ? (
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Share ski"
-              onPress={handleShare}
-              disabled={sharing}
+              accessibilityLabel="Suggest a change"
+              onPress={() =>
+                navigation.navigate('SuggestChange', {
+                  skiId,
+                  ownerUid,
+                  skiName: ski.name,
+                })
+              }
               hitSlop={8}
               style={({pressed}) => [
                 styles.shareBtn,
-                sharing && {opacity: 0.5},
                 pressed && {opacity: 0.6},
               ]}>
               <Ionicons
-                name="share-outline"
+                name="bulb-outline"
                 size={22}
                 color={colors.textPrimary}
               />
@@ -302,6 +370,11 @@ const SkiInfo = ({route, navigation}) => {
             <Text style={styles.heroName} numberOfLines={2}>
               {ski.name}
             </Text>
+            {!!brandModel && (
+              <Text style={styles.heroBrandModel} numberOfLines={1}>
+                {brandModel}
+              </Text>
+            )}
             <View style={styles.heroPillRow}>
               {!!ski.technique && (
                 <View style={styles.heroPillWrap}>
@@ -317,13 +390,6 @@ const SkiInfo = ({route, navigation}) => {
                   </Pill>
                 </View>
               )}
-              {!!ski.brand && (
-                <View style={styles.heroPillWrap}>
-                  <Pill variant="ghost" color="neutral">
-                    {ski.brand}
-                  </Pill>
-                </View>
-              )}
             </View>
             <View style={styles.miniStatRow}>
               <View style={styles.miniStat}>
@@ -331,25 +397,24 @@ const SkiInfo = ({route, navigation}) => {
                 <Text style={styles.miniStatValue}>
                   {ski.flex !== null && ski.flex !== undefined && ski.flex !== ''
                     ? `${ski.flex} kg`
-                    : '—'}
+                    : '-'}
                 </Text>
               </View>
               <View style={styles.miniStat}>
                 <Text style={styles.miniStatLabel}>Length</Text>
                 <Text style={styles.miniStatValue}>
-                  {ski.length ? `${ski.length} cm` : '—'}
+                  {ski.length ? `${ski.length} cm` : '-'}
                 </Text>
               </View>
               <View style={styles.miniStat}>
                 <Text style={styles.miniStatLabel}>Grind</Text>
                 <Text style={styles.miniStatValue} numberOfLines={1}>
-                  {ski.grind || '—'}
+                  {ski.grind || '-'}
                 </Text>
               </View>
             </View>
-            {!!(ski.base || ski.build || ski.model) && (
+            {!!(ski.base || ski.build) && (
               <View style={styles.metaRow}>
-                {!!ski.model && <Text style={styles.metaText}>{ski.model}</Text>}
                 {!!ski.base && (
                   <Text style={styles.metaText}>Base: {ski.base}</Text>
                 )}
@@ -401,6 +466,20 @@ const SkiInfo = ({route, navigation}) => {
                   }
                   title={formatDate(log.date)}
                   subtitle={waxLogSubtitle(log)}
+                  onPress={
+                    isCoachView
+                      ? undefined
+                      : () =>
+                          navigation.navigate('EditWaxLog', {
+                            logId: log.id,
+                            skiId,
+                          })
+                  }
+                  accessibilityLabel={
+                    isCoachView
+                      ? undefined
+                      : `Edit wax from ${formatDate(log.date)}`
+                  }
                   showDivider={i < waxLogs.length - 1}
                 />
               </View>
@@ -422,6 +501,18 @@ const SkiInfo = ({route, navigation}) => {
                   leading={<RatingBadge value={log.glideRating} />}
                   title={testLogTitle(log)}
                   subtitle={testLogSubtitle(log)}
+                  onPress={
+                    isCoachView
+                      ? undefined
+                      : () =>
+                          navigation.navigate('EditTestLog', {
+                            logId: log.id,
+                            skiId,
+                          })
+                  }
+                  accessibilityLabel={
+                    isCoachView ? undefined : `Edit test: ${testLogTitle(log)}`
+                  }
                   showDivider={i < testLogs.length - 1}
                 />
               </View>
@@ -439,7 +530,7 @@ const SkiInfo = ({route, navigation}) => {
       </ScrollView>
 
       {/* Off-screen share card. Position it absolutely far off-screen
-          so it never blocks taps but stays in the render tree —
+          so it never blocks taps but stays in the render tree -
           captureRef needs a mounted, laid-out View. */}
       <View pointerEvents="none" style={styles.shareCardHost}>
         <SkiShareCard
@@ -492,6 +583,11 @@ const styles = StyleSheet.create({
   heroName: {
     ...typography.displayLg,
     color: colors.textPrimary,
+    marginBottom: spacing.xs,
+  },
+  heroBrandModel: {
+    ...typography.body,
+    color: colors.textSecondary,
     marginBottom: spacing.md,
   },
   heroPillRow: {
@@ -579,6 +675,10 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: colors.textPrimary,
     lineHeight: 22,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   shareBtn: {
     width: 40,

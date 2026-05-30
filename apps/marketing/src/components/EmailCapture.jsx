@@ -27,7 +27,7 @@ export function EmailCapture({source = 'website', compact = false}) {
     try {
       await recordSignup(email, {source});
       setState('done');
-      setMessage("You're on the list — we'll be in touch.");
+      setMessage("You're on the list, we'll be in touch.");
       setEmail('');
     } catch (err) {
       setState('error');

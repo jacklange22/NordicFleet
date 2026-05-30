@@ -28,8 +28,8 @@ export function Footer() {
         <div className="md:col-span-2">
           <Wordmark />
           <p className="text-text-secondary text-sm mt-4 max-w-xs leading-relaxed">
-            The ski-and-wax logbook for nordic racers and coaches. Built by
-            skiers who got tired of losing their wax notes.
+            The ski and wax logbook for nordic racers and coaches. Built by a
+            skier to help teams keep better ski, wax, and testing records.
           </p>
         </div>
         {COLUMNS.map(col => (

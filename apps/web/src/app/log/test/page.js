@@ -1,6 +1,6 @@
 'use client';
 
-// Log a test — record conditions once, then per-ski ratings + notes.
+// Log a test - record conditions once, then per-ski ratings + notes.
 // Save fans out one createTestLog per selected ski via Promise.allSettled.
 
 import {useEffect, useMemo, useState} from 'react';
@@ -78,7 +78,7 @@ function Inner() {
         setGeoError(
           err && err.code === 1
             ? 'Location permission denied.'
-            : "Couldn't get your location — you can still type a label.",
+            : "Couldn't get your location - you can still type a label.",
         );
       },
       {enableHighAccuracy: false, timeout: 15000, maximumAge: 60000},
@@ -292,7 +292,7 @@ function Inner() {
             onChange={setSelectedIds}
             emptyMessage={
               loaded
-                ? 'No active skis — add one before logging a test.'
+                ? 'No active skis - add one before logging a test.'
                 : 'Loading…'
             }
             required

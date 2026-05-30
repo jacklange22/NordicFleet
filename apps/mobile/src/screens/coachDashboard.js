@@ -155,12 +155,23 @@ const CoachDashboardScreen = () => {
         </View>
         <View style={styles.statCellSpacer} />
         <View style={styles.statCell}>
-          <StatCard compact value="—" label="Total skis" />
+          <StatCard compact value="-" label="Total skis" />
         </View>
         <View style={styles.statCellSpacer} />
         <View style={styles.statCell}>
-          <StatCard compact value="—" label="Tests / wk" />
+          <StatCard compact value="-" label="Tests / wk" />
         </View>
+      </View>
+      <View style={styles.inviteCta}>
+        <Button
+          variant="secondary"
+          size="md"
+          fullWidth
+          icon="person-add-outline"
+          onPress={() => navigation.navigate('InviteAthletes')}
+          accessibilityLabel="Invite athletes">
+          Invite athletes
+        </Button>
       </View>
       {pendingRequests.length > 0 && (
         <>
@@ -228,13 +239,13 @@ const CoachDashboardScreen = () => {
         right={
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Settings"
+            accessibilityLabel="Open profile"
             onPress={() => navigation.navigate('Profile')}
             hitSlop={8}
             style={({pressed}) => pressed && {opacity: 0.6}}>
             <Ionicons
-              name="settings-outline"
-              size={22}
+              name="person-circle-outline"
+              size={24}
               color={colors.textPrimary}
             />
           </Pressable>
@@ -297,6 +308,8 @@ const styles = StyleSheet.create({
   },
   statCell: {flex: 1},
   statCellSpacer: {width: spacing.sm},
+
+  inviteCta: {marginBottom: spacing.md},
 
   afterSearch: {height: spacing.lg},
 

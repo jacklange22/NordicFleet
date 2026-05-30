@@ -3,7 +3,7 @@
 import {useEffect, useRef, useState} from 'react';
 
 /**
- * Scroll-reveal wrapper — fades + rises its children into view once, the
+ * Scroll-reveal wrapper, fades + rises its children into view once, the
  * first time they cross the viewport. Falls back to immediately-visible
  * if IntersectionObserver is unavailable or the user prefers reduced
  * motion (the CSS handles the latter).

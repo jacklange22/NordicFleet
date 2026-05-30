@@ -2,6 +2,38 @@ import RNShare from 'react-native-share';
 import {captureRef} from 'react-native-view-shot';
 
 /**
+ * Where to point people who receive a shared snapshot. We don't have
+ * per-ski / per-fleet web deep links yet (issue #6 follow-up), so the
+ * invite goes to the marketing site.
+ */
+export function inviteUrl() {
+  return (
+    process.env.NORDICFLEET_MARKETING_URL ||
+    'https://marketing-black-eight.vercel.app'
+  );
+}
+
+/**
+ * Caption for a shared *fleet* snapshot. The screenshot alone has no
+ * context - this gives the recipient a reason to try the app (issue #6).
+ */
+export function fleetShareMessage() {
+  return (
+    'My ski quiver, tracked in NordicFleet - wax logs, ski testing, and ' +
+    `race-day picks. Try it: ${inviteUrl()}`
+  );
+}
+
+/** Caption for a shared *single-ski* snapshot (issue #6). */
+export function skiShareMessage(skiName) {
+  const name = (skiName || '').trim() || 'My ski';
+  return (
+    `${name}, tracked in NordicFleet. I log every wax and test to pick the ` +
+    `right ski on race day. Try it: ${inviteUrl()}`
+  );
+}
+
+/**
  * Snapshot a React Native View (by ref) into a PNG and hand the file
  * URI to the iOS share sheet.
  *

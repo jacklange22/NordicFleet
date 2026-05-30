@@ -1,4 +1,4 @@
-// ScanSki — camera → OCR → review-and-save flow for adding a ski.
+// ScanSki - camera → OCR → review-and-save flow for adding a ski.
 //
 // The user lands here from the AddSki screen ("Scan sticker" CTA),
 // snaps or picks an image, the NFOCR native module runs Apple Vision
@@ -8,9 +8,9 @@
 // just like the manual form.
 //
 // Three phases:
-//   idle       — hero + "Take photo" / "Choose from library"
-//   processing — thumbnail + spinner ("Reading sticker…")
-//   review     — thumbnail (small) + editable fields with confidence
+//   idle       - hero + "Take photo" / "Choose from library"
+//   processing - thumbnail + spinner ("Reading sticker…")
+//   review     - thumbnail (small) + editable fields with confidence
 //                badges + Save
 //
 // Failure handling: any phase can return to idle with a Toast. The
@@ -34,7 +34,7 @@ import {useNavigation} from '@react-navigation/native';
 import {launchCamera, launchImageLibrary} from 'react-native-image-picker';
 import Toast from 'react-native-toast-message';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import {parseStickerText, toSkiInput} from '@nordicfleet/core';
+import {parseSticker, toSkiInput} from '@nordicfleet/core';
 import {useAuth} from '../context/AuthContext';
 import {createSki} from '../services/skiService';
 import {recognizeTextLines, isOCRAvailable} from '../services/ocrService';
@@ -64,7 +64,7 @@ const CONFIDENCE_LABEL = {
   low: 'Maybe',
 };
 
-// ─── Confidence chip — small dot + word, sits next to a field label ───
+// ─── Confidence chip - small dot + word, sits next to a field label ───
 const ConfidenceChip = ({confidence}) => {
   if (!confidence) {
     return null;
@@ -92,7 +92,7 @@ const ScanSkiScreen = () => {
   const [parsed, setParsed] = useState(null); // ParsedSticker
   const [error, setError] = useState('');
 
-  // Editable state — initialized from parsed when we enter review.
+  // Editable state - initialized from parsed when we enter review.
   const [brand, setBrand] = useState('');
   const [model, setModel] = useState('');
   const [technique, setTechnique] = useState('');
@@ -116,10 +116,13 @@ const ScanSkiScreen = () => {
     setError('');
     try {
       const lines = await recognizeTextLines(uri);
-      const p = parseStickerText(lines);
+      // Brand-aware parse: same per-field shape as before, plus brand
+      // metrics + an overall confidence, and brand refiners (e.g. Madshus
+      // hardness-code decoding) applied.
+      const p = parseSticker(lines);
       const prefill = toSkiInput(p);
       setParsed(p);
-      // Pre-fill — toSkiInput already returns plain values.
+      // Pre-fill - toSkiInput already returns plain values.
       setBrand(prefill.brand || '');
       setModel(prefill.model || '');
       setTechnique(prefill.technique || '');
@@ -277,7 +280,7 @@ const ScanSkiScreen = () => {
               <Text style={styles.heroTitle}>Snap the sticker</Text>
               <Text style={styles.heroSubtitle}>
                 Aim at the white sticker on the topsheet of your ski.
-                Brand, model, length, and flex auto-fill — you confirm
+                Brand, model, length, and flex auto-fill - you confirm
                 before saving.
               </Text>
               {!!error && <Text style={styles.error}>{error}</Text>}
@@ -303,7 +306,7 @@ const ScanSkiScreen = () => {
               </View>
               <View style={styles.fineprint}>
                 <Text style={styles.fineprintText}>
-                  Photos stay on your device — Vision runs offline.
+                  Photos stay on your device - Vision runs offline.
                 </Text>
               </View>
             </View>
@@ -327,6 +330,7 @@ const ScanSkiScreen = () => {
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <ScrollView
             contentContainerStyle={styles.reviewScroll}
+            keyboardDismissMode="on-drag"
             keyboardShouldPersistTaps="handled">
             {!!imageUri && (
               <Card style={styles.previewCard} padding={spacing.sm}>
@@ -338,9 +342,6 @@ const ScanSkiScreen = () => {
                       {parsed && parsed.rawLines?.length
                         ? `${parsed.rawLines.length} line${parsed.rawLines.length === 1 ? '' : 's'} detected`
                         : 'no lines detected'}
-                      {parsed && parsed.unmatched?.length
-                        ? ` • ${parsed.unmatched.length} ignored`
-                        : ''}
                     </Text>
                     <Pressable
                       onPress={handleRetake}
@@ -433,15 +434,6 @@ const ScanSkiScreen = () => {
               onChangeText={setNotes}
               multiline
             />
-
-            {!!parsed?.unmatched?.length && (
-              <Card style={styles.unmatchedCard}>
-                <Text style={styles.unmatchedTitle}>Ignored text</Text>
-                <Text style={styles.unmatchedBody}>
-                  {parsed.unmatched.join(' · ')}
-                </Text>
-              </Card>
-            )}
 
             {!!error && <Text style={styles.error}>{error}</Text>}
 
@@ -624,21 +616,6 @@ const styles = StyleSheet.create({
   row2: {flexDirection: 'row'},
   row2Cell: {flex: 1},
   row2Spacer: {width: spacing.md},
-  unmatchedCard: {
-    marginTop: spacing.lg,
-    borderStyle: 'dashed',
-  },
-  unmatchedTitle: {
-    ...typography.caption,
-    color: colors.textTertiary,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginBottom: spacing.xs,
-  },
-  unmatchedBody: {
-    ...typography.bodySm,
-    color: colors.textSecondary,
-  },
   error: {
     ...typography.body,
     color: colors.red,

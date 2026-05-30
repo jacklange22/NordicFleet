@@ -7,7 +7,7 @@
 //   4. Athlete client observes 'accepted' on its outgoing request and
 //      sets users/{athleteUid}.coachId = coachUid (cross-doc write that
 //      Firestore rules wouldn't allow the coach to do, but the athlete
-//      can do for themselves — see NOTES.md "Coach-acceptance flow").
+//      can do for themselves - see NOTES.md "Coach-acceptance flow").
 //   5. Either party can later set the request status to 'ended' to
 //      unlink. The athlete additionally clears their own coachId on
 //      transition to 'ended'.
@@ -112,7 +112,7 @@ export async function respondToRequest(requestId, accept) {
 }
 
 /**
- * Either party — transition an accepted request to 'ended'. Used when
+ * Either party - transition an accepted request to 'ended'. Used when
  * either side wants to unlink. Note: the athlete should also clear
  * their coachId locally (the rules don't let the coach do it).
  */
@@ -182,7 +182,7 @@ export function subscribeOutgoingRequestsForAthlete(athleteUid, callback) {
  * in sync.
  *
  * Pass the FULL list of outgoing requests (from
- * subscribeOutgoingRequestsForAthlete) — the function picks the most
+ * subscribeOutgoingRequestsForAthlete) - the function picks the most
  * recent accepted one (if any) as the current coach.
  */
 export async function syncCoachIdFromRequests(athleteUid, requests) {

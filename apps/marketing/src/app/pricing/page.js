@@ -2,11 +2,12 @@ import Link from 'next/link';
 import {Container, Eyebrow} from '@/components/ui';
 import {Reveal} from '@/components/Reveal';
 import {EmailCapture} from '@/components/EmailCapture';
+import {APP_URL} from '@/lib/urls';
 
 export const metadata = {
   title: 'Pricing',
   description:
-    'NordicFleet pricing — start free, with team plans for coaches and clubs on the way.',
+    'NordicFleet pricing, start free, with team plans for coaches and clubs on the way.',
 };
 
 const PLANS = [
@@ -17,7 +18,7 @@ const PLANS = [
     features: [
       'Unlimited skis in your fleet',
       'Wax & test logs with conditions',
-      'Base-sticker scan & spreadsheet import',
+      'Ski-sticker scan & spreadsheet import',
       'Run your own wax tests',
       'iPhone & web',
     ],
@@ -40,9 +41,6 @@ const PLANS = [
   },
 ];
 
-const APP_URL =
-  process.env.NEXT_PUBLIC_APP_URL || 'https://app.nordicfleet.com';
-
 export default function PricingPage() {
   return (
     <>
@@ -61,7 +59,7 @@ export default function PricingPage() {
           delay={120}
           className="mt-5 text-lg text-text-secondary max-w-2xl mx-auto">
           The individual app is free while we build. Team plans for coaches
-          and clubs are on the way — get on the list and you&apos;ll hear
+          and clubs are on the way, get on the list and you&apos;ll hear
           first.
         </Reveal>
       </Container>

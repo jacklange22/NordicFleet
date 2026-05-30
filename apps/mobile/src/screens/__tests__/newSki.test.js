@@ -16,11 +16,13 @@ import {AuthProvider} from '../../context/AuthContext';
 
 const mockReplace = jest.fn();
 const mockNavigate = jest.fn();
+let mockRouteParams = {};
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({
     replace: mockReplace,
     navigate: mockNavigate,
   }),
+  useRoute: () => ({params: mockRouteParams}),
 }));
 
 const renderWithAuth = ui => render(<AuthProvider>{ui}</AuthProvider>);
@@ -30,6 +32,7 @@ beforeEach(() => {
   firestoreMock.__resetFirestoreMock();
   mockReplace.mockClear();
   mockNavigate.mockClear();
+  mockRouteParams = {};
   mockOcrAvailable = false;
 });
 
@@ -53,7 +56,7 @@ describe('AddSkiForm', () => {
 
     // Fill the plain-text fields but leave the brand / technique / type
     // pill selectors untouched. The form should still refuse to save.
-    fireEvent.changeText(tree.getByLabelText('Ski name'), 'My Ski');
+    fireEvent.changeText(tree.getByLabelText('Display name'), 'My Ski');
     fireEvent.changeText(tree.getByLabelText('Model'), 'Speedmax');
     fireEvent.changeText(tree.getByLabelText('Length'), '195');
     fireEvent.changeText(tree.getByLabelText('Flex'), '90');
@@ -90,7 +93,7 @@ describe('AddSkiForm', () => {
     const tree = renderWithAuth(<AddSkiForm />);
     await act(async () => {});
 
-    fireEvent.changeText(tree.getByLabelText('Ski name'), 'My Ski');
+    fireEvent.changeText(tree.getByLabelText('Display name'), 'My Ski');
     // The brand pill row, technique pill row, and type pill row all expose
     // each option as an accessibility-label'd button.
     fireEvent.press(tree.getByLabelText('Fischer'));
@@ -103,5 +106,38 @@ describe('AddSkiForm', () => {
       'SkiInfo',
       expect.objectContaining({skiId: expect.any(String)}),
     );
+  });
+
+  describe('edit mode (#P6)', () => {
+    it('pre-fills from the existing ski and saves via update', async () => {
+      authMock.__setCurrentUser({uid: 'user_x', email: 'a@b.com'});
+      firestoreMock.__seedDoc('users/user_x/skis/s1', {
+        name: 'Old name',
+        brand: 'Madshus',
+        model: 'Redline',
+        technique: 'Skate',
+        type: 'Cold',
+        grind: 'P5',
+      });
+      mockRouteParams = {editSkiId: 's1'};
+
+      const tree = renderWithAuth(<AddSkiForm />);
+      await act(async () => {});
+
+      // Header says Edit ski, and the form is pre-filled.
+      expect(tree.getByText('Edit ski')).toBeTruthy();
+      expect(tree.getByLabelText('Display name').props.value).toBe('Old name');
+      expect(tree.getByLabelText('Model').props.value).toBe('Redline');
+
+      // Change the name and save → updateSki writes, navigates back to detail.
+      fireEvent.changeText(tree.getByLabelText('Display name'), 'New name');
+      fireEvent.press(tree.getByLabelText('Save'));
+      await act(async () => {});
+
+      const stored = firestoreMock.__getStore().get('users/user_x/skis/s1');
+      expect(stored.name).toBe('New name');
+      expect(stored.brand).toBe('Madshus'); // preserved
+      expect(mockReplace).toHaveBeenCalledWith('SkiInfo', {skiId: 's1'});
+    });
   });
 });

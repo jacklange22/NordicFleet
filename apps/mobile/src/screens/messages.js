@@ -12,7 +12,7 @@ import {useNavigation} from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
 import {useAuth} from '../context/AuthContext';
-import {subscribeMessagesForAthlete} from '../services/messageService';
+import {subscribeMessagesForUser} from '../services/messageService';
 import {Header, Card, EmptyState, TabBar} from '../components/ui';
 import {colors, spacing, typography} from '../theme';
 
@@ -46,42 +46,56 @@ const fmtDate = raw => {
   return d.toLocaleDateString(undefined, {month: 'short', day: 'numeric'});
 };
 
-const MessageRow = ({msg, onPress}) => (
-  <Card
-    onPress={onPress}
-    accessibilityLabel={`Open message${msg.subject ? `: ${msg.subject}` : ''}`}
-    style={styles.msgCard}>
-    <View style={styles.msgRow}>
-      {!msg.read && <View style={styles.unreadDot} />}
-      <View style={styles.msgMain}>
-        <View style={styles.msgTopRow}>
-          <Text
-            style={[styles.msgSubject, !msg.read && styles.msgSubjectUnread]}
-            numberOfLines={1}>
-            {msg.subject || 'Message from your coach'}
-          </Text>
-          <Text style={styles.msgDate}>{fmtDate(msg.createdAt)}</Text>
-        </View>
-        <Text style={styles.msgPreview} numberOfLines={2}>
-          {msg.body}
-        </Text>
-        {!!(msg.attachedSkiIds && msg.attachedSkiIds.length) && (
-          <View style={styles.attachRow}>
-            <Ionicons
-              name="link-outline"
-              size={14}
-              color={colors.textTertiary}
-            />
-            <Text style={styles.attachText}>
-              {msg.attachedSkiIds.length} ski
-              {msg.attachedSkiIds.length === 1 ? '' : 's'} attached
+const MessageRow = ({msg, onPress}) => {
+  const isSent = msg.direction === 'sent';
+  // Unread dot only for messages YOU received and have not opened. A message
+  // you sent is never "unread" for you (its read flag tracks the recipient).
+  const showUnread = !isSent && !msg.read;
+  const subject = isSent
+    ? msg.subject || 'You sent a message'
+    : msg.subject || 'Message from your coach';
+  return (
+    <Card
+      onPress={onPress}
+      accessibilityLabel={`Open ${isSent ? 'sent ' : ''}message${
+        msg.subject ? `: ${msg.subject}` : ''
+      }`}
+      style={styles.msgCard}>
+      <View style={styles.msgRow}>
+        {showUnread && <View style={styles.unreadDot} />}
+        <View style={styles.msgMain}>
+          <View style={styles.msgMetaRow}>
+            <Text style={styles.msgDirection}>
+              {isSent ? (msg.read ? 'Sent · Read' : 'Sent') : 'Received'}
             </Text>
+            <Text style={styles.msgDate}>{fmtDate(msg.createdAt)}</Text>
           </View>
-        )}
+          <Text
+            style={[styles.msgSubject, showUnread && styles.msgSubjectUnread]}
+            numberOfLines={1}>
+            {subject}
+          </Text>
+          <Text style={styles.msgPreview} numberOfLines={2}>
+            {msg.body}
+          </Text>
+          {!!(msg.attachedSkiIds && msg.attachedSkiIds.length) && (
+            <View style={styles.attachRow}>
+              <Ionicons
+                name="link-outline"
+                size={14}
+                color={colors.textTertiary}
+              />
+              <Text style={styles.attachText}>
+                {msg.attachedSkiIds.length} ski
+                {msg.attachedSkiIds.length === 1 ? '' : 's'} attached
+              </Text>
+            </View>
+          )}
+        </View>
       </View>
-    </View>
-  </Card>
-);
+    </Card>
+  );
+};
 
 const Spacer = () => <View style={styles.rowSpacer} />;
 
@@ -100,7 +114,7 @@ const MessagesScreen = () => {
       return;
     }
     setLoading(true);
-    return subscribeMessagesForAthlete(uid, list => {
+    return subscribeMessagesForUser(uid, list => {
       setMessages(list);
       setLoading(false);
     });
@@ -132,7 +146,7 @@ const MessagesScreen = () => {
             <EmptyState
               icon="chatbubble-outline"
               title="No messages yet"
-              description="Messages from your coach will appear here. Once a coach accepts your request they can send you wax tips, race recaps, and ski recommendations."
+              description="Messages you send and receive appear here. A coach can send you wax tips, race recaps, and ski recommendations once you are linked."
             />
           }
         />
@@ -162,11 +176,17 @@ const styles = StyleSheet.create({
     marginRight: spacing.md,
   },
   msgMain: {flex: 1},
-  msgTopRow: {
+  msgMetaRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: spacing.xs,
+    marginBottom: 2,
+  },
+  msgDirection: {
+    ...typography.caption,
+    color: colors.textTertiary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
   },
   msgSubject: {
     ...typography.headingMd,

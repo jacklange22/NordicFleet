@@ -55,7 +55,27 @@ describe('WaxLogScreen', () => {
     expect(mockNavigate).not.toHaveBeenCalled();
   });
 
-  it('writes one wax log per selected ski and navigates Home', async () => {
+  it('blocks an empty wax log (no wax, no note) — #13', async () => {
+    authMock.__setCurrentUser({uid: 'u1'});
+    firestoreMock.__seedDoc('users/u1/skis/a', {
+      name: 'Speedmax',
+      technique: 'Classic',
+    });
+    const tree = renderScreen();
+    await waitFor(() => tree.getByLabelText('Speedmax'));
+    fireEvent.press(tree.getByLabelText('Speedmax'));
+    await act(async () => {});
+    // Save with nothing filled in → blocked, no write, no navigation.
+    fireEvent.press(tree.getByLabelText('Save'));
+    await act(async () => {});
+    expect(mockNavigate).not.toHaveBeenCalled();
+    const waxLogs = [...firestoreMock.__getStore().keys()].filter(k =>
+      k.startsWith('users/u1/waxLogs/'),
+    );
+    expect(waxLogs.length).toBe(0);
+  });
+
+  it('writes one wax log and opens the ski detail (single ski) — #12/#13', async () => {
     authMock.__setCurrentUser({uid: 'u1'});
     firestoreMock.__seedDoc('users/u1/skis/a', {
       name: 'Speedmax',
@@ -66,16 +86,20 @@ describe('WaxLogScreen', () => {
     // Tap the ski pill to select it.
     fireEvent.press(tree.getByLabelText('Speedmax'));
     await act(async () => {});
+    // Add a note so the log has meaningful content.
+    fireEvent.changeText(tree.getByLabelText('Notes'), 'cold dry');
+    await act(async () => {});
     fireEvent.press(tree.getByLabelText('Save'));
     await act(async () => {});
-    expect(mockNavigate).toHaveBeenCalledWith('Home');
+    // Single ski → navigates to that ski's detail (history visible).
+    expect(mockNavigate).toHaveBeenCalledWith('SkiInfo', {skiId: 'a'});
     const waxLogs = [...firestoreMock.__getStore().keys()].filter(k =>
       k.startsWith('users/u1/waxLogs/'),
     );
     expect(waxLogs.length).toBe(1);
   });
 
-  it('tolerates an offline write (still navigates Home)', async () => {
+  it('tolerates an offline write (still navigates to ski detail)', async () => {
     authMock.__setCurrentUser({uid: 'u1'});
     firestoreMock.__seedDoc('users/u1/skis/a', {
       name: 'Speedmax',
@@ -88,8 +112,10 @@ describe('WaxLogScreen', () => {
     await waitFor(() => tree.getByLabelText('Speedmax'));
     fireEvent.press(tree.getByLabelText('Speedmax'));
     await act(async () => {});
+    fireEvent.changeText(tree.getByLabelText('Notes'), 'cold dry');
+    await act(async () => {});
     fireEvent.press(tree.getByLabelText('Save'));
     await act(async () => {});
-    expect(mockNavigate).toHaveBeenCalledWith('Home');
+    expect(mockNavigate).toHaveBeenCalledWith('SkiInfo', {skiId: 'a'});
   });
 });

@@ -1,6 +1,6 @@
 'use client';
 
-// Log a wax — pick one or more skis from the active fleet, fill out
+// Log a wax - pick one or more skis from the active fleet, fill out
 // the per-ski wax stack (binder / kick / glide layers), save all of
 // them in one batch.
 
@@ -183,7 +183,7 @@ function Inner() {
             onChange={setSelectedIds}
             emptyMessage={
               loaded
-                ? 'No active skis — add one before logging a wax.'
+                ? 'No active skis - add one before logging a wax.'
                 : 'Loading…'
             }
             required

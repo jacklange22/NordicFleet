@@ -4,7 +4,7 @@
 // AND only when the NEXT_PUBLIC_FIREBASE_* env vars are present, so
 // `next build` can prerender every page without an env file.
 //
-// The marketing site only needs Firestore (to record email signups) —
+// The marketing site only needs Firestore (to record email signups) ,
 // no auth, no persistent cache.
 
 import {initializeApp, getApps, getApp} from 'firebase/app';

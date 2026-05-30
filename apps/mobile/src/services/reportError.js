@@ -2,11 +2,12 @@
 //
 // Single funnel for crashes/errors on iOS. Today it scrubs PII (via
 // @nordicfleet/core) and logs to the console. It is the ONE place a real
-// vendor (Firebase Crashlytics or Sentry) gets wired later — see
+// vendor (Firebase Crashlytics or Sentry) gets wired later - see
 // OBSERVABILITY_PLAN.md. Keep all reporting going through here so the
 // vendor swap is a one-file change.
 
 import {scrubErrorForReport} from '@nordicfleet/core';
+import {trace} from './devTrace';
 
 /**
  * Report an error through the PII-safe funnel.
@@ -26,7 +27,7 @@ export function reportError(error, context) {
   }
   // TODO(OBSERVABILITY_PLAN.md): forward to Crashlytics/Sentry here, e.g.
   //   crashlytics().recordError(error);  // with payload.context as attrs
-  // Intentionally not implemented yet — no native vendor dependency.
+  // Intentionally not implemented yet - no native vendor dependency.
 }
 
 let installed = false;
@@ -48,6 +49,7 @@ export function installGlobalErrorHandler() {
   const previous = g.ErrorUtils.getGlobalHandler();
   g.ErrorUtils.setGlobalHandler((error, isFatal) => {
     try {
+      trace('global JS error caught', {fatal: !!isFatal});
       reportError(error, {boundary: 'global', code: isFatal ? 'fatal' : 'nonfatal'});
     } catch {
       // never let reporting break the chain

@@ -1,4 +1,4 @@
-// Data export — read the user's full account and hand a JSON file to
+// Data export - read the user's full account and hand a JSON file to
 // the iOS share sheet. The export shape is built by @nordicfleet/core
 // (buildDataExport); this service just fetches the docs and shares.
 
@@ -15,7 +15,7 @@ async function readCollection(uid, sub) {
 }
 
 /**
- * Build the export envelope for a user (no sharing) — exposed so it can
+ * Build the export envelope for a user (no sharing) - exposed so it can
  * be unit-tested and reused.
  * @param {string} uid
  */

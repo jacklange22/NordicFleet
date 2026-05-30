@@ -6,6 +6,7 @@
 
 import firestore from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
+import {trace} from './devTrace';
 
 let persistenceConfigured = false;
 
@@ -26,6 +27,7 @@ function configurePersistence() {
 }
 
 configurePersistence();
+trace('firebase configured', {persistence: persistenceConfigured});
 
 export {auth, firestore};
 export const db = firestore();

@@ -1,6 +1,6 @@
 'use client';
 
-// New wax test — name, conditions, fleet size, and the combination
+// New wax test - name, conditions, fleet size, and the combination
 // builder. The Kick/Paraffin/Topcoat/Structure category selector filters
 // the wax typeahead, but the picker is always free-text: a coach can
 // commit a wax (or structure) that exists nowhere in the dictionary.
@@ -230,7 +230,7 @@ function Inner() {
 
         <Card className="mb-6">
           <span className="block text-xs uppercase tracking-wider text-text-tertiary mb-3">
-            Fleet size — max combinations
+            Fleet size - max combinations
           </span>
           <div className="flex gap-2">
             {FLEET_SIZES.map(n => (

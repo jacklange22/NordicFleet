@@ -29,6 +29,7 @@ import {
   EmptyState,
   Input,
   Button,
+  TabBar,
 } from '../components/ui';
 import {colors, radius, spacing, typography} from '../theme';
 
@@ -192,11 +193,11 @@ const AthleteDetailScreen = ({route}) => {
         </View>
         <View style={styles.statCellSpacer} />
         <View style={styles.statCell}>
-          <StatCard compact value="—" label="Last wax" />
+          <StatCard compact value="-" label="Last wax" />
         </View>
         <View style={styles.statCellSpacer} />
         <View style={styles.statCell}>
-          <StatCard compact value="—" label="Tests" />
+          <StatCard compact value="-" label="Tests" />
         </View>
       </View>
 
@@ -277,6 +278,8 @@ const AthleteDetailScreen = ({route}) => {
           }
         />
       )}
+
+      <TabBar />
 
       {/* Send-message modal */}
       <Modal

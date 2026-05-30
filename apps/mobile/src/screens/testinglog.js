@@ -27,6 +27,7 @@ import {
   Button,
   Pill,
   SectionHeader,
+  SkiSelector,
   EmptyState,
 } from '../components/ui';
 import {colors, spacing, typography} from '../theme';
@@ -34,7 +35,7 @@ import {colors, spacing, typography} from '../theme';
 const SNOW_OPTIONS = ['Old', 'New', 'Manmade'];
 const SURFACE_OPTIONS = ['Hardpack', 'Powder', 'Corduroy', 'Slush'];
 
-const emptyTestEntry = () => ({
+export const emptyTestEntry = () => ({
   glideWax: '',
   kickWax: '',
   glideRating: 5,
@@ -49,7 +50,7 @@ const RatingPicker = ({label, value, onChange}) => (
   <View style={styles.ratingBlock}>
     <View style={styles.ratingHeader}>
       <Text style={styles.ratingLabel}>{label}</Text>
-      <Text style={styles.ratingValue}>{value ?? '—'}</Text>
+      <Text style={styles.ratingValue}>{value ?? '-'}</Text>
     </View>
     <View style={styles.ratingRow}>
       {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => {
@@ -79,15 +80,17 @@ const RatingPicker = ({label, value, onChange}) => (
   </View>
 );
 
-const TestEntryCard = ({ski, entry, onChange}) => {
+export const TestEntryCard = ({ski, entry, onChange}) => {
   const tech = (ski.technique || '').toLowerCase();
   return (
     <Card style={styles.entryCard}>
       <Text style={styles.entryTitle}>{ski.name || ski.id}</Text>
+      {/* Read-only ski attributes - ghost variant so they read as quiet
+          labels, NOT like the tappable outline/solid selector pills. */}
       <View style={styles.entryPillRow}>
         {!!ski.technique && (
           <View style={styles.entryPillWrap}>
-            <Pill variant="outline" color="red">
+            <Pill variant="ghost" color="neutral">
               {ski.technique}
             </Pill>
           </View>
@@ -447,27 +450,16 @@ const TestingLogScreen = () => {
 
               <SectionHeader title="Select skis" />
               <Card style={styles.selectorCard}>
-                <View style={styles.chipRow}>
-                  {skisForUser.map(ski => {
-                    const selected = selectedSkis.includes(ski.id);
-                    return (
-                      <View key={ski.id} style={styles.chipWrap}>
-                        <Pill
-                          variant={selected ? 'solid' : 'outline'}
-                          color="red"
-                          onPress={() => toggleSki(ski.id)}
-                          accessibilityLabel={ski.name || ski.id}>
-                          {ski.name || ski.id}
-                        </Pill>
-                      </View>
-                    );
-                  })}
-                </View>
-                {selectedSkis.length === 0 && (
-                  <Text style={styles.hint}>
-                    Tap one or more skis to rate.
-                  </Text>
-                )}
+                <SkiSelector
+                  skis={skisForUser}
+                  selectedIds={selectedSkis}
+                  onToggle={toggleSki}
+                  onSelectAll={() =>
+                    setSelectedSkis(skisForUser.map(s => s.id))
+                  }
+                  onClearAll={() => setSelectedSkis([])}
+                  hint="Tap one or more skis to rate."
+                />
               </Card>
 
               {selectedSkis.length > 0 && (

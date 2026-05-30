@@ -1,4 +1,4 @@
-// WaxTestRunner — arrange the bracket, run it head-to-head, and read
+// WaxTestRunner - arrange the bracket, run it head-to-head, and read
 // the result. One screen, three phases keyed off `status`:
 //
 //   setup     → arranger: reorder seeds (up/down), then Start.
@@ -106,7 +106,7 @@ const WaxTestRunnerScreen = () => {
     };
   }, [uid, testId]);
 
-  // Linked athletes — only needed to offer "send winner as advisory".
+  // Linked athletes - only needed to offer "send winner as advisory".
   useEffect(() => {
     if (!uid) {
       return undefined;
@@ -295,6 +295,7 @@ const WaxTestRunnerScreen = () => {
       />
       <ScrollView
         contentContainerStyle={styles.scroll}
+        keyboardDismissMode="on-drag"
         keyboardShouldPersistTaps="handled">
         {test.status === 'setup' && (
           <Arranger
@@ -323,7 +324,7 @@ const WaxTestRunnerScreen = () => {
           />
         )}
 
-        {/* Performance numbers — available once the test is running. */}
+        {/* Performance numbers - available once the test is running. */}
         {test.status !== 'setup' && (
           <>
             <SectionHeader title="Performance numbers" />
@@ -342,7 +343,7 @@ const WaxTestRunnerScreen = () => {
                     value={c.performanceNumber == null ? '' : String(c.performanceNumber)}
                     onChangeText={v => setPerf(c.id, v)}
                     keyboardType="numbers-and-punctuation"
-                    placeholder="—"
+                    placeholder="-"
                   />
                 </View>
               </View>
@@ -358,7 +359,7 @@ const WaxTestRunnerScreen = () => {
           </>
         )}
 
-        {/* Full bracket overview — read-only. */}
+        {/* Full bracket overview - read-only. */}
         <SectionHeader title="Bracket" />
         <BracketOverview bracket={test.bracket} labelFor={labelFor} />
 
@@ -452,7 +453,7 @@ const Runner = ({bracket, labelFor, progress, onPick}) => {
     return (
       <Card style={styles.infoCard}>
         <Text style={styles.infoText}>
-          Waiting on earlier rounds — no live matchups right now.
+          Waiting on earlier rounds - no live matchups right now.
         </Text>
       </Card>
     );
@@ -631,7 +632,7 @@ const Slot = ({label, won}) => (
   <Text
     style={[styles.slotText, won && styles.slotWon]}
     numberOfLines={1}>
-    {label || '—'}
+    {label || '-'}
   </Text>
 );
 

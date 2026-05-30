@@ -10,16 +10,26 @@ import {
   KeyboardAvoidingView,
   Platform,
   Switch,
-  Linking,
+  Pressable,
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useNavigation} from '@react-navigation/native';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 
 import Toast from 'react-native-toast-message';
-import {isValidEmail} from '@nordicfleet/core';
+import {
+  isValidEmail,
+  formatWeight,
+  formatHeight,
+  weightFromMetric,
+  weightToMetric,
+  heightFromMetric,
+  heightToMetric,
+  normalizeWeightUnit,
+  normalizeHeightUnit,
+} from '@nordicfleet/core';
 import LoadingScreen from '../components/LoadingScreen';
-import {shareSnapshot} from '../services/shareService';
-import {exportAndShareUserData} from '../services/dataExportService';
+import {shareSnapshot, fleetShareMessage} from '../services/shareService';
 import FleetShareCard from '../components/share/FleetShareCard';
 import {useAuth} from '../context/AuthContext';
 import useProfile from '../hooks/useProfile';
@@ -29,10 +39,10 @@ import {
   updateProfile,
   removeCoach,
   getProfile,
-  deleteAccount,
   setCoachCapability,
+  setCoachPermission,
 } from '../services/userService';
-import {deriveIsCoach} from '@nordicfleet/core';
+import {deriveIsCoach, normalizePermission} from '@nordicfleet/core';
 import {useMode} from '../context/ModeContext';
 import {
   requestCoach,
@@ -40,7 +50,6 @@ import {
   subscribeOutgoingRequestsForAthlete,
   syncCoachIdFromRequests,
 } from '../services/coachRequestService';
-import {auth} from '../services/firebase';
 import {
   Header,
   Card,
@@ -50,21 +59,36 @@ import {
   SectionHeader,
   Button,
   Input,
+  Pill,
   TabBar,
 } from '../components/ui';
 import {colors, radius, spacing, typography} from '../theme';
 
 const NUMERIC_FIELDS = new Set(['weight', 'height']);
 
+// weight/height are stored in metric (kg/cm); `unitKind` drives the
+// per-user display unit (see the Units section + @nordicfleet/core).
 const FIELD_DEFS = [
-  {key: 'weight', label: 'Weight', suffix: ' kg', icon: 'barbell-outline'},
-  {key: 'height', label: 'Height', suffix: ' cm', icon: 'resize-outline'},
+  {key: 'weight', label: 'Weight', unitKind: 'weight', icon: 'barbell-outline'},
+  {key: 'height', label: 'Height', unitKind: 'height', icon: 'resize-outline'},
   {key: 'team', label: 'Team', icon: 'people-outline'},
   {key: 'location', label: 'Location', icon: 'location-outline'},
 ];
 
+// The active display unit ('kg'/'lb'/'cm'/'in') for a field, or '' for
+// plain text fields.
+const unitFor = (def, weightUnit, heightUnit) => {
+  if (def.unitKind === 'weight') {
+    return weightUnit;
+  }
+  if (def.unitKind === 'height') {
+    return heightUnit;
+  }
+  return '';
+};
+
 // Brief: decimal-pad for weight/height. iOS decimal-pad shows digits +
-// the locale's decimal separator (no minus sign — fine for these, since
+// the locale's decimal separator (no minus sign - fine for these, since
 // negative weight/height isn't meaningful).
 const keyboardTypeFor = field => {
   if (NUMERIC_FIELDS.has(field)) {
@@ -73,17 +97,23 @@ const keyboardTypeFor = field => {
   return 'default';
 };
 
-const fieldDisplay = (def, profile) => {
+const fieldDisplay = (def, profile, weightUnit, heightUnit) => {
   const v = profile?.[def.key];
   if (v === undefined || v === null || v === '') {
-    return '—';
+    return '-';
   }
-  return `${v}${def.suffix || ''}`;
+  if (def.unitKind === 'weight') {
+    return formatWeight(v, weightUnit) || '-';
+  }
+  if (def.unitKind === 'height') {
+    return formatHeight(v, heightUnit) || '-';
+  }
+  return `${v}`;
 };
 
 const ProfileScreen = () => {
   const navigation = useNavigation();
-  const {user, signOut} = useAuth();
+  const {user} = useAuth();
   const {setMode} = useMode();
   const uid = user?.uid;
 
@@ -91,17 +121,32 @@ const ProfileScreen = () => {
   const {skis} = useSkis(uid);
   const {totalWaxes, totalTests} = useDashboardStats(uid);
 
+  // Display units for body metrics (stored value stays metric). Default
+  // to kg/cm when the profile carries no preference yet.
+  const weightUnit = normalizeWeightUnit(profile?.weightUnit);
+  const heightUnit = normalizeHeightUnit(profile?.heightUnit);
+
+  // How much access the linked coach has (default view).
+  const coachPermission = normalizePermission(profile?.coachPermission);
+
+  const changeCoachPermission = useCallback(
+    async level => {
+      if (!uid) {
+        return;
+      }
+      try {
+        await setCoachPermission(uid, level);
+      } catch (err) {
+        Alert.alert('Update failed', String(err.message || err));
+      }
+    },
+    [uid],
+  );
+
   const [coachingBusy, setCoachingBusy] = useState(false);
 
   const [editField, setEditField] = useState(null);
   const [tempValue, setTempValue] = useState('');
-
-  // Password change flow.
-  const [pwModalOpen, setPwModalOpen] = useState(false);
-  const [currentPw, setCurrentPw] = useState('');
-  const [newPw, setNewPw] = useState('');
-  const [pwError, setPwError] = useState('');
-  const [pwSubmitting, setPwSubmitting] = useState(false);
 
   // Add / change coach flow.
   const [coachModalOpen, setCoachModalOpen] = useState(false);
@@ -123,7 +168,7 @@ const ProfileScreen = () => {
     return subscribeOutgoingRequestsForAthlete(uid, list => {
       setOutgoingRequests(list);
       // When a request transitions to accepted/ended, the athlete writes
-      // its own coachId. Best-effort — failures are ignored (the next
+      // its own coachId. Best-effort - failures are ignored (the next
       // snapshot fires the same path).
       syncCoachIdFromRequests(uid, list).catch(() => {});
     });
@@ -134,49 +179,16 @@ const ProfileScreen = () => {
     .filter(r => r.status === 'declined')
     .sort((a, b) => (b.updatedAt?.seconds || 0) - (a.updatedAt?.seconds || 0))[0];
 
-  // Delete account flow (App Store guideline 5.1.1(v)).
-  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-  const [deletePw, setDeletePw] = useState('');
-  const [deleteError, setDeleteError] = useState('');
-  const [deleteSubmitting, setDeleteSubmitting] = useState(false);
-
   // Share fleet flow.
   const [sharing, setSharing] = useState(false);
-  const [exporting, setExporting] = useState(false);
   const fleetShareRef = useRef(null);
-
-  const handleExportData = useCallback(async () => {
-    if (!user?.uid) {
-      return;
-    }
-    setExporting(true);
-    try {
-      await exportAndShareUserData(user.uid);
-    } catch (err) {
-      Toast.show({
-        type: 'error',
-        text1: 'Export failed',
-        text2: String(err.message || err),
-        position: 'top',
-        visibilityTime: 2400,
-      });
-    } finally {
-      setExporting(false);
-    }
-  }, [user?.uid]);
-
-  const openLegal = useCallback(path => {
-    const base =
-      process.env.NORDICFLEET_MARKETING_URL || 'https://nordicfleet.com';
-    Linking.openURL(`${base}${path}`).catch(() => {});
-  }, []);
 
   const handleShareFleet = useCallback(async () => {
     setSharing(true);
     try {
       await shareSnapshot(fleetShareRef, 'my_fleet', {
         title: 'My fleet · NordicFleet',
-        message: 'My ski fleet — shared from NordicFleet',
+        message: fleetShareMessage(),
       });
     } catch (err) {
       Toast.show({
@@ -212,7 +224,19 @@ const ProfileScreen = () => {
 
   const openEdit = def => {
     const v = profile?.[def.key];
-    setTempValue(v !== undefined && v !== null ? String(v) : '');
+    let display = '';
+    if (v !== undefined && v !== null && v !== '') {
+      if (def.unitKind === 'weight') {
+        const n = weightFromMetric(v, weightUnit);
+        display = n === null ? '' : String(n);
+      } else if (def.unitKind === 'height') {
+        const n = heightFromMetric(v, heightUnit);
+        display = n === null ? '' : String(n);
+      } else {
+        display = String(v);
+      }
+    }
+    setTempValue(display);
     setEditField(def);
   };
 
@@ -221,11 +245,16 @@ const ProfileScreen = () => {
       setEditField(null);
       return;
     }
-    const next = NUMERIC_FIELDS.has(editField.key)
-      ? tempValue === ''
-        ? null
-        : Number(tempValue)
-      : tempValue;
+    // weight/height are entered in the user's display unit and converted
+    // back to metric (kg/cm) before storage.
+    let next;
+    if (editField.unitKind === 'weight') {
+      next = tempValue === '' ? null : weightToMetric(tempValue, weightUnit);
+    } else if (editField.unitKind === 'height') {
+      next = tempValue === '' ? null : heightToMetric(tempValue, heightUnit);
+    } else {
+      next = tempValue;
+    }
     try {
       await updateProfile(uid, {[editField.key]: next});
       Toast.show({
@@ -240,7 +269,23 @@ const ProfileScreen = () => {
     } finally {
       setEditField(null);
     }
-  }, [editField, tempValue, uid]);
+  }, [editField, tempValue, uid, weightUnit, heightUnit]);
+
+  // Switching a display unit only rewrites the preference; the stored
+  // metric value is unchanged, so the figure simply re-renders converted.
+  const changeUnit = useCallback(
+    async (field, value) => {
+      if (!uid) {
+        return;
+      }
+      try {
+        await updateProfile(uid, {[field]: value});
+      } catch (err) {
+        Alert.alert('Save failed', String(err.message || err));
+      }
+    },
+    [uid],
+  );
 
   const openCoachModal = useCallback(() => {
     setCoachEmailInput('');
@@ -354,142 +399,6 @@ const ProfileScreen = () => {
     );
   }, [uid]);
 
-  const handleDeleteAccountTap = useCallback(() => {
-    // Two-step confirmation: first alert, then reauth modal.
-    Alert.alert(
-      'Delete your account?',
-      'This permanently removes all your skis, wax logs, test logs, and profile data. This cannot be undone.',
-      [
-        {text: 'Cancel', style: 'cancel'},
-        {
-          text: 'I want to delete',
-          style: 'destructive',
-          onPress: () => {
-            setDeletePw('');
-            setDeleteError('');
-            setDeleteModalOpen(true);
-          },
-        },
-      ],
-    );
-  }, []);
-
-  const closeDeleteModal = useCallback(() => {
-    setDeleteModalOpen(false);
-    setDeletePw('');
-    setDeleteError('');
-  }, []);
-
-  const submitDeleteAccount = useCallback(async () => {
-    setDeleteError('');
-    const currentUser = auth().currentUser;
-    if (!currentUser || !currentUser.email) {
-      setDeleteError('Not signed in');
-      return;
-    }
-    if (deletePw.length < 6) {
-      setDeleteError('Enter your password to confirm');
-      return;
-    }
-    setDeleteSubmitting(true);
-    try {
-      const cred = auth.EmailAuthProvider.credential(
-        currentUser.email,
-        deletePw,
-      );
-      await currentUser.reauthenticateWithCredential(cred);
-      await deleteAccount();
-      // After deleteAccount succeeds, auth state is null. Show the toast
-      // before navigating because Toast lives at the App root and
-      // unmounting the navigator wipes the screen anyway.
-      Toast.show({
-        type: 'success',
-        text1: 'Account deleted',
-        position: 'top',
-        visibilityTime: 2200,
-      });
-      setDeleteModalOpen(false);
-      setDeletePw('');
-      navigation.reset({index: 0, routes: [{name: 'Welcome'}]});
-    } catch (err) {
-      const code = err && err.code;
-      if (
-        code === 'auth/wrong-password' ||
-        code === 'auth/invalid-credential'
-      ) {
-        setDeleteError('Wrong password');
-      } else if (code === 'auth/network-request-failed') {
-        setDeleteError('No connection — please try again');
-      } else if (code === 'auth/requires-recent-login') {
-        setDeleteError('Please sign out, sign back in, and try again');
-      } else {
-        setDeleteError("Couldn't delete account, please try again");
-      }
-    } finally {
-      setDeleteSubmitting(false);
-    }
-  }, [deletePw, navigation]);
-
-  const handleSignOut = useCallback(() => {
-    Alert.alert('Sign out?', 'You will need to log in again next time.', [
-      {text: 'Cancel', style: 'cancel'},
-      {
-        text: 'Sign out',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await signOut();
-            navigation.reset({index: 0, routes: [{name: 'Welcome'}]});
-          } catch (err) {
-            Alert.alert('Sign-out failed', String(err.message || err));
-          }
-        },
-      },
-    ]);
-  }, [signOut, navigation]);
-
-  const handlePasswordSubmit = useCallback(async () => {
-    setPwError('');
-    if (newPw.length < 6) {
-      setPwError('New password must be at least 6 characters');
-      return;
-    }
-    const currentUser = auth().currentUser;
-    if (!currentUser || !currentUser.email) {
-      setPwError('Not signed in');
-      return;
-    }
-    setPwSubmitting(true);
-    try {
-      const cred = auth.EmailAuthProvider.credential(
-        currentUser.email,
-        currentPw,
-      );
-      await currentUser.reauthenticateWithCredential(cred);
-      await currentUser.updatePassword(newPw);
-      setPwModalOpen(false);
-      setCurrentPw('');
-      setNewPw('');
-      Alert.alert('Password updated');
-    } catch (err) {
-      const code = err && err.code;
-      if (
-        code === 'auth/wrong-password' ||
-        code === 'auth/invalid-credential'
-      ) {
-        setPwError('Current password is incorrect');
-      } else if (code === 'auth/weak-password') {
-        setPwError('New password is too weak');
-      } else if (code === 'auth/network-request-failed') {
-        setPwError('No connection — please try again');
-      } else {
-        setPwError('Could not change password, please try again');
-      }
-    } finally {
-      setPwSubmitting(false);
-    }
-  }, [currentPw, newPw]);
-
   const enableCoaching = useCallback(async () => {
     if (!uid) {
       return;
@@ -524,7 +433,7 @@ const ProfileScreen = () => {
             setCoachingBusy(true);
             try {
               const {clearedAthletes} = await setCoachCapability(uid, false);
-              // Drop back to personal mode — coaching surface is gone.
+              // Drop back to personal mode - coaching surface is gone.
               setMode('personal');
               Alert.alert(
                 'Coaching turned off',
@@ -563,7 +472,23 @@ const ProfileScreen = () => {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <StatusBar barStyle="light-content" />
-      <Header title="Profile" />
+      <Header
+        title="Profile"
+        right={
+          <Pressable
+            onPress={() => navigation.navigate('Settings')}
+            accessibilityRole="button"
+            accessibilityLabel="Settings"
+            hitSlop={10}
+            style={({pressed}) => [styles.gearButton, pressed && {opacity: 0.6}]}>
+            <Ionicons
+              name="settings-outline"
+              size={22}
+              color={colors.textPrimary}
+            />
+          </Pressable>
+        }
+      />
       <ScrollView contentContainerStyle={styles.scroll}>
         {/* Hero */}
         <View style={styles.hero}>
@@ -573,14 +498,14 @@ const ProfileScreen = () => {
             size={80}
           />
           <Text style={styles.heroName} numberOfLines={1}>
-            {displayName || '—'}
+            {displayName || '-'}
           </Text>
           <Text style={styles.heroEmail} numberOfLines={1}>
-            {profile?.email || user?.email || '—'}
+            {profile?.email || user?.email || '-'}
           </Text>
         </View>
 
-        {/* Stat row — everyone has a personal fleet now */}
+        {/* Stat row - everyone has a personal fleet now */}
         <View style={styles.statRow}>
           <View style={styles.statCell}>
             <StatCard compact value={skis.length} label="Skis" />
@@ -598,30 +523,70 @@ const ProfileScreen = () => {
         {/* Personal info */}
         <SectionHeader title="Personal info" />
         <Card padding={0}>
-          {FIELD_DEFS.map((def, i) => (
-            <View key={def.key} style={styles.rowOuter}>
-              <ListItem
-                icon={def.icon}
-                title={`${def.label} (${def.suffix?.trim() || ''})`.replace(
-                  / \(\)$/,
-                  '',
-                )}
-                subtitle={fieldDisplay(def, profile)}
-                onPress={() => openEdit(def)}
-                accessibilityLabel={`Edit ${def.label}${
-                  def.suffix ? ` (${def.suffix.trim()}):` : ''
-                }`}
-                right={
-                  <Text style={styles.editAction}>Edit</Text>
-                }
-                showDivider={i < FIELD_DEFS.length - 1}
-                chevron={false}
-              />
-            </View>
-          ))}
+          {FIELD_DEFS.map((def, i) => {
+            const unit = unitFor(def, weightUnit, heightUnit);
+            return (
+              <View key={def.key} style={styles.rowOuter}>
+                <ListItem
+                  icon={def.icon}
+                  title={unit ? `${def.label} (${unit})` : def.label}
+                  subtitle={fieldDisplay(def, profile, weightUnit, heightUnit)}
+                  onPress={() => openEdit(def)}
+                  accessibilityLabel={`Edit ${def.label}${
+                    unit ? ` (${unit}):` : ''
+                  }`}
+                  right={<Text style={styles.editAction}>Edit</Text>}
+                  showDivider={i < FIELD_DEFS.length - 1}
+                  chevron={false}
+                />
+              </View>
+            );
+          })}
         </Card>
 
-        {/* Coaching capability toggle — every user can become a coach. */}
+        {/* Measurement units */}
+        <SectionHeader title="Units" />
+        <Card padding={spacing.lg}>
+          <View style={styles.unitRow}>
+            <Text style={styles.unitRowLabel}>Weight</Text>
+            <View style={styles.unitChoices}>
+              {['kg', 'lb'].map(u => (
+                <View key={u} style={styles.unitChoiceWrap}>
+                  <Pill
+                    variant={weightUnit === u ? 'solid' : 'outline'}
+                    color="red"
+                    onPress={() => changeUnit('weightUnit', u)}
+                    accessibilityLabel={`Weight in ${
+                      u === 'kg' ? 'kilograms' : 'pounds'
+                    }`}>
+                    {u}
+                  </Pill>
+                </View>
+              ))}
+            </View>
+          </View>
+          <View style={styles.unitDivider} />
+          <View style={styles.unitRow}>
+            <Text style={styles.unitRowLabel}>Height</Text>
+            <View style={styles.unitChoices}>
+              {['cm', 'in'].map(u => (
+                <View key={u} style={styles.unitChoiceWrap}>
+                  <Pill
+                    variant={heightUnit === u ? 'solid' : 'outline'}
+                    color="red"
+                    onPress={() => changeUnit('heightUnit', u)}
+                    accessibilityLabel={`Height in ${
+                      u === 'cm' ? 'centimetres' : 'inches'
+                    }`}>
+                    {u}
+                  </Pill>
+                </View>
+              ))}
+            </View>
+          </View>
+        </Card>
+
+        {/* Coaching capability toggle - every user can become a coach. */}
         <SectionHeader title="Coaching" />
         <Card padding={spacing.lg} style={styles.coachingCard}>
           <View style={styles.coachingRow}>
@@ -645,7 +610,7 @@ const ProfileScreen = () => {
           </View>
         </Card>
 
-        {/* Coach link — every user can have a coach. */}
+        {/* Coach link - every user can have a coach. */}
         <>
             <SectionHeader title="My coach" />
             <Card padding={0}>
@@ -678,6 +643,52 @@ const ProfileScreen = () => {
                       onPress={openCoachModal}
                       accessibilityLabel="Change coach"
                       chevron={false}
+                      showDivider
+                    />
+                  </View>
+                  <View style={styles.rowOuter}>
+                    <View style={styles.permWrap}>
+                      <Text style={styles.permLabel}>Coach access</Text>
+                      <View style={styles.permChoices}>
+                        {[
+                          {key: 'view', label: 'View only'},
+                          {key: 'comment', label: 'Can suggest'},
+                        ].map(opt => (
+                          <View key={opt.key} style={styles.permChoiceWrap}>
+                            <Pill
+                              variant={
+                                coachPermission === opt.key ? 'solid' : 'outline'
+                              }
+                              color="red"
+                              onPress={() => changeCoachPermission(opt.key)}
+                              accessibilityLabel={`Coach access: ${opt.label}`}>
+                              {opt.label}
+                            </Pill>
+                          </View>
+                        ))}
+                        <View style={styles.permChoiceWrap}>
+                          <Pill
+                            variant="ghost"
+                            color="neutral"
+                            accessibilityLabel="Coach edit access, coming soon">
+                            Edit (soon)
+                          </Pill>
+                        </View>
+                      </View>
+                      <Text style={styles.permHint}>
+                        {coachPermission === 'comment'
+                          ? 'Your coach can suggest changes you approve. They cannot edit your data directly.'
+                          : 'Your coach can view your fleet and history only.'}
+                      </Text>
+                    </View>
+                  </View>
+                  <View style={styles.rowOuter}>
+                    <ListItem
+                      icon="bulb-outline"
+                      title="Coach suggestions"
+                      subtitle="Review changes your coach suggested"
+                      onPress={() => navigation.navigate('Suggestions')}
+                      accessibilityLabel="Coach suggestions"
                       showDivider
                     />
                   </View>
@@ -732,8 +743,12 @@ const ProfileScreen = () => {
                 <View style={styles.rowOuter}>
                   <ListItem
                     icon="add-circle-outline"
-                    title="Add a coach"
-                    subtitle="Send your coach a request"
+                    title={isCoach ? 'Add your own coach' : 'Add a coach'}
+                    subtitle={
+                      isCoach
+                        ? 'Link a coach who advises you - separate from the athletes you coach'
+                        : 'Send a request to the coach who trains you'
+                    }
                     onPress={openCoachModal}
                     accessibilityLabel="Add a coach"
                   />
@@ -742,106 +757,22 @@ const ProfileScreen = () => {
             </Card>
         </>
 
-        {/* Account */}
-        <SectionHeader title="Account" />
+        {/* Share */}
+        <SectionHeader title="Share" />
         <Card padding={0}>
-          <View style={styles.rowOuter}>
-            <ListItem
-              icon="key-outline"
-              title="Change password"
-              onPress={() => setPwModalOpen(true)}
-              accessibilityLabel="Change password"
-              showDivider
-            />
-          </View>
           <View style={styles.rowOuter}>
             <ListItem
               icon="share-outline"
               title="Share my fleet"
-              subtitle={sharing ? 'Preparing image…' : 'Send a snapshot of your skis'}
+              subtitle={
+                sharing ? 'Preparing image…' : 'Send a snapshot of your skis'
+              }
               onPress={handleShareFleet}
               accessibilityLabel="Share my fleet"
-              showDivider
-            />
-          </View>
-          <View style={styles.rowOuter}>
-            <ListItem
-              icon="log-out-outline"
-              iconColor={colors.red}
-              title="Sign out"
-              destructive
-              onPress={handleSignOut}
-              accessibilityLabel="Sign out"
               chevron={false}
             />
           </View>
         </Card>
-
-        {/* Privacy & data — export + legal + issue reporting */}
-        <SectionHeader title="Privacy & data" />
-        <Card padding={0}>
-          <View style={styles.rowOuter}>
-            <ListItem
-              icon="download-outline"
-              title="Export my data"
-              subtitle={
-                exporting ? 'Preparing export…' : 'Download everything as JSON'
-              }
-              onPress={handleExportData}
-              accessibilityLabel="Export my data"
-              showDivider
-            />
-          </View>
-          <View style={styles.rowOuter}>
-            <ListItem
-              icon="shield-checkmark-outline"
-              title="Privacy Policy"
-              onPress={() => openLegal('/privacy')}
-              accessibilityLabel="Privacy Policy"
-              showDivider
-            />
-          </View>
-          <View style={styles.rowOuter}>
-            <ListItem
-              icon="document-text-outline"
-              title="Terms of Service"
-              onPress={() => openLegal('/terms')}
-              accessibilityLabel="Terms of Service"
-              showDivider
-            />
-          </View>
-          <View style={styles.rowOuter}>
-            <ListItem
-              icon="mail-outline"
-              title="Report a problem"
-              onPress={() =>
-                Linking.openURL(
-                  'mailto:support@nordicfleet.com?subject=NordicFleet%20issue%20report',
-                ).catch(() => {})
-              }
-              accessibilityLabel="Report a problem"
-              chevron={false}
-            />
-          </View>
-        </Card>
-
-        {/* Danger zone — App Store guideline 5.1.1(v): account deletion */}
-        <SectionHeader title="Danger zone" />
-        <Card padding={0}>
-          <View style={styles.rowOuter}>
-            <ListItem
-              icon="trash-outline"
-              iconColor={colors.red}
-              title="Delete account"
-              subtitle="Permanently removes all your data"
-              destructive
-              onPress={handleDeleteAccountTap}
-              accessibilityLabel="Delete account"
-              chevron={false}
-            />
-          </View>
-        </Card>
-
       </ScrollView>
 
       {/* Edit-field modal */}
@@ -866,7 +797,11 @@ const ProfileScreen = () => {
                   value={tempValue}
                   onChangeText={setTempValue}
                   keyboardType={keyboardTypeFor(editField.key)}
-                  suffix={isNumeric ? (editField.suffix || '').trim() : undefined}
+                  suffix={
+                    isNumeric
+                      ? unitFor(editField, weightUnit, heightUnit)
+                      : undefined
+                  }
                   autoCapitalize={
                     isNumeric
                       ? 'none'
@@ -903,131 +838,6 @@ const ProfileScreen = () => {
         </KeyboardAvoidingView>
       </Modal>
 
-      {/* Password modal */}
-      <Modal
-        animationType="fade"
-        transparent
-        visible={pwModalOpen}
-        onRequestClose={() => setPwModalOpen(false)}>
-        <KeyboardAvoidingView
-          style={styles.modalBackdrop}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Change password</Text>
-            <Input
-              label="Current password"
-              icon="lock-closed-outline"
-              value={currentPw}
-              onChangeText={setCurrentPw}
-              secureTextEntry
-              autoCapitalize="none"
-              autoComplete="current-password"
-              textContentType="password"
-              autoCorrect={false}
-            />
-            <View style={styles.modalFieldSpacer} />
-            <Input
-              label="New password"
-              icon="key-outline"
-              value={newPw}
-              onChangeText={setNewPw}
-              secureTextEntry
-              autoCapitalize="none"
-              autoComplete="new-password"
-              textContentType="newPassword"
-              passwordRules="minlength: 8; required: lower; required: upper; required: digit;"
-              autoCorrect={false}
-              error={pwError || undefined}
-            />
-            <View style={styles.modalActions}>
-              <View style={styles.modalActionCell}>
-                <Button
-                  variant="ghost"
-                  size="md"
-                  fullWidth
-                  disabled={pwSubmitting}
-                  onPress={() => {
-                    setPwModalOpen(false);
-                    setCurrentPw('');
-                    setNewPw('');
-                    setPwError('');
-                  }}>
-                  Cancel
-                </Button>
-              </View>
-              <View style={styles.modalActionCell}>
-                <Button
-                  variant="primary"
-                  size="md"
-                  fullWidth
-                  icon="checkmark"
-                  loading={pwSubmitting}
-                  onPress={handlePasswordSubmit}>
-                  Update
-                </Button>
-              </View>
-            </View>
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
-
-      {/* Delete-account reauth modal */}
-      <Modal
-        animationType="fade"
-        transparent
-        visible={deleteModalOpen}
-        onRequestClose={closeDeleteModal}>
-        <KeyboardAvoidingView
-          style={styles.modalBackdrop}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Confirm deletion</Text>
-            <Text style={styles.modalSubtitle}>
-              For security, please enter your password. After deletion your
-              data cannot be recovered.
-            </Text>
-            <View style={styles.modalFieldSpacer} />
-            <Input
-              label="Password"
-              icon="lock-closed-outline"
-              value={deletePw}
-              onChangeText={setDeletePw}
-              secureTextEntry
-              autoCapitalize="none"
-              autoComplete="current-password"
-              textContentType="password"
-              autoCorrect={false}
-              error={deleteError || undefined}
-              editable={!deleteSubmitting}
-            />
-            <View style={styles.modalActions}>
-              <View style={styles.modalActionCell}>
-                <Button
-                  variant="ghost"
-                  size="md"
-                  fullWidth
-                  disabled={deleteSubmitting}
-                  onPress={closeDeleteModal}>
-                  Cancel
-                </Button>
-              </View>
-              <View style={styles.modalActionCell}>
-                <Button
-                  variant="danger"
-                  size="md"
-                  fullWidth
-                  icon="trash-outline"
-                  loading={deleteSubmitting}
-                  onPress={submitDeleteAccount}
-                  accessibilityLabel="Confirm delete account">
-                  Delete
-                </Button>
-              </View>
-            </View>
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
-
       {/* Add / change coach modal */}
       <Modal
         animationType="fade"
@@ -1039,11 +849,15 @@ const ProfileScreen = () => {
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>
-              {profile?.coachId ? 'Change coach' : 'Add a coach'}
+              {profile?.coachId
+                ? 'Change coach'
+                : isCoach
+                ? 'Add your own coach'
+                : 'Add a coach'}
             </Text>
             <Text style={styles.modalSubtitle}>
-              Enter your coach's email. They need to have signed up for a
-              NordicFleet coach account first.
+              Enter the email of the coach who advises you. They need to have
+              signed up for a NordicFleet coach account first.
             </Text>
             <View style={styles.modalFieldSpacer} />
             <Input
@@ -1157,6 +971,54 @@ const styles = StyleSheet.create({
     ...typography.bodySm,
     color: colors.red,
     fontWeight: '600',
+  },
+  unitRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  unitRowLabel: {
+    ...typography.bodyLg,
+    color: colors.textPrimary,
+  },
+  unitChoices: {
+    flexDirection: 'row',
+  },
+  unitChoiceWrap: {
+    marginLeft: spacing.sm,
+  },
+  unitDivider: {
+    height: 1,
+    backgroundColor: colors.border,
+    marginVertical: spacing.md,
+  },
+  permWrap: {
+    paddingVertical: spacing.md,
+  },
+  permLabel: {
+    ...typography.bodyLg,
+    color: colors.textPrimary,
+    marginBottom: spacing.sm,
+  },
+  permChoices: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  permChoiceWrap: {
+    marginRight: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  permHint: {
+    ...typography.bodySm,
+    color: colors.textTertiary,
+    marginTop: spacing.xs,
+  },
+  gearButton: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: -spacing.sm,
   },
 
   modalBackdrop: {

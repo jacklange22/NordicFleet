@@ -15,7 +15,7 @@ import {colors, radius, spacing, typography} from '../../theme';
 import Input from './Input';
 
 /**
- * WaxPicker — typeahead-style input bound to the wax dictionary.
+ * WaxPicker - typeahead-style input bound to the wax dictionary.
  *
  * Props:
  *   value         { id?: string|null, name: string }
@@ -27,7 +27,7 @@ import Input from './Input';
  *   label         visible label (defaults to "Wax")
  *   placeholder   placeholder for the free-text fallback
  *
- * The dictionary only ever SUGGESTS — it never blocks. The "Use as
+ * The dictionary only ever SUGGESTS - it never blocks. The "Use as
  * typed" row always lets the coach commit a wax that exists nowhere in
  * the database, in any category.
  *

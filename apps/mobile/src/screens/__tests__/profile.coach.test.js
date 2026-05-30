@@ -137,6 +137,36 @@ describe('ProfileScreen — add/change/remove coach', () => {
     expect(stored.coachId).toBeNull();
   });
 
+  // Issue #3: a coach reading their own profile should not see a bare
+  // "Add a coach" that reads like "add a coach to my team". The athlete
+  // coach-link is worded as the coach who advises *them*.
+  it('athlete sees the plain "Add a coach" wording', async () => {
+    authMock.__setCurrentUser({uid: 'a1', email: 'a@b.com'});
+    firestoreMock.__seedDoc('users/a1', {
+      email: 'a@b.com',
+      role: 'athlete',
+      coachId: null,
+    });
+    const tree = renderProfile();
+    await waitFor(() => tree.getByLabelText('Add a coach'));
+    expect(tree.getByText('Add a coach')).toBeTruthy();
+    expect(tree.queryByText('Add your own coach')).toBeNull();
+  });
+
+  it('coach sees "Add your own coach" (own advisor, not their team)', async () => {
+    authMock.__setCurrentUser({uid: 'c1', email: 'coach@b.com'});
+    firestoreMock.__seedDoc('users/c1', {
+      email: 'coach@b.com',
+      role: 'coach',
+      coachId: null,
+    });
+    const tree = renderProfile();
+    // Same accessibility label (so the flow is unchanged) but clearer text.
+    await waitFor(() => tree.getByLabelText('Add a coach'));
+    expect(tree.getByText('Add your own coach')).toBeTruthy();
+    expect(tree.queryByText('Add a coach')).toBeNull();
+  });
+
   it('with linked coach (accepted request), "Remove coach" clears the coachId', async () => {
     authMock.__setCurrentUser({uid: 'a1', email: 'a@b.com'});
     seedCoach('c1');

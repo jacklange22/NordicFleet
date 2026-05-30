@@ -6,6 +6,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // Drive the profile + user through mocks so we can flip isCoach.
 let mockUser = {uid: 'u1'};
 let mockProfile = {uid: 'u1', isCoach: true};
+// When true, the profile subscription does NOT fire synchronously; the test
+// captures the callback (mockProfileCb) and delivers the profile by hand —
+// reproducing the real-device race where AsyncStorage restores the mode
+// before the Firestore profile (and isCoach) arrives.
+let mockDeferProfile = false;
+let mockProfileCb = null;
 
 jest.mock('../AuthContext', () => ({
   useAuth: () => ({user: mockUser}),
@@ -13,7 +19,11 @@ jest.mock('../AuthContext', () => ({
 
 jest.mock('../../services/userService', () => ({
   subscribeProfile: (uid, cb) => {
-    cb(mockProfile);
+    if (mockDeferProfile) {
+      mockProfileCb = cb;
+    } else {
+      cb(mockProfile);
+    }
     return () => {};
   },
   backfillCoachCapability: jest.fn(() => Promise.resolve(true)),
@@ -53,6 +63,8 @@ const renderProbe = () =>
 beforeEach(async () => {
   mockUser = {uid: 'u1'};
   mockProfile = {uid: 'u1', isCoach: true};
+  mockDeferProfile = false;
+  mockProfileCb = null;
   if (AsyncStorage.__reset) {
     AsyncStorage.__reset();
   }
@@ -132,6 +144,68 @@ describe('ModeContext', () => {
     await waitFor(() => {
       expect(tree.getByTestId('mode').props.children).toBe('personal');
     });
+  });
+
+  it('a non-coach with a stale waxtruck mode gets snapped back to personal', async () => {
+    await AsyncStorage.setItem(STORAGE_KEY, 'waxtruck');
+    mockProfile = {uid: 'u1', isCoach: false};
+    const tree = renderProbe();
+    await waitFor(() => {
+      expect(tree.getByTestId('mode').props.children).toBe('personal');
+    });
+  });
+
+  it('a corrupt stored mode resets to personal and clears storage', async () => {
+    await AsyncStorage.setItem(STORAGE_KEY, 'not-a-real-mode');
+    mockProfile = {uid: 'u1', isCoach: true};
+    const tree = renderProbe();
+    await act(async () => {});
+    await act(async () => {});
+    // Invalid value never applied — stays personal.
+    expect(tree.getByTestId('mode').props.children).toBe('personal');
+    // And the garbage value is cleared from storage.
+    expect(await AsyncStorage.getItem(STORAGE_KEY)).toBeNull();
+  });
+
+  it('a coach with a stored waxtruck mode keeps it after async profile load', async () => {
+    mockDeferProfile = true;
+    await AsyncStorage.setItem(STORAGE_KEY, 'waxtruck');
+    const tree = renderProbe();
+    await act(async () => {});
+    await act(async () => {});
+    await act(async () => {});
+    expect(await AsyncStorage.getItem(STORAGE_KEY)).toBe('waxtruck');
+    await act(async () => {
+      mockProfileCb({uid: 'u1', isCoach: true});
+    });
+    expect(tree.getByTestId('mode').props.children).toBe('waxtruck');
+  });
+
+  it('keeps a coach in their persisted mode while the profile is still loading', async () => {
+    // Reproduce the cold-start race: the persisted mode restores from
+    // AsyncStorage before the (deferred) Firestore profile resolves, so
+    // isCoach is still false at restore time. The persisted mode must NOT be
+    // overwritten — otherwise a coach gets clobbered to personal every launch.
+    mockDeferProfile = true;
+    await AsyncStorage.setItem(STORAGE_KEY, 'coaching');
+    const tree = renderProbe();
+
+    // Flush mount effects: deferred profile-subscribe, AsyncStorage restore,
+    // and the snap-back effect. The buggy version writes 'personal' here.
+    await act(async () => {});
+    await act(async () => {});
+    await act(async () => {});
+    // Profile hasn't arrived, so the UI safely shows personal — but the
+    // persisted value is intact, not clobbered.
+    expect(tree.getByTestId('isCoach').props.children).toBe('false');
+    expect(await AsyncStorage.getItem(STORAGE_KEY)).toBe('coaching');
+
+    // Now the coach profile arrives → coaching mode surfaces.
+    await act(async () => {
+      mockProfileCb({uid: 'u1', isCoach: true});
+    });
+    expect(tree.getByTestId('mode').props.children).toBe('coaching');
+    expect(await AsyncStorage.getItem(STORAGE_KEY)).toBe('coaching');
   });
 
   it('derives isCoach from a legacy role-only profile', async () => {

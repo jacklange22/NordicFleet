@@ -14,7 +14,7 @@ function mapError(code) {
     case 'auth/user-not-found':
       return 'Wrong email or password';
     case 'auth/network-request-failed':
-      return 'No connection — please try again';
+      return 'No connection - please try again';
     case 'auth/too-many-requests':
       return 'Too many attempts, try again in a minute';
     default:

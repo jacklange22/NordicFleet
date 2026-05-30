@@ -1,0 +1,23 @@
+=== WEB APP (https://nordicfleet-web.vercel.app) ===
+  200  /
+  200  /login
+  200  /signup
+  200  /forgot-password
+  200  /home
+  200  /import
+  200  /log/wax
+  200  /log/test
+  200  /ski/new
+  200  /wax-truck
+  200  /profile
+  200  /messages
+  200  /coach
+
+=== MARKETING (https://marketing-black-eight.vercel.app) ===
+  200  /
+  200  /features
+  200  /coaches
+  200  /pricing
+  200  /about
+  200  /privacy
+  200  /terms

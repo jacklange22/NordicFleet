@@ -1,6 +1,6 @@
 'use client';
 
-// Wax Truck — the coach's list of head-to-head wax tests. Mirrors the
+// Wax Truck - the coach's list of head-to-head wax tests. Mirrors the
 // mobile waxTruck screen: live list newest-first, status + progress,
 // and a new-test CTA. Empty state when there are none.
 

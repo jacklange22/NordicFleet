@@ -38,7 +38,7 @@ Evidence keys: `core/<file>` = packages/core test; `mobile/<file>` = apps/mobile
 | 17 | Coach sends message / advisory | Rough | Rough | `mobile/messageService.test.js`, `core/messageOperations`+`advisoryOperations`; advisory **compose iOS-only** | Med — never live/human; web has no advisory composer | Send a real message both ways; decide on web advisory composer |
 | 18 | Athlete reads message | Rough | Rough | `messageService.subscribe*`; unread badge in TabBar/SiteHeader | Med — never human-driven | Manual: coach sends → athlete sees badge + reads |
 | 19 | Data export (JSON) | Rough | Rough | `core/dataExport.test.js` (8); mobile share-sheet glue + web Blob download, neither human-tested | Med | Export on both platforms, open the file |
-| 20 | Delete account | Ready | Rough | `mobile/userService.deleteAccount.test.js`, `mobile/profile.deleteAccount.test.js`, `script/verify-data-integrity` delete section (live); web `deleteAccount` added but not human-tested | Med — destructive; web path unproven | Manual web delete with a throwaway account |
+| 20 | Delete account | Ready | Rough | `mobile/userService.deleteAccount.test.js`, `mobile/settings.deleteAccount.test.js` (now in the Settings screen), `script/verify-data-integrity` delete section (live); web `deleteAccount` added but not human-tested | Med — destructive; web path unproven | Manual web delete with a throwaway account |
 
 ## Summary
 
@@ -46,6 +46,16 @@ Evidence keys: `core/<file>` = packages/core test; `mobile/<file>` = apps/mobile
 - **iOS** is generally a notch ahead of **web** because it has the test suite (`apps/mobile`, 261 tests) and the native sign-in was just fixed + verified. Web relies on `web:build` + live REST scripts and has **no unit tests**.
 - **Highest-risk flows for beta:** Wax Truck (#11–13, brand-new, never human-used), and the cross-account coach messaging/advisory loop (#17–18, only mock-tested). These are exactly what a coach beta tester will reach for, so they need a manual two-account pass before any coach is invited.
 - **Web parity gaps:** no advisory composer on web (#17); web has no automated tests at all.
+
+## Known follow-ups (deferred, not beta-blocking)
+
+- **Share = snapshot only (issue #6).** Sharing a fleet/ski now sends the
+  screenshot *plus* an invite caption with a CTA + `nordicfleet.com` link
+  (`shareService.fleetShareMessage` / `skiShareMessage`). There are **no
+  per-ski / per-fleet web deep links yet** — a recipient lands on the
+  marketing site, not the shared item. Building real deep links (web route
+  that renders a public ski/fleet view + universal links) is the proper
+  fix and is deferred until beta demand justifies it.
 
 ## What "Ready for 5 beta users" needs from this table
 

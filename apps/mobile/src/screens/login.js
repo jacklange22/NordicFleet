@@ -23,7 +23,7 @@ const mapAuthError = code => {
     case 'auth/invalid-email':
       return 'Please enter a valid email';
     case 'auth/network-request-failed':
-      return 'No connection — please try again';
+      return 'No connection - please try again';
     case 'auth/too-many-requests':
       return 'Too many attempts, try again in a minute';
     case 'auth/user-disabled':
@@ -31,7 +31,7 @@ const mapAuthError = code => {
     case 'auth/keychain-error':
       // The device couldn't reach the secure keychain Firebase Auth uses
       // to persist the session. Usually transient.
-      return "Couldn't access secure storage — restart the app and try again";
+      return "Couldn't access secure storage - restart the app and try again";
     default:
       return 'Sign-in failed, please try again';
   }
@@ -78,6 +78,7 @@ const LoginScreen = ({navigation}) => {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView
           contentContainerStyle={styles.scroll}
+          keyboardDismissMode="on-drag"
           keyboardShouldPersistTaps="handled">
           <View style={styles.intro}>
             <Text style={styles.title}>Welcome back</Text>

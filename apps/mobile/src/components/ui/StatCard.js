@@ -3,7 +3,7 @@ import {View, Text, StyleSheet} from 'react-native';
 import {colors, radius, spacing, typography} from '../../theme';
 
 /**
- * StatCard — the big-number-and-label primitive that defines the Whoop
+ * StatCard - the big-number-and-label primitive that defines the Whoop
  * dashboard look. Value is huge, label is tiny caps below.
  *
  * Props:

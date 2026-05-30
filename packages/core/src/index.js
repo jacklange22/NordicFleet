@@ -17,4 +17,5 @@ module.exports = {
   ...require('./constants'),
   ...require('./services'),
   ...require('./parsers'),
+  ...require('./units'),
 };

@@ -8,6 +8,7 @@ import React, {
 } from 'react';
 import {auth} from '../services/firebase';
 import {createProfile} from '../services/userService';
+import {trace} from '../services/devTrace';
 
 const AuthContext = createContext({
   user: null,
@@ -23,7 +24,9 @@ export const AuthProvider = ({children}) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    trace('auth listener attached');
     const unsub = auth().onAuthStateChanged(u => {
+      trace('auth resolved', {signedIn: !!u});
       setUser(u || null);
       setLoading(false);
     });
@@ -41,7 +44,7 @@ export const AuthProvider = ({children}) => {
     try {
       await createProfile(cred.user.uid, {email: cred.user.email});
     } catch {
-      // Swallow — surfaceable via subscribeProfile on next mount.
+      // Swallow - surfaceable via subscribeProfile on next mount.
     }
   }, []);
 

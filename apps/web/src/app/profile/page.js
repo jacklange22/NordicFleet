@@ -15,6 +15,15 @@ import {
   deriveIsCoach,
   dataExportToJSON,
   dataExportFilename,
+  formatWeight,
+  formatHeight,
+  weightFromMetric,
+  weightToMetric,
+  heightFromMetric,
+  heightToMetric,
+  normalizeWeightUnit,
+  normalizeHeightUnit,
+  buildFeedbackMailto,
 } from '@nordicfleet/core';
 import {
   subscribeProfile,
@@ -24,9 +33,7 @@ import {
   exportUserData,
   deleteAccount,
 } from '@/lib/firestore';
-
-const MARKETING_URL =
-  process.env.NEXT_PUBLIC_MARKETING_URL || 'https://nordicfleet.com';
+import {MARKETING_URL, FEEDBACK_EMAIL} from '@/lib/urls';
 
 export default function ProfilePage() {
   return (
@@ -116,6 +123,22 @@ function Inner() {
 
   const isCoach = deriveIsCoach(profile);
 
+  // Display units for body metrics (value stays metric). Default kg/cm.
+  const weightUnit = normalizeWeightUnit(profile?.weightUnit);
+  const heightUnit = normalizeHeightUnit(profile?.heightUnit);
+
+  const changeUnit = async (field, value) => {
+    if (!user) return;
+    try {
+      await updateProfile(user.uid, {[field]: value});
+    } catch (err) {
+      toast.error({
+        title: 'Update failed',
+        body: String((err && err.message) || err),
+      });
+    }
+  };
+
   const toggleCoaching = async next => {
     if (!user) return;
     if (!next) {
@@ -180,18 +203,36 @@ function Inner() {
           </button>
         </div>
         <Card className="divide-y divide-border p-0 mb-8">
-          <Row label="Display name" value={profile?.name || '—'} />
+          <Row label="Display name" value={profile?.name || '-'} />
           <Row
             label="Weight"
-            value={profile?.weight ? `${profile.weight} kg` : '—'}
+            value={formatWeight(profile?.weight, weightUnit) || '-'}
           />
           <Row
             label="Height"
-            value={profile?.height ? `${profile.height} cm` : '—'}
+            value={formatHeight(profile?.height, heightUnit) || '-'}
           />
-          <Row label="Team" value={profile?.team || '—'} />
-          <Row label="Location" value={profile?.location || '—'} />
+          <Row label="Team" value={profile?.team || '-'} />
+          <Row label="Location" value={profile?.location || '-'} />
           <Row label="Skis" value={`${skis.length}`} />
+        </Card>
+
+        <h3 className="text-xs uppercase tracking-wider text-text-tertiary mb-3">
+          Units
+        </h3>
+        <Card className="divide-y divide-border p-0 mb-8">
+          <UnitRow
+            label="Weight"
+            options={['kg', 'lb']}
+            value={weightUnit}
+            onChange={u => changeUnit('weightUnit', u)}
+          />
+          <UnitRow
+            label="Height"
+            options={['cm', 'in']}
+            value={heightUnit}
+            onChange={u => changeUnit('heightUnit', u)}
+          />
         </Card>
 
         <h3 className="text-xs uppercase tracking-wider text-text-tertiary mb-3">
@@ -245,8 +286,8 @@ function Inner() {
             <div>
               <p className="text-white font-semibold">Export my data</p>
               <p className="text-text-secondary text-sm mt-1 max-w-prose">
-                Download everything in your account — profile, skis, wax
-                logs, test logs, and wax tests — as a JSON file.
+                Download everything in your account - profile, skis, wax
+                logs, test logs, and wax tests - as a JSON file.
               </p>
             </div>
             <Button
@@ -273,7 +314,12 @@ function Inner() {
               Terms of Service ↗
             </a>
             <a
-              href="mailto:support@nordicfleet.com?subject=NordicFleet%20issue%20report"
+              href={
+                buildFeedbackMailto(FEEDBACK_EMAIL, {
+                  kind: 'bug',
+                  platform: 'web',
+                }) || MARKETING_URL
+              }
               className="text-text-secondary hover:text-white">
               Report a problem ↗
             </a>
@@ -330,6 +376,8 @@ function Inner() {
         open={editing}
         onClose={() => setEditing(false)}
         profile={profile}
+        weightUnit={weightUnit}
+        heightUnit={heightUnit}
         onSaved={() => {
           toast.success({title: 'Profile updated'});
           setEditing(false);
@@ -349,7 +397,40 @@ function Row({label, value}) {
   );
 }
 
-function EditProfileModal({open, onClose, profile, onSaved, onError}) {
+function UnitRow({label, options, value, onChange}) {
+  return (
+    <div className="flex items-center justify-between px-4 py-3">
+      <span className="text-text-secondary">{label}</span>
+      <div className="flex gap-2">
+        {options.map(u => (
+          <button
+            key={u}
+            type="button"
+            aria-pressed={value === u}
+            onClick={() => onChange(u)}
+            className={
+              'px-3 py-1 rounded-full border text-sm transition-colors ' +
+              (value === u
+                ? 'bg-red border-red text-white'
+                : 'border-border text-text-secondary hover:text-white')
+            }>
+            {u}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function EditProfileModal({
+  open,
+  onClose,
+  profile,
+  weightUnit,
+  heightUnit,
+  onSaved,
+  onError,
+}) {
   const {user} = useAuth();
   const [name, setName] = useState('');
   const [weight, setWeight] = useState('');
@@ -358,26 +439,28 @@ function EditProfileModal({open, onClose, profile, onSaved, onError}) {
   const [location, setLocation] = useState('');
   const [saving, setSaving] = useState(false);
 
-  // Re-seed every time the modal opens.
+  // Re-seed every time the modal opens. weight/height are shown in the
+  // user's display unit (converted from the stored metric value).
   useEffect(() => {
     if (!open) return;
     setName(profile?.name || '');
-    setWeight(profile?.weight != null ? String(profile.weight) : '');
-    setHeight(profile?.height != null ? String(profile.height) : '');
+    const w = weightFromMetric(profile?.weight, weightUnit);
+    const h = heightFromMetric(profile?.height, heightUnit);
+    setWeight(w === null ? '' : String(w));
+    setHeight(h === null ? '' : String(h));
     setTeam(profile?.team || '');
     setLocation(profile?.location || '');
-  }, [open, profile]);
+  }, [open, profile, weightUnit, heightUnit]);
 
   const handleSave = async () => {
     if (!user) return;
     setSaving(true);
     try {
-      const w = weight === '' ? null : Number(weight);
-      const h = height === '' ? null : Number(height);
+      // Convert the entered display values back to metric (kg/cm).
       const partial = {
         name: name.trim() || null,
-        weight: Number.isFinite(w) ? w : null,
-        height: Number.isFinite(h) ? h : null,
+        weight: weight === '' ? null : weightToMetric(weight, weightUnit),
+        height: height === '' ? null : heightToMetric(height, heightUnit),
         team: team.trim() || null,
         location: location.trim() || null,
       };
@@ -420,14 +503,14 @@ function EditProfileModal({open, onClose, profile, onSaved, onError}) {
             label="Weight"
             value={weight}
             onChange={setWeight}
-            suffix="kg"
+            suffix={weightUnit}
             inputMode="numeric"
           />
           <FormInput
             label="Height"
             value={height}
             onChange={setHeight}
-            suffix="cm"
+            suffix={heightUnit}
             inputMode="numeric"
           />
         </div>

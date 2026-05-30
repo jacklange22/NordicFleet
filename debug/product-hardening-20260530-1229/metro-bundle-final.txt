@@ -1,0 +1,8 @@
+                Welcome to Metro v0.81.5
+              Fast - Scalable - Integrated
+
+
+info Writing bundle output to: /tmp/nordicfleet-ios-debug.jsbundle
+info Done writing bundle output
+info Copying 10 asset files
+info Done copying assets

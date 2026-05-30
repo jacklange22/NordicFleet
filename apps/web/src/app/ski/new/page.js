@@ -45,7 +45,7 @@ function Inner() {
         </div>
         <h1 className="text-4xl font-bold tracking-tight mb-2">Add a ski</h1>
         <p className="text-text-secondary mb-6 max-w-prose">
-          Fill out what you know. Brand, model, build details — all optional
+          Fill out what you know. Brand, model, build details - all optional
           except for the basics.
         </p>
         <Card>

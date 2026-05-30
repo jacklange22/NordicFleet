@@ -1,0 +1,6 @@
+DEVELOPMENT_TEAM: BW4688H3JP (Debug+Release) ✅
+CODE_SIGN_ENTITLEMENTS: set both configs ✅
+keychain-access-groups: $(AppIdentifierPrefix)com.NordicFleet.app ✅
+app bundle id: com.NordicFleet.app ✅
+GoogleService BUNDLE_ID: com.NordicFleet.app (matches) ✅
+Firebase PROJECT_ID: nordicfleet-11e67 ✅

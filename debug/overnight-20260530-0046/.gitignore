@@ -1,0 +1,5 @@
+# Large raw build logs — kept on disk as evidence, excluded from git to avoid bloat.
+ios-sim-build-before.txt
+ios-sim-build-final.txt
+# Raw device crash dumps are never committed (contain the user's app inventory).
+jetsam/*.ips

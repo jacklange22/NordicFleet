@@ -1,11 +1,29 @@
-// Wax Truck persistence — users/{coachUid}/waxTests/{testId}.
+// Wax Truck persistence - users/{coachUid}/waxTests/{testId}.
 //
 // Validation + bracket shaping live in @nordicfleet/core
 // (buildWaxTestCreatePayload). The service is a thin Firestore wrapper
 // that adds server timestamps.
 
-import {buildWaxTestCreatePayload} from '@nordicfleet/core';
+import {
+  buildWaxTestCreatePayload,
+  serializeBracket,
+  deserializeBracket,
+} from '@nordicfleet/core';
 import {db, firestore} from './firebase';
+
+// The in-memory bracket is Match[][] (array of arrays). Firestore forbids
+// nested arrays, so we serialize the bracket to a rounds-map on every WRITE
+// and restore the array form on every READ. (This was the Wax Truck
+// create-test crash: a nested array can crash RN Firebase natively.)
+const withSerializedBracket = data =>
+  data && data.bracket
+    ? {...data, bracket: serializeBracket(data.bracket)}
+    : data;
+
+const withDeserializedBracket = data =>
+  data && data.bracket
+    ? {...data, bracket: deserializeBracket(data.bracket)}
+    : data;
 
 const waxTestsCollection = uid =>
   db.collection('users').doc(uid).collection('waxTests');
@@ -21,7 +39,7 @@ export async function createWaxTest(uid, data) {
     throw new Error('createWaxTest: uid is required');
   }
   const payload = {
-    ...buildWaxTestCreatePayload(data),
+    ...withSerializedBracket(buildWaxTestCreatePayload(data)),
     createdAt: firestore.FieldValue.serverTimestamp(),
     updatedAt: firestore.FieldValue.serverTimestamp(),
   };
@@ -38,7 +56,10 @@ export async function updateWaxTest(uid, testId, partial) {
     throw new Error('updateWaxTest: uid and testId are required');
   }
   await waxTestDoc(uid, testId).set(
-    {...partial, updatedAt: firestore.FieldValue.serverTimestamp()},
+    {
+      ...withSerializedBracket(partial),
+      updatedAt: firestore.FieldValue.serverTimestamp(),
+    },
     {merge: true},
   );
 }
@@ -48,7 +69,9 @@ export async function getWaxTest(uid, testId) {
     return null;
   }
   const snap = await waxTestDoc(uid, testId).get();
-  return snap.exists ? {id: snap.id, ...snap.data()} : null;
+  return snap.exists
+    ? withDeserializedBracket({id: snap.id, ...snap.data()})
+    : null;
 }
 
 export async function deleteWaxTest(uid, testId) {
@@ -71,7 +94,9 @@ export function subscribeWaxTests(uid, callback) {
     .onSnapshot(
       snap => {
         const out = [];
-        snap.forEach(d => out.push({id: d.id, ...d.data()}));
+        snap.forEach(d =>
+          out.push(withDeserializedBracket({id: d.id, ...d.data()})),
+        );
         callback(out);
       },
       () => callback([]),

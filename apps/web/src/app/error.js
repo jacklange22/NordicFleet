@@ -5,7 +5,9 @@
 // instead of a blank screen. Reports through the PII-safe funnel.
 
 import {useEffect} from 'react';
+import {buildFeedbackMailto} from '@nordicfleet/core';
 import {reportError} from '@/lib/reportError';
+import {MARKETING_URL, FEEDBACK_EMAIL} from '@/lib/urls';
 
 export default function Error({error, reset}) {
   useEffect(() => {
@@ -22,7 +24,7 @@ export default function Error({error, reset}) {
           Something went wrong
         </h1>
         <p className="text-text-secondary mb-8">
-          We hit an unexpected error. You can try again — if it keeps
+          We hit an unexpected error. You can try again - if it keeps
           happening, please let us know.
         </p>
         <div className="flex items-center justify-center gap-3">
@@ -39,7 +41,12 @@ export default function Error({error, reset}) {
           </a>
         </div>
         <a
-          href="mailto:support@nordicfleet.com?subject=NordicFleet%20error%20report"
+          href={
+            buildFeedbackMailto(FEEDBACK_EMAIL, {
+              kind: 'bug',
+              platform: 'web',
+            }) || MARKETING_URL
+          }
           className="block mt-6 text-text-tertiary text-sm hover:text-white">
           Report a problem ↗
         </a>
