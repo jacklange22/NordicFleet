@@ -732,8 +732,12 @@ const ProfileScreen = () => {
                 <View style={styles.rowOuter}>
                   <ListItem
                     icon="add-circle-outline"
-                    title="Add a coach"
-                    subtitle="Send your coach a request"
+                    title={isCoach ? 'Add your own coach' : 'Add a coach'}
+                    subtitle={
+                      isCoach
+                        ? 'Link a coach who advises you — separate from the athletes you coach'
+                        : 'Send a request to the coach who trains you'
+                    }
                     onPress={openCoachModal}
                     accessibilityLabel="Add a coach"
                   />
@@ -1039,11 +1043,15 @@ const ProfileScreen = () => {
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>
-              {profile?.coachId ? 'Change coach' : 'Add a coach'}
+              {profile?.coachId
+                ? 'Change coach'
+                : isCoach
+                ? 'Add your own coach'
+                : 'Add a coach'}
             </Text>
             <Text style={styles.modalSubtitle}>
-              Enter your coach's email. They need to have signed up for a
-              NordicFleet coach account first.
+              Enter the email of the coach who advises you. They need to have
+              signed up for a NordicFleet coach account first.
             </Text>
             <View style={styles.modalFieldSpacer} />
             <Input
