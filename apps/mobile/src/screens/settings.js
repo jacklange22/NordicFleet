@@ -22,6 +22,7 @@ import {auth} from '../services/firebase';
 import {Header, Card, ListItem, SectionHeader, Button, Input} from '../components/ui';
 import {colors, radius, spacing, typography} from '../theme';
 import {BUILD_TAG} from '../buildInfo';
+import {legalUrl} from '../config/urls';
 
 // Settings groups the account-management actions that used to clutter the
 // Profile screen (issue #4): credentials, data/privacy, and the dangerous
@@ -48,9 +49,7 @@ const SettingsScreen = () => {
   const [deleteSubmitting, setDeleteSubmitting] = useState(false);
 
   const openLegal = useCallback(path => {
-    const base =
-      process.env.NORDICFLEET_MARKETING_URL || 'https://nordicfleet.com';
-    Linking.openURL(`${base}${path}`).catch(() => {});
+    Linking.openURL(legalUrl(path)).catch(() => {});
   }, []);
 
   const handleExportData = useCallback(async () => {
@@ -135,19 +134,35 @@ const SettingsScreen = () => {
   }, [currentPw, newPw]);
 
   const handleDeleteAccountTap = useCallback(() => {
-    // Step 1 of 2: a destructive Alert that spells out what is lost.
+    // Step 1 of 3: a destructive Alert that spells out what is lost.
     Alert.alert(
       'Delete your account?',
       'This permanently erases your skis, wax logs, test logs, coaching links, and profile. It cannot be undone and your data cannot be recovered.',
       [
         {text: 'Cancel', style: 'cancel'},
         {
-          text: 'Continue',
+          text: 'Delete forever',
           style: 'destructive',
           onPress: () => {
-            setDeletePw('');
-            setDeleteError('');
-            setDeleteModalOpen(true);
+            // Step 2 of 3: an explicit second confirmation, so a single
+            // accidental tap can never reach the destructive action.
+            Alert.alert(
+              'Are you absolutely sure?',
+              'There is no undo. Your account and everything in it will be gone for good.',
+              [
+                {text: 'Cancel', style: 'cancel'},
+                {
+                  text: 'Yes, delete forever',
+                  style: 'destructive',
+                  onPress: () => {
+                    // Step 3 of 3: password reauth modal.
+                    setDeletePw('');
+                    setDeleteError('');
+                    setDeleteModalOpen(true);
+                  },
+                },
+              ],
+            );
           },
         },
       ],
@@ -304,13 +319,12 @@ const SettingsScreen = () => {
           </View>
         </Card>
 
-        {/* Dev-only build label — proves the phone is running THIS build.
-            Stripped from Release. Bump BUILD_TAG in src/buildInfo.js. */}
-        {__DEV__ && (
-          <Text style={styles.buildTag} accessibilityLabel={`Build ${BUILD_TAG}`}>
-            DEV build · {BUILD_TAG}
-          </Text>
-        )}
+        {/* Build label — proves the phone is running THIS build. Shown in
+            both Debug and Release (the user runs Release on device). Bump
+            BUILD_TAG in src/buildInfo.js per build. */}
+        <Text style={styles.buildTag} accessibilityLabel={`Build ${BUILD_TAG}`}>
+          {__DEV__ ? 'DEV' : 'Build'} · {BUILD_TAG}
+        </Text>
       </ScrollView>
 
       {/* Password modal */}
