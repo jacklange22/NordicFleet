@@ -32,6 +32,7 @@ export const TABBAR_HIDDEN_ROUTES = new Set([
   'ComposeAdvisory',
   'WaxTestSetup',
   'WaxTestRunner',
+  'SuggestChange',
 ]);
 
 /**

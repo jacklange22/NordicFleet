@@ -25,6 +25,8 @@ import RoleSelectScreen from './src/screens/roleSelect.js';
 import CoachDashboardScreen from './src/screens/coachDashboard.js';
 import AthleteDetailScreen from './src/screens/athleteDetail.js';
 import InviteAthletesScreen from './src/screens/inviteAthletes.js';
+import SuggestionsScreen from './src/screens/suggestions.js';
+import SuggestChangeScreen from './src/screens/suggestChange.js';
 import MessagesScreen from './src/screens/messages.js';
 import MessageDetailScreen from './src/screens/messageDetail.js';
 import ComposeAdvisoryScreen from './src/screens/composeAdvisory.js';
@@ -133,6 +135,11 @@ const App = () => {
               <Stack.Screen
                 name="InviteAthletes"
                 component={InviteAthletesScreen}
+              />
+              <Stack.Screen name="Suggestions" component={SuggestionsScreen} />
+              <Stack.Screen
+                name="SuggestChange"
+                component={SuggestChangeScreen}
               />
               <Stack.Screen name="Messages" component={MessagesScreen} />
               <Stack.Screen

@@ -282,6 +282,87 @@ describe('athleteInvites', () => {
   });
 });
 
+describe('fleetSuggestions', () => {
+  const newSuggestion = (overrides = {}) => ({
+    coachUid: 'coach',
+    athleteUid: 'alice',
+    targetType: 'ski',
+    targetId: 'ski1',
+    suggestedChanges: {flex: 80},
+    comment: 'try',
+    status: 'pending',
+    ...overrides,
+  });
+
+  beforeEach(async () => {
+    await seed(async db => {
+      await setDoc(doc(db, 'users/alice'), {
+        email: 'a',
+        role: 'athlete',
+        coachId: 'coach',
+        coachPermission: 'comment',
+      });
+      await setDoc(doc(db, 'fleetSuggestions/s1'), newSuggestion());
+    });
+  });
+
+  it('a comment coach can create a suggestion', async () => {
+    await assertSucceeds(
+      setDoc(doc(asCoach(), 'fleetSuggestions/s2'), newSuggestion()),
+    );
+  });
+
+  it('a view-only coach cannot create a suggestion', async () => {
+    await seed(db =>
+      setDoc(doc(db, 'users/alice'), {
+        email: 'a',
+        role: 'athlete',
+        coachId: 'coach',
+        coachPermission: 'view',
+      }),
+    );
+    await assertFails(
+      setDoc(doc(asCoach(), 'fleetSuggestions/s3'), newSuggestion()),
+    );
+  });
+
+  it('the coach cannot accept/reject - only the athlete can', async () => {
+    await assertFails(
+      updateDoc(doc(asCoach(), 'fleetSuggestions/s1'), {status: 'accepted'}),
+    );
+    await assertSucceeds(
+      updateDoc(doc(asAlice(), 'fleetSuggestions/s1'), {status: 'accepted'}),
+    );
+  });
+
+  it('both parties can read; an unrelated user cannot', async () => {
+    await assertSucceeds(getDoc(doc(asCoach(), 'fleetSuggestions/s1')));
+    await assertSucceeds(getDoc(doc(asAlice(), 'fleetSuggestions/s1')));
+    await assertFails(getDoc(doc(asBob(), 'fleetSuggestions/s1')));
+  });
+
+  it('a coach cannot forge a suggestion as another coach / for a non-athlete', async () => {
+    await assertFails(
+      setDoc(
+        doc(asCoach(), 'fleetSuggestions/s4'),
+        newSuggestion({coachUid: 'someone-else'}),
+      ),
+    );
+    await assertFails(
+      setDoc(doc(asBob(), 'fleetSuggestions/s5'), newSuggestion({coachUid: 'bob'})),
+    );
+  });
+
+  it('rejects an unknown targetType', async () => {
+    await assertFails(
+      setDoc(
+        doc(asCoach(), 'fleetSuggestions/s6'),
+        newSuggestion({targetType: 'profile'}),
+      ),
+    );
+  });
+});
+
 describe('marketingSignups', () => {
   it('anyone can create a valid signup but clients cannot read them', async () => {
     await assertSucceeds(

@@ -684,6 +684,16 @@ const ProfileScreen = () => {
                   </View>
                   <View style={styles.rowOuter}>
                     <ListItem
+                      icon="bulb-outline"
+                      title="Coach suggestions"
+                      subtitle="Review changes your coach suggested"
+                      onPress={() => navigation.navigate('Suggestions')}
+                      accessibilityLabel="Coach suggestions"
+                      showDivider
+                    />
+                  </View>
+                  <View style={styles.rowOuter}>
+                    <ListItem
                       icon="close-circle-outline"
                       iconColor={colors.red}
                       title="Remove coach"

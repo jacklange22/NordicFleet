@@ -15,6 +15,15 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/users/$(athleteUid)).data.coachId == request.auth.uid;
     }
 
+    // True when the requester is the athlete's linked coach AND the athlete
+    // granted at least 'comment'. Default permission (missing field) is
+    // 'view', which fails this check - so a view-only coach cannot suggest.
+    function coachHasComment(athleteUid) {
+      return isCoachOf(athleteUid)
+        && get(/databases/$(database)/documents/users/$(athleteUid))
+             .data.get('coachPermission', 'view') in ['comment', 'edit'];
+    }
+
     match /users/{uid} {
       // Read access:
       //   1. The owner reads their own doc.
@@ -132,6 +141,39 @@ service cloud.firestore {
       // The owning coach can update (e.g. revoke) their own invite.
       allow update: if request.auth != null
         && request.auth.uid == resource.data.coachUid;
+
+      // Keep an audit trail - no client delete.
+      allow delete: if false;
+    }
+
+    // Coach -> athlete fleet suggestions. A coach with comment (or edit)
+    // permission proposes changes; the ATHLETE accepts (applying the change
+    // via their own owner-write on the ski/wax/test doc) or rejects. The coach
+    // never writes the athlete's data directly - view/comment do not loosen
+    // the owner-only write rule on skis/waxLogs/testLogs.
+    match /fleetSuggestions/{suggestionId} {
+      // Both parties read a suggestion they're part of.
+      allow read: if request.auth != null
+        && (request.auth.uid == resource.data.athleteUid
+            || request.auth.uid == resource.data.coachUid);
+
+      // Coach creates a PENDING suggestion for an athlete who granted
+      // comment|edit, for a valid target type.
+      allow create: if request.auth != null
+        && request.auth.uid == request.resource.data.coachUid
+        && request.resource.data.status == 'pending'
+        && request.resource.data.targetType in ['ski', 'waxLog', 'testLog']
+        && coachHasComment(request.resource.data.athleteUid);
+
+      // The athlete (and only the athlete) accepts/rejects their own
+      // suggestion. coachUid + athleteUid + target are immutable on update.
+      allow update: if request.auth != null
+        && request.auth.uid == resource.data.athleteUid
+        && request.resource.data.coachUid == resource.data.coachUid
+        && request.resource.data.athleteUid == resource.data.athleteUid
+        && request.resource.data.targetType == resource.data.targetType
+        && request.resource.data.targetId == resource.data.targetId
+        && request.resource.data.status in ['accepted', 'rejected'];
 
       // Keep an audit trail - no client delete.
       allow delete: if false;

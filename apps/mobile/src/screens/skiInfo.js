@@ -16,6 +16,8 @@ import {useAuth} from '../context/AuthContext';
 import {subscribeSki} from '../services/skiService';
 import {subscribeWaxLogsForSki} from '../services/waxLogService';
 import {subscribeTestLogsForSki} from '../services/testLogService';
+import {getProfile} from '../services/userService';
+import {canComment, normalizePermission} from '@nordicfleet/core';
 import {shareSnapshot, skiShareMessage} from '../services/shareService';
 import SkiShareCard from '../components/share/SkiShareCard';
 import {
@@ -183,6 +185,30 @@ const SkiInfo = ({route, navigation}) => {
     };
   }, [uid, skiId]);
 
+  // In coach view, learn how much access the athlete granted so we only
+  // offer "Suggest a change" when they allowed comment (or edit).
+  const [coachPermission, setCoachPermission] = useState(null);
+  useEffect(() => {
+    if (!isCoachView || !ownerUid) {
+      setCoachPermission(null);
+      return undefined;
+    }
+    let active = true;
+    getProfile(ownerUid)
+      .then(p => {
+        if (active) {
+          setCoachPermission(p?.coachPermission);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [isCoachView, ownerUid]);
+
+  const coachCanSuggest =
+    isCoachView && canComment(normalizePermission(coachPermission));
+
   const techLower = (ski?.technique || '').toLowerCase();
   const accentColor = techLower === 'skate' ? colors.redDim : colors.red;
   const brandModel = [ski?.brand, ski?.model].filter(Boolean).join(' · ');
@@ -309,6 +335,28 @@ const SkiInfo = ({route, navigation}) => {
                 />
               </Pressable>
             </View>
+          ) : coachCanSuggest ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Suggest a change"
+              onPress={() =>
+                navigation.navigate('SuggestChange', {
+                  skiId,
+                  ownerUid,
+                  skiName: ski.name,
+                })
+              }
+              hitSlop={8}
+              style={({pressed}) => [
+                styles.shareBtn,
+                pressed && {opacity: 0.6},
+              ]}>
+              <Ionicons
+                name="bulb-outline"
+                size={22}
+                color={colors.textPrimary}
+              />
+            </Pressable>
           ) : undefined
         }
       />
