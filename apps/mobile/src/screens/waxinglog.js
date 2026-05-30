@@ -168,10 +168,12 @@ const WaxEntryCard = ({ski, entry, onChange, collapsible, expanded, onToggle}) =
 
       {!expanded ? null : (
         <>
+      {/* Read-only ski attributes — ghost variant so they read as quiet
+          labels, NOT like the tappable outline/solid selector pills. */}
       <View style={styles.entryPillRow}>
         {!!ski.technique && (
           <View style={styles.entryPillWrap}>
-            <Pill variant="outline" color="red">
+            <Pill variant="ghost" color="neutral">
               {ski.technique}
             </Pill>
           </View>
