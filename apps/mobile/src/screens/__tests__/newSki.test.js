@@ -53,7 +53,7 @@ describe('AddSkiForm', () => {
 
     // Fill the plain-text fields but leave the brand / technique / type
     // pill selectors untouched. The form should still refuse to save.
-    fireEvent.changeText(tree.getByLabelText('Ski name'), 'My Ski');
+    fireEvent.changeText(tree.getByLabelText('Display name'), 'My Ski');
     fireEvent.changeText(tree.getByLabelText('Model'), 'Speedmax');
     fireEvent.changeText(tree.getByLabelText('Length'), '195');
     fireEvent.changeText(tree.getByLabelText('Flex'), '90');
@@ -90,7 +90,7 @@ describe('AddSkiForm', () => {
     const tree = renderWithAuth(<AddSkiForm />);
     await act(async () => {});
 
-    fireEvent.changeText(tree.getByLabelText('Ski name'), 'My Ski');
+    fireEvent.changeText(tree.getByLabelText('Display name'), 'My Ski');
     // The brand pill row, technique pill row, and type pill row all expose
     // each option as an accessibility-label'd button.
     fireEvent.press(tree.getByLabelText('Fischer'));

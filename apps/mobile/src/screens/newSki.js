@@ -89,7 +89,7 @@ const AddSkiForm = () => {
   const handleSubmit = async () => {
     setError('');
     if (!isValid) {
-      setError('Name, brand, technique, and type are required.');
+      setError('Display name, brand, technique, and type are required.');
       return;
     }
     if (!uid) {
@@ -189,8 +189,13 @@ const AddSkiForm = () => {
             </Card>
           )}
           <SectionHeader title="Identity" />
+          <Text style={styles.sectionHint}>
+            The display name is whatever you'll recognize in your fleet. Brand
+            and model are the manufacturer's — both show on the ski card.
+          </Text>
           <Input
-            label="Ski name"
+            label="Display name"
+            placeholder="e.g. Cold skate, Race classic"
             icon="bookmark-outline"
             value={name}
             onChangeText={setName}
@@ -236,6 +241,7 @@ const AddSkiForm = () => {
           <View style={styles.fieldSpacer} />
           <Input
             label="Model"
+            placeholder="e.g. Speedmax 3D, Redster S9"
             icon="layers-outline"
             value={model}
             onChangeText={setModel}
@@ -389,6 +395,13 @@ const styles = StyleSheet.create({
     color: colors.textTertiary,
     marginBottom: spacing.sm,
     paddingHorizontal: spacing.xs,
+  },
+  sectionHint: {
+    ...typography.bodySm,
+    color: colors.textSecondary,
+    marginBottom: spacing.md,
+    paddingHorizontal: spacing.xs,
+    lineHeight: 18,
   },
   chipRow: {
     flexDirection: 'row',

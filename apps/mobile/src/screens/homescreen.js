@@ -61,18 +61,30 @@ const SkiSeparator = () => <View style={styles.rowSpacer} />;
 const SkiCard = ({ski, onPress}) => {
   const tech = (ski.technique || '').toLowerCase();
   const accentColor = tech === 'skate' ? colors.redDim : colors.red;
+  const name = (ski.name || '').trim();
+  const brand = (ski.brand || '').trim();
+  const model = (ski.model || '').trim();
+  // With a display name, brand·model is a secondary line; without one, the
+  // brand+model reads as the title (space-joined, like a product name).
+  const title = name || [brand, model].filter(Boolean).join(' ') || 'Unnamed ski';
+  const subtitle = name ? [brand, model].filter(Boolean).join(' · ') : '';
   return (
     <Card
       onPress={onPress}
-      accessibilityLabel={`Open ${ski.name || 'ski'}`}
+      accessibilityLabel={`Open ${title}`}
       style={styles.skiCardOuter}
       padding={0}>
       <View style={styles.skiCardBody}>
         <View style={[styles.accentBar, {backgroundColor: accentColor}]} />
         <View style={styles.skiCardMain}>
           <Text style={styles.skiName} numberOfLines={1}>
-            {ski.name || 'Unnamed ski'}
+            {title}
           </Text>
+          {!!subtitle && (
+            <Text style={styles.skiBrandModel} numberOfLines={1}>
+              {subtitle}
+            </Text>
+          )}
           <View style={styles.pillRow}>
             {!!ski.technique && (
               <View style={styles.pillWrap}>
@@ -433,12 +445,17 @@ const styles = StyleSheet.create({
   skiName: {
     ...typography.headingMd,
     color: colors.textPrimary,
-    marginBottom: spacing.sm,
+    marginBottom: 2,
+  },
+  skiBrandModel: {
+    ...typography.bodySm,
+    color: colors.textSecondary,
+    marginBottom: spacing.xs,
   },
   pillRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginTop: 2,
+    marginTop: spacing.xs,
   },
   pillWrap: {
     marginRight: spacing.xs,

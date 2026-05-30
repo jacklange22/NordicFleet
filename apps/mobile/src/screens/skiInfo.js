@@ -185,6 +185,7 @@ const SkiInfo = ({route, navigation}) => {
 
   const techLower = (ski?.technique || '').toLowerCase();
   const accentColor = techLower === 'skate' ? colors.redDim : colors.red;
+  const brandModel = [ski?.brand, ski?.model].filter(Boolean).join(' · ');
 
   const waxLogSubtitle = log => {
     const parts = [];
@@ -302,6 +303,11 @@ const SkiInfo = ({route, navigation}) => {
             <Text style={styles.heroName} numberOfLines={2}>
               {ski.name}
             </Text>
+            {!!brandModel && (
+              <Text style={styles.heroBrandModel} numberOfLines={1}>
+                {brandModel}
+              </Text>
+            )}
             <View style={styles.heroPillRow}>
               {!!ski.technique && (
                 <View style={styles.heroPillWrap}>
@@ -314,13 +320,6 @@ const SkiInfo = ({route, navigation}) => {
                 <View style={styles.heroPillWrap}>
                   <Pill variant="outline" color="red">
                     {ski.type}
-                  </Pill>
-                </View>
-              )}
-              {!!ski.brand && (
-                <View style={styles.heroPillWrap}>
-                  <Pill variant="ghost" color="neutral">
-                    {ski.brand}
                   </Pill>
                 </View>
               )}
@@ -347,9 +346,8 @@ const SkiInfo = ({route, navigation}) => {
                 </Text>
               </View>
             </View>
-            {!!(ski.base || ski.build || ski.model) && (
+            {!!(ski.base || ski.build) && (
               <View style={styles.metaRow}>
-                {!!ski.model && <Text style={styles.metaText}>{ski.model}</Text>}
                 {!!ski.base && (
                   <Text style={styles.metaText}>Base: {ski.base}</Text>
                 )}
@@ -492,6 +490,11 @@ const styles = StyleSheet.create({
   heroName: {
     ...typography.displayLg,
     color: colors.textPrimary,
+    marginBottom: spacing.xs,
+  },
+  heroBrandModel: {
+    ...typography.body,
+    color: colors.textSecondary,
     marginBottom: spacing.md,
   },
   heroPillRow: {

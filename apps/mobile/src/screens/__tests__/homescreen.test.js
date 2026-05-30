@@ -60,6 +60,33 @@ describe('HomeScreen', () => {
     expect(tree.getByText('Carbon S')).toBeTruthy();
   });
 
+  // Issue #8: brand + model were invisible on the card; now they show as a
+  // secondary line under the display name.
+  it('shows brand · model under the display name', async () => {
+    authMock.__setCurrentUser({uid: 'u1', email: 'a@b.com'});
+    firestoreMock.__seedDoc('users/u1/skis/a', {
+      name: 'Cold skate',
+      brand: 'Fischer',
+      model: 'Speedmax 3D',
+      technique: 'Skate',
+      type: 'Cold',
+    });
+    const tree = renderHome();
+    await waitFor(() => tree.getByText('Cold skate'));
+    expect(tree.getByText('Fischer · Speedmax 3D')).toBeTruthy();
+  });
+
+  it('falls back to brand+model as the title when no display name', async () => {
+    authMock.__setCurrentUser({uid: 'u1', email: 'a@b.com'});
+    firestoreMock.__seedDoc('users/u1/skis/a', {
+      brand: 'Madshus',
+      model: 'Redline',
+      technique: 'Classic',
+    });
+    const tree = renderHome();
+    await waitFor(() => tree.getByText('Madshus Redline'));
+  });
+
   it('hides retired skis', async () => {
     authMock.__setCurrentUser({uid: 'u1', email: 'a@b.com'});
     firestoreMock.__seedDoc('users/u1/skis/a', {name: 'Alive'});
